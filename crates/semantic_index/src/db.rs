@@ -182,6 +182,7 @@ impl VectorDatabase {
                     name VARCHAR NOT NULL,
                     embedding BLOB NOT NULL,
                     digest BLOB NOT NULL,
+                    token_count INTEGER NOT NULL,
                     FOREIGN KEY(file_id) REFERENCES files(id) ON DELETE CASCADE
                 )",
                 [],
@@ -232,8 +233,8 @@ impl VectorDatabase {
             let mut query = db.prepare(
                 "
                 INSERT INTO documents
-                (file_id, start_byte, end_byte, name, embedding, digest)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                (file_id, start_byte, end_byte, name, embedding, digest, token_count)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                 ",
             )?;
             log::trace!(
@@ -248,7 +249,8 @@ impl VectorDatabase {
                     document.range.end.to_string(),
                     document.name,
                     document.embedding,
-                    document.digest
+                    document.digest,
+                    document.token_count
                 ])?;
             }
 
