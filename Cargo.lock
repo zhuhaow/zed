@@ -1456,6 +1456,7 @@ name = "collab"
 version = "0.20.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "async-tungstenite",
  "audio",
  "axum",
@@ -6721,6 +6722,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bincode",
+ "collections",
  "ctor",
  "editor",
  "env_logger 0.9.3",
