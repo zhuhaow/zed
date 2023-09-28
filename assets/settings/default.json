@@ -370,7 +370,7 @@
   },
   // Difference settings for semantic_index
   "semantic_index": {
-    "enabled": false
+    "enabled": true
   },
   // Different settings for specific languages.
   "languages": {
