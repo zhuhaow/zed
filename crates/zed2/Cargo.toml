@@ -68,7 +68,7 @@ text = { path = "../text" }
 theme2 = { path = "../theme2" }
 # theme_selector = { path = "../theme_selector" }
 util = { path = "../util" }
-# semantic_index = { path = "../semantic_index" }
+semantic_index2 = { path = "../semantic_index2" }
 # vim = { path = "../vim" }
 # workspace = { path = "../workspace" }
 # welcome = { path = "../welcome" }
