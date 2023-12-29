@@ -6,6 +6,8 @@ mod registry;
 mod scale;
 mod settings;
 mod styles;
+mod theme3;
+mod theme3_ayu;
 #[cfg(not(feature = "importing-themes"))]
 mod themes;
 mod user_theme;
