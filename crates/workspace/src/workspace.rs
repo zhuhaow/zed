@@ -63,7 +63,7 @@ use std::{
     sync::{atomic::AtomicUsize, Arc},
     time::Duration,
 };
-use tetris::Tetris;
+use tetris::*;
 use theme::{ActiveTheme, ThemeSettings};
 pub use toolbar::{Toolbar, ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView};
 pub use ui;
@@ -3523,7 +3523,7 @@ impl Render for Workspace {
             .border()
             .border_color(colors.border)
             .p_12()
-            .child(Tetris::new())
+        // .child(Tetris::new())
     }
 }
 
