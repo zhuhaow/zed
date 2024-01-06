@@ -8,6 +8,7 @@ mod persistence;
 pub mod searchable;
 pub mod shared_screen;
 mod status_bar;
+mod tetris;
 mod toolbar;
 mod workspace_settings;
 
@@ -25,13 +26,13 @@ use futures::{
     Future, FutureExt, StreamExt,
 };
 use gpui::{
-    actions, canvas, div, impl_actions, point, size, Action, AnyElement, AnyModel, AnyView,
-    AnyWeakView, AnyWindowHandle, AppContext, AsyncAppContext, AsyncWindowContext, BorrowWindow,
-    Bounds, Context, Div, DragMoveEvent, Element, Entity, EntityId, EventEmitter, FocusHandle,
-    FocusableView, GlobalPixels, InteractiveElement, IntoElement, KeyContext, LayoutId,
-    ManagedView, Model, ModelContext, ParentElement, PathPromptOptions, Pixels, Point, PromptLevel,
-    Render, Size, Styled, Subscription, Task, View, ViewContext, VisualContext, WeakView,
-    WindowBounds, WindowContext, WindowHandle, WindowOptions,
+    actions, div, impl_actions, point, size, Action, AnyElement, AnyModel, AnyView, AnyWeakView,
+    AnyWindowHandle, AppContext, AsyncAppContext, AsyncWindowContext, BorrowWindow, Bounds,
+    Context, Div, Element, Entity, EntityId, EventEmitter, FocusHandle, FocusableView,
+    GlobalPixels, InteractiveElement, IntoElement, KeyContext, LayoutId, ManagedView, Model,
+    ModelContext, ParentElement, PathPromptOptions, Pixels, Point, PromptLevel, Render, Size,
+    Styled, Subscription, Task, View, ViewContext, VisualContext, WeakView, WindowBounds,
+    WindowContext, WindowHandle, WindowOptions,
 };
 use item::{FollowableItem, FollowableItemHandle, Item, ItemHandle, ItemSettings, ProjectItem};
 use itertools::Itertools;
@@ -62,6 +63,7 @@ use std::{
     sync::{atomic::AtomicUsize, Arc},
     time::Duration,
 };
+use tetris::Tetris;
 use theme::{ActiveTheme, ThemeSettings};
 pub use toolbar::{Toolbar, ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView};
 pub use ui;
@@ -3516,135 +3518,12 @@ impl Render for Workspace {
             .relative()
             .size_full()
             .flex()
-            .flex_col()
-            .font(ui_font)
-            .gap_0()
-            .justify_start()
-            .items_start()
             .text_color(colors.text)
             .bg(colors.background)
             .border()
             .border_color(colors.border)
-            .children(self.titlebar_item.clone())
-            .child(
-                div()
-                    .id("workspace")
-                    .relative()
-                    .flex_1()
-                    .w_full()
-                    .flex()
-                    .flex_col()
-                    .overflow_hidden()
-                    .border_t()
-                    .border_b()
-                    .border_color(colors.border)
-                    .child(
-                        canvas(cx.listener(|workspace, bounds, _| {
-                            workspace.bounds = *bounds;
-                        }))
-                        .absolute()
-                        .size_full(),
-                    )
-                    .on_drag_move(
-                        cx.listener(|workspace, e: &DragMoveEvent<DraggedDock>, cx| {
-                            match e.drag(cx).0 {
-                                DockPosition::Left => {
-                                    let size = workspace.bounds.left() + e.event.position.x;
-                                    workspace.left_dock.update(cx, |left_dock, cx| {
-                                        left_dock.resize_active_panel(Some(size), cx);
-                                    });
-                                }
-                                DockPosition::Right => {
-                                    let size = workspace.bounds.right() - e.event.position.x;
-                                    workspace.right_dock.update(cx, |right_dock, cx| {
-                                        right_dock.resize_active_panel(Some(size), cx);
-                                    });
-                                }
-                                DockPosition::Bottom => {
-                                    let size = workspace.bounds.bottom() - e.event.position.y;
-                                    workspace.bottom_dock.update(cx, |bottom_dock, cx| {
-                                        bottom_dock.resize_active_panel(Some(size), cx);
-                                    });
-                                }
-                            }
-                        }),
-                    )
-                    .child(self.modal_layer.clone())
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .h_full()
-                            // Left Dock
-                            .children(self.zoomed_position.ne(&Some(DockPosition::Left)).then(
-                                || {
-                                    div()
-                                        .flex()
-                                        .flex_none()
-                                        .overflow_hidden()
-                                        .child(self.left_dock.clone())
-                                },
-                            ))
-                            // Panes
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .flex_1()
-                                    .overflow_hidden()
-                                    .child(self.center.render(
-                                        &self.project,
-                                        &self.follower_states,
-                                        self.active_call(),
-                                        &self.active_pane,
-                                        self.zoomed.as_ref(),
-                                        &self.app_state,
-                                        cx,
-                                    ))
-                                    .children(
-                                        self.zoomed_position
-                                            .ne(&Some(DockPosition::Bottom))
-                                            .then(|| self.bottom_dock.clone()),
-                                    ),
-                            )
-                            // Right Dock
-                            .children(self.zoomed_position.ne(&Some(DockPosition::Right)).then(
-                                || {
-                                    div()
-                                        .flex()
-                                        .flex_none()
-                                        .overflow_hidden()
-                                        .child(self.right_dock.clone())
-                                },
-                            )),
-                    )
-                    .children(self.render_notifications(cx))
-                    .children(self.zoomed.as_ref().and_then(|view| {
-                        let zoomed_view = view.upgrade()?;
-                        let div = div()
-                            .z_index(1)
-                            .absolute()
-                            .overflow_hidden()
-                            .border_color(colors.border)
-                            .bg(colors.background)
-                            .child(zoomed_view)
-                            .inset_0()
-                            .shadow_lg();
-
-                        Some(match self.zoomed_position {
-                            Some(DockPosition::Left) => div.right_2().border_r(),
-                            Some(DockPosition::Right) => div.left_2().border_l(),
-                            Some(DockPosition::Bottom) => div.top_2().border_t(),
-                            None => div.top_2().bottom_2().left_2().right_2().border(),
-                        })
-                    })),
-            )
-            .child(self.status_bar.clone())
-            .children(if self.project.read(cx).is_disconnected() {
-                Some(DisconnectedOverlay)
-            } else {
-                None
-            })
+            .p_12()
+            .child(Tetris::new())
     }
 }
 
