@@ -1,3 +1,4 @@
+use gpui::SharedString;
 #[allow(unused)]
 use gpui::{div, IntoElement, ParentElement, RenderOnce, Styled, WindowContext};
 use serde::{Deserialize, Serialize};
@@ -49,10 +50,20 @@ impl From<Shape> for Rotations {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(IntoElement, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BlockStatus {
     Empty,
     Occupied,
+}
+
+impl RenderOnce for BlockStatus {
+    fn render(self, _cx: &mut WindowContext) -> impl IntoElement {
+        div()
+            .size_6()
+            .border()
+            .border_color(gpui::white())
+            .when(self == Self::Occupied, |this| this.bg(gpui::white()))
+    }
 }
 
 pub struct Tetromino {
@@ -83,9 +94,27 @@ impl Tetromino {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(IntoElement, Serialize, Deserialize)]
 pub struct Grid {
     grid_blocks: [[BlockStatus; GRID_WIDTH]; GRID_HEIGHT],
+}
+
+impl RenderOnce for Grid {
+    fn render(self, cx: &mut WindowContext) -> impl IntoElement {
+        div()
+            .border()
+            .border_color(gpui::white())
+            .p_px()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .children(self.grid_blocks.iter().map(|row| {
+                div()
+                    .flex()
+                    .gap_1()
+                    .children(row.iter().map(|block| div().child(block.to_owned())))
+            }))
+    }
 }
 
 impl Grid {
@@ -212,39 +241,38 @@ impl Grid {
     pub fn deserialize(data: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(data)
     }
+}
 
-    /// Saves the grid state to a file.
-    ///
-    /// # Parameters
-    /// - `filename`: The path to the file where the grid state will be saved.
-    ///
-    /// # Returns
-    /// `Ok(())` if the grid state is successfully written to the file, or an error if it fails.
-    pub fn save_to_file(&self, filename: &str) -> Result<(), io::Error> {
-        let serialized = self.serialize()?;
-        fs::write(filename, serialized)?;
-        Ok(())
-    }
+#[derive(IntoElement)]
+pub struct Game {
+    grid: Grid,
+    score: usize,
+}
 
-    /// Loads the grid state from a file.
-    ///
-    /// # Parameters
-    /// - `filename`: The path to the file from which to load the grid state.
-    ///
-    /// # Returns
-    /// `Ok(Grid)` if the grid state is successfully loaded from the file, or an error if it fails.
-    pub fn load_from_file(filename: &str) -> Result<Self, io::Error> {
-        let mut file = fs::File::open(filename)?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-        let grid = Grid::deserialize(&contents)?;
-        Ok(grid)
+impl RenderOnce for Game {
+    fn render(self, cx: &mut WindowContext) -> impl IntoElement {
+        let score: SharedString = format!("Score: {}", self.score).to_string().into();
+
+        div()
+            .bg(gpui::black())
+            .p_1()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .child("GPUI Tetris")
+            .child(score)
+            .child(self.grid.render(cx));
     }
 }
 
-pub struct Game {}
-
 impl Game {
+    pub fn new() -> Self {
+        Self {
+            grid: Grid::new(),
+            score: 0,
+        }
+    }
+
     fn process_input(&mut self, action: PlayerAction) {
         match action {
             PlayerAction::MoveLeft => self.move_tetromino(-1, 0),

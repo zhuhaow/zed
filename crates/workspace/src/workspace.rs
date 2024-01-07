@@ -1,3 +1,4 @@
+pub mod bad_game_engine;
 pub mod dock;
 pub mod item;
 mod modal_layer;
@@ -8,7 +9,7 @@ mod persistence;
 pub mod searchable;
 pub mod shared_screen;
 mod status_bar;
-mod tetris;
+pub mod tetris;
 mod toolbar;
 mod workspace_settings;
 
@@ -30,8 +31,8 @@ use gpui::{
     AnyWindowHandle, AppContext, AsyncAppContext, AsyncWindowContext, BorrowWindow, Bounds,
     Context, Div, Element, Entity, EntityId, EventEmitter, FocusHandle, FocusableView,
     GlobalPixels, InteractiveElement, IntoElement, KeyContext, LayoutId, ManagedView, Model,
-    ModelContext, ParentElement, PathPromptOptions, Pixels, Point, PromptLevel, Render, Size,
-    Styled, Subscription, Task, View, ViewContext, VisualContext, WeakView, WindowBounds,
+    ModelContext, ParentElement, PathPromptOptions, Pixels, Point, PromptLevel, Render, RenderOnce,
+    Size, Styled, Subscription, Task, View, ViewContext, VisualContext, WeakView, WindowBounds,
     WindowContext, WindowHandle, WindowOptions,
 };
 use item::{FollowableItem, FollowableItemHandle, Item, ItemHandle, ItemSettings, ProjectItem};
@@ -53,6 +54,7 @@ use project::{Project, ProjectEntryId, ProjectPath, Worktree, WorktreeId};
 use serde::Deserialize;
 use settings::Settings;
 use shared_screen::SharedScreen;
+use smol::Timer;
 use status_bar::StatusBar;
 pub use status_bar::StatusItemView;
 use std::{
@@ -3513,6 +3515,8 @@ impl Render for Workspace {
         let colors = theme.colors();
         cx.set_rem_size(ui_font_size);
 
+        let game = tetris::Game::new();
+
         self.actions(div(), cx)
             .key_context(context)
             .relative()
@@ -3523,7 +3527,17 @@ impl Render for Workspace {
             .border()
             .border_color(colors.border)
             .p_12()
-        // .child(Tetris::new())
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .size_full()
+                    .bg(gpui::blue())
+                    .child(game)
+                    .child(tetris::BlockStatus::Occupied)
+                    .child(tetris::BlockStatus::Empty),
+            )
     }
 }
 

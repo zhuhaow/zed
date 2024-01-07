@@ -19,6 +19,7 @@ test-support = [
 ]
 
 [dependencies]
+smol = "2.0.0"
 db = { path = "../db" }
 call = { path = "../call" }
 client = { path = "../client" }
@@ -42,8 +43,6 @@ async-recursion = "1.0.0"
 itertools = "0.10"
 bincode = "1.2.1"
 rand = "0.8.4"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 anyhow.workspace = true
 futures.workspace = true
 lazy_static.workspace = true
