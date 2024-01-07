@@ -3515,7 +3515,7 @@ impl Render for Workspace {
         let colors = theme.colors();
         cx.set_rem_size(ui_font_size);
 
-        let game = tetris::Game::new();
+        let game = tetris::Grid::new();
 
         self.actions(div(), cx)
             .key_context(context)
