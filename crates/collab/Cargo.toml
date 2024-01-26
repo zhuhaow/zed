@@ -22,6 +22,7 @@ live_kit_server = { path = "../live_kit_server" }
 text = { path = "../text" }
 rpc = { path = "../rpc" }
 util = { path = "../util" }
+redis = { version = "0.24.0", features = ["tokio-comp"] }
 
 anyhow.workspace = true
 async-tungstenite = "0.16"

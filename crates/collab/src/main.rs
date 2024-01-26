@@ -2,11 +2,13 @@ use anyhow::anyhow;
 use axum::{routing::get, Extension, Router};
 use collab::{db, env, executor::Executor, AppState, Config, MigrateConfig, Result};
 use db::Database;
+use futures::StreamExt;
+use redis::aio::PubSub;
 use std::{
     env::args,
     net::{SocketAddr, TcpListener},
     path::Path,
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 use tokio::signal::unix::SignalKind;
 use tracing_log::LogTracer;
@@ -15,8 +17,26 @@ use util::ResultExt;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
+// static REDIS_PUBSUB: OnceLock<PubSub> = OnceLock::new();
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    let client = redis::Client::open("redis://127.0.0.1:6379").unwrap();
+    let con = client.get_async_connection().await.unwrap();
+    let mut pubsub = con.into_pubsub();
+    // let pubsub = &mut REDIS_PUBSUB.get_or_init(|| {
+    //     pubsub
+    // });
+
+    tokio::spawn(async move {
+        pubsub.subscribe("foo").await.unwrap();
+        let mut messages = pubsub.on_message();
+        loop {
+            let msg = messages.next().await.unwrap();
+            println!("Received: {:?}", msg);
+        }
+    });
+
     if let Err(error) = env::load_dotenv() {
         eprintln!(
             "error loading .env.toml (this is expected in production): {}",
