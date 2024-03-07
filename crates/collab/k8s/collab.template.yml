@@ -48,15 +48,15 @@ spec:
       labels:
         app: ${ZED_SERVICE_NAME}
       annotations:
-        ad.datadoghq.com/collab.check_names: |
+        ad.datadoghq.com/${ZED_SERVICE_NAME}.check_names: |
           ["openmetrics"]
-        ad.datadoghq.com/collab.init_configs: |
+        ad.datadoghq.com/${ZED_SERVICE_NAME}.init_configs: |
           [{}]
-        ad.datadoghq.com/collab.instances: |
+        ad.datadoghq.com/${ZED_SERVICE_NAME}.instances: |
           [
               {
               "openmetrics_endpoint": "http://%%host%%:%%port%%/metrics",
-              "namespace": "collab_${ZED_KUBE_NAMESPACE}",
+              "namespace": "${ZED_SERVICE_NAME}_${ZED_KUBE_NAMESPACE}",
               "metrics": [".*"]
               }
           ]
