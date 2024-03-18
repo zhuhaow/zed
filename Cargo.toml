@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/activity_indicator",
+    "crates/anthropic_ai",
     "crates/assets",
     "crates/assistant",
     "crates/audio",
