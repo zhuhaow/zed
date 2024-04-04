@@ -376,6 +376,9 @@ where
 
 impl Server {
     pub fn new(id: ServerId, app_state: Arc<AppState>) -> Arc<Self> {
+        tracing::error!("ERROR");
+        tracing::warn!("WARN");
+        tracing::info!("INFO");
         let mut server = Self {
             id: parking_lot::Mutex::new(id),
             peer: Peer::new(id.0 as u32),
