@@ -639,81 +639,95 @@ impl AssistantChat {
 
 impl Render for AssistantChat {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        let message_2 = r#"To add a new item to the left side of the titlebar in your Rust code, you need to modify the section of the `CollabTitlebarItem`'s `render` method where you have the comment `// left side`. This section constructs the left side of the titlebar using a chain of `.child()` and `.children()` method calls to add elements horizontally.
+        let message_2 = r#"To add a new item you need to modify `render` method of `CollabTitlebarItem`.
 
-        Here is a simplified step-by-step approach:
-
-        1. **Decide on the Item to Add:** First, determine what item you want to add to the left side. For the sake of example, let's say you want to add a simple button.
-
-        2. **Create the New Item:** Based on the example, you'll want to create a new `Button` element, similar to how other UI elements are created in your existing code. Refer to other button creations in your code for examples on how to configure its properties, like label, style, or actions upon clicks.
-
-        3. **Insert the New Item in the Render Method:** Locate the section in the `render` method of `CollabTitlebarItem` where the left side elements are added. This is the section that starts with `TitleBar::new("collab-titlebar")` and adds children to it. You can directly insert the new item within the `h_flex()` block for the left side.
-
-        Assuming you are adding a new button named "NewButton" to the left side of the titlebar, here's an illustrative example showing where and how you might add it:
-
-        ```rust
-        impl Render for CollabTitlebarItem {
-            fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-                // Your existing code up to the left side modifications
-                TitleBar::new("collab-titlebar")
-                    .when(cfg!(not(windows)), |this| {
-                        // Existing double-click to zoom functionality
-                    })
-                    // Modify the left side starting here
+~~~rust
+impl Render for CollabTitlebarItem {
+    fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+        TitleBar::new("collab-titlebar")
+            // ...
+            // Modify the left side starting here
+            .child(
+                h_flex()
+                    .gap_1() // Keep the existing gap
+                    // Add your new button here
                     .child(
-                        h_flex()
-                            .gap_1() // Keep the existing gap
-                            // Add your new button here
-                            .child(
-                                Button::new("new_button", "New Button")
-                                    // You can chain any configuration methods you need
-                                    .style(ButtonStyle::Subtle)
-                                    .on_click(|_, cx| {
-                                        // Define click behavior
-                                    }),
-                            )
-                            .children(self.render_project_host(cx)) // Keep existing items
-                            .child(self.render_project_name(cx))
-                            .children(self.render_project_branch(cx)),
+                        Button::new("new_button", "New Button")
+                            // You can chain any configuration methods you need
+                            .style(ButtonStyle::Subtle)
+                            .on_click(|_, cx| {
+                                // Define click behavior
+                            }),
                     )
-                    // Your existing code continues from here...
-                    .child(...)
-                    // The rest of the existing render method...
-            }
-        }
-        ```
+                    .children(self.render_project_host(cx)) // Keep existing items
+                    .child(self.render_project_name(cx))
+                    .children(self.render_project_branch(cx)),
+            )
+            // ...
+    }
+}
+~~~
 
-        In this example, we added a new button with the label "New Button" to the left side of the titlebar. You can replace the button creation with any other UI element or components you wish to add, and configure it according to your needs. Adjust the `.on_click` handler to define what should happen when the user clicks the new item."#.to_string();
+Above is an example showing how to add a new button named "NewButton" to the left side of the titlebar.
+"#.to_string();
 
         let messages_vec = vec![
-            "How can I add a new item to the left side of the titlebar?".to_string(),
-            message_2.to_string(),
+            (
+                ChatRole::User,
+                "How can I add a new item to the left side of the titlebar?".to_string(),
+            ),
+            (
+                ChatRole::Action,
+                "Assistant accessed project context".to_string(),
+            ),
+            (ChatRole::Assistant, message_2.to_string()),
+            (
+                ChatRole::User,
+                "Can you help me add the on_click behavior? I want to open a web page when clicking on the button".to_string(),
+            ),
+            (
+                ChatRole::Action,
+                "Looking for relevant context in your project...".to_string(),
+            ),
         ];
 
         let composer = cx.new_view(|cx| UIComposer::new(cx));
 
-        v_flex()
+        div()
             .id("assistant-chat")
-            .relative()
-            .flex_1()
-            .justify_end()
+            // I know we will use a gpui::List, this is just for quickly prototyping
             .overflow_y_scroll()
-            .px_5()
-            .py_2p5()
-            .key_context("AssistantChat")
-            .text_color(Color::Default.color(cx))
-            .bg(cx.theme().colors().surface_background)
-            // .child(self.render_model_dropdown(cx))
-            // .child(list(self.list_state.clone()).flex_1())
-            .children(messages_vec.iter().map(|message| {
-                cx.new_view(|cx| {
-                    let rich_message =
-                        RichText::new(message.clone(), &[], &self.language_registry.clone());
-
-                    UIChatMessage::new(ChatRole::User, rich_message)
-                })
-            }))
-            .child(composer)
+            .size_full()
+            .child(
+                v_flex()
+                    .relative()
+                    .flex_1()
+                    .justify_end()
+                    .px_5()
+                    .py_2p5()
+                    .key_context("AssistantChat")
+                    .text_color(Color::Default.color(cx))
+                    .bg(cx.theme().colors().surface_background)
+                    // .child(self.render_model_dropdown(cx))
+                    // .child(list(self.list_state.clone()).flex_1())
+                    .children(messages_vec.iter().map(|message| {
+                        if message.0 == ChatRole::Action {
+                            cx.new_view(|cx| UIChatAction::new(message.1.clone()))
+                                .into_any_element()
+                        } else {
+                            cx.new_view(|cx| {
+                                let rich_message = RichText::new(
+                                    message.1.clone(),
+                                    &[],
+                                    &self.language_registry.clone(),
+                                );
+                                UIChatMessage::new(message.0.clone(), rich_message)
+                            })
+                            .into_any_element()
+                        }
+                    }))
+                    .child(composer),
+            )
     }
 }
 
@@ -961,8 +975,39 @@ impl CodebaseContext {
     }
 }
 
-struct UIChatAction {}
+struct UIChatAction {
+    id: ElementId,
+    action: String,
+}
 
+impl UIChatAction {
+    fn new(action: String) -> Self {
+        Self {
+            id: ElementId::Name(nanoid::nanoid!().into()),
+            action,
+        }
+    }
+}
+
+impl Render for UIChatAction {
+    fn render(&mut self, _cx: &mut ViewContext<Self>) -> impl IntoElement {
+        div()
+            .max_w(rems(56.))
+            .mx_auto()
+            .overflow_hidden()
+            .w_full()
+            .child(div().h_3().w_full())
+            .child(
+                h_flex().ml_8().flex_1().w_full().group("").p_2().child(
+                    Label::new(self.action.clone())
+                        .color(Color::Muted)
+                        .size(LabelSize::Default),
+                ),
+            )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ChatRole {
     User,
     Assistant,
@@ -987,51 +1032,61 @@ impl UIChatMessage {
 
 impl Render for UIChatMessage {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        div().child(div().h_3().w_full()).child(
-            v_flex()
-                .group("")
-                .bg(hsla(1.0, 1.0, 1.0, 0.06))
-                .rounded_md()
-                .px_2p5()
-                .py_1p5()
-                .child(
-                    h_flex()
-                        .justify_between()
-                        .child(
-                            div()
-                                .mb_0p5()
-                                .child(Label::new("You").color(Color::Default)),
-                        )
-                        .child(
-                            h_flex()
-                                .mr_1()
+        div()
+            .max_w(rems(56.))
+            .mx_auto()
+            .overflow_hidden()
+            .w_full()
+            .child(div().h_3().w_full())
+            .child(
+                h_flex()
+                    .gap_2()
+                    .items_start()
+                    .justify_start()
+                    .child(
+                        div()
+                            .pt_1p5()
+                            .child(
+                            Avatar::new(
+                                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRni2qBxMYI5UwXBrhb5Kds8BamU5DSwjI1bHvhr3S_Pq58Lp4M".to_string()
+                            ).size(rems(1.25))
+                        ),
+                    )
+                    .child(
+                        v_flex()
+                            .flex_1()
+                            .w_full()
+                            .group("")
+                            .bg(cx.theme().colors().surface_background)
+                            .rounded_md()
+                            .p_2()
+                            .child(h_flex()
+                                .justify_between()
                                 .child(
-                                    h_flex().visible_on_hover("").gap_1().child(
-                                        IconButton::new("copy_text", IconName::Copy)
-                                            .icon_size(IconSize::Small)
-                                            .icon_color(Color::Muted),
-                                    ),
+                                    div()
+                                        .mb_0p5()
+                                        .child(Label::new(if self.role == ChatRole::User {"You"} else {"Assistant"}).color(Color::Default)),
                                 )
                                 .child(
-                                    IconButton::new("menu", IconName::Ellipsis)
-                                        .icon_size(IconSize::Small)
-                                        .icon_color(Color::Muted),
-                                ),
-                        ),
-                )
-                .child(
-                    div()
-                        // .on_action(cx.listener(Self::submit))
-                        .mx_1()
-                        .mb_1()
-                        .p_1()
-                        .rounded_md()
-                        .text_color(cx.theme().colors().editor_foreground)
-                        .font(ThemeSettings::get_global(cx).buffer_font.clone())
-                        .hover(|this| this.bg(cx.theme().colors().editor_background)) // .child(body.read(cx).set_read_only(true))
-                        .child(self.content.element(self.id.clone(), cx)),
-                ),
-        )
+                                    h_flex()
+                                        .mr_1()
+                                        .child(
+                                            h_flex().visible_on_hover("").gap_1().child(
+                                                IconButton::new("copy_text", IconName::Copy)
+                                                    .icon_size(IconSize::Small)
+                                                    .icon_color(Color::Muted),
+                                            ),
+                                        )
+                                        .child(
+                                            IconButton::new("menu", IconName::Ellipsis)
+                                                .icon_size(IconSize::Small)
+                                                .icon_color(Color::Muted),
+                                        ),
+                                ))
+                                .child(self.content.element(self.id.clone(), cx))
+
+                    ),
+            )
     }
 }
 
@@ -1055,7 +1110,13 @@ impl UIComposer {
 
 impl Render for UIComposer {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+        let active_theme_name = ThemeSettings::get_global(cx).active_theme.name.clone();
+
         div()
+            .max_w(rems(56.))
+            .mx_auto()
+            .overflow_hidden()
+            .w_full()
             .child(div().h_3().w_full())
             .child(
                 h_flex()
@@ -1064,7 +1125,7 @@ impl Render for UIComposer {
                     .justify_start()
                     .child(
                         div()
-                            .pt_0p5()
+                            .pt_1p5()
                             .child(
                             Avatar::new(
                                 "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRni2qBxMYI5UwXBrhb5Kds8BamU5DSwjI1bHvhr3S_Pq58Lp4M".to_string()
@@ -1076,7 +1137,7 @@ impl Render for UIComposer {
                             .flex_1()
                             .w_full()
                             .group("")
-                            .bg(cx.theme().colors().editor_background)
+                            .bg(cx.theme().colors().surface_background)
                             .rounded_md()
                             .p_2()
                             .child(
@@ -1084,6 +1145,7 @@ impl Render for UIComposer {
                                     // .on_action(cx.listener(Self::submit))
                                     .text_color(cx.theme().colors().editor_foreground)
                                     .font(ThemeSettings::get_global(cx).ui_font.clone())
+                                    .child(active_theme_name)
                                     .child(self.editor.clone())
                             )
                             .child(
