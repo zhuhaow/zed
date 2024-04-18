@@ -3,11 +3,11 @@ mod completion_provider;
 use anyhow::Result;
 use client::Client;
 use completion_provider::*;
-use editor::{Editor, EditorEvent};
+use editor::{Editor, EditorElement, EditorEvent, EditorStyle};
 use futures::{channel::oneshot, Future, FutureExt as _, StreamExt};
 use gpui::{
-    list, prelude::*, AnyElement, AppContext, FocusHandle, Global, ListAlignment, ListState, Model,
-    Render, Task, View,
+    hsla, list, prelude::*, AnyElement, AppContext, FocusHandle, Global, ListAlignment, ListState,
+    Model, Render, Task, TextStyle, View,
 };
 use language::{language_settings::SoftWrap, LanguageRegistry};
 use project::Fs;
@@ -317,6 +317,7 @@ impl AssistantChat {
         let body = cx.new_view(|cx| {
             let mut editor = Editor::auto_height(80, cx);
             editor.set_soft_wrap_mode(SoftWrap::EditorWidth, cx);
+
             if focus {
                 cx.focus_self();
             }
@@ -421,28 +422,70 @@ impl AssistantChat {
 
         match &self.messages[ix] {
             ChatMessage::User(UserMessage { body, contexts, .. }) => div()
-                .when(!is_last, |element| element.mb_2())
-                .child(div().p_2().child(Label::new("You").color(Color::Default)))
+                // .when(!is_last, |element| element.mb_3())
+                .child(div().h_3().w_full())
                 .child(
-                    div()
-                        .on_action(cx.listener(Self::submit))
-                        .p_2()
-                        .text_color(cx.theme().colors().editor_foreground)
-                        .font(ThemeSettings::get_global(cx).buffer_font.clone())
-                        .bg(cx.theme().colors().editor_background)
-                        .child(body.clone())
-                        .children(contexts.iter().map(|context| context.render(cx))),
+                    v_flex()
+                        .group("")
+                        .bg(hsla(1.0, 1.0, 1.0, 0.06))
+                        .rounded_md()
+                        .px_2p5()
+                        .py_1p5()
+                        .child(
+                            h_flex()
+                                .justify_between()
+                                .child(
+                                    div()
+                                        .mb_0p5()
+                                        .child(Label::new("You").color(Color::Default)),
+                                )
+                                .child(
+                                    h_flex()
+                                        .mr_1()
+                                        .child(
+                                            h_flex().visible_on_hover("").gap_1().child(
+                                                IconButton::new("copy_text", IconName::Copy)
+                                                    .icon_size(IconSize::Small)
+                                                    .icon_color(Color::Muted),
+                                            ),
+                                        )
+                                        .child(
+                                            IconButton::new("menu", IconName::Ellipsis)
+                                                .icon_size(IconSize::Small)
+                                                .icon_color(Color::Muted),
+                                        ),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .on_action(cx.listener(Self::submit))
+                                .mx_1()
+                                .mb_1()
+                                .p_1()
+                                .rounded_md()
+                                .text_color(cx.theme().colors().editor_foreground)
+                                .font(ThemeSettings::get_global(cx).buffer_font.clone())
+                                .hover(|this| this.bg(cx.theme().colors().editor_background))
+                                // .child(body.read(cx).set_read_only(true))
+                                .child(body.clone())
+                                .children(contexts.iter().map(|context| context.render(cx))),
+                        ),
                 )
                 .into_any(),
             ChatMessage::Assistant(AssistantMessage { id, body, error }) => div()
-                .when(!is_last, |element| element.mb_2())
+                // .when(!is_last, |element| element.mb_3())
+                .child(div().h_3().w_full())
                 .child(
-                    div()
-                        .p_2()
-                        .child(Label::new("Assistant").color(Color::Modified)),
+                    v_flex()
+                        .bg(hsla(1.0, 1.0, 1.0, 0.06))
+                        .child(
+                            div()
+                                .p_2()
+                                .child(Label::new("Assistant").color(Color::Modified)),
+                        )
+                        .child(div().p_2().child(body.element(ElementId::from(id.0), cx)))
+                        .child(self.render_error(error.clone(), ix, cx)),
                 )
-                .child(div().p_2().child(body.element(ElementId::from(id.0), cx)))
-                .child(self.render_error(error.clone(), ix, cx))
                 .into_any(),
         }
     }
@@ -532,10 +575,11 @@ impl AssistantChat {
 
 impl Render for AssistantChat {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        div()
+        v_flex()
             .relative()
             .flex_1()
-            .v_flex()
+            .px_5()
+            .py_2p5()
             .key_context("AssistantChat")
             .text_color(Color::Default.color(cx))
             .child(self.render_model_dropdown(cx))
