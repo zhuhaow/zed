@@ -582,6 +582,7 @@ impl Render for AssistantChat {
             .py_2p5()
             .key_context("AssistantChat")
             .text_color(Color::Default.color(cx))
+            .bg(cx.theme().colors().surface_background)
             .child(self.render_model_dropdown(cx))
             .child(list(self.list_state.clone()).flex_1())
     }
