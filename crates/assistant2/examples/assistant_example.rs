@@ -5,14 +5,14 @@ use gpui::{actions, App, AppContext, KeyBinding, Model, Task, View, WindowOption
 use language::LanguageRegistry;
 use project::{Fs, Project};
 use semantic_index::{OpenAiEmbeddingModel, OpenAiEmbeddingProvider, ProjectIndex, SemanticIndex};
-use settings::{KeymapFile, DEFAULT_KEYMAP_PATH};
+use settings::{KeymapFile, Settings, DEFAULT_KEYMAP_PATH};
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use theme::LoadThemes;
+use theme::{LoadThemes, ThemeRegistry, ThemeSettings};
 use ui::{div, prelude::*, Render};
-use util::http::HttpClientWithUrl;
+use util::{http::HttpClientWithUrl, paths, ResultExt};
 
 actions!(example, [Quit]);
 
@@ -35,10 +35,16 @@ fn main() {
         }
 
         settings::init(cx);
-        language::init(cx);
+        theme::init(LoadThemes::All(Box::new(Assets)), cx);
+
+        let theme_registry = ThemeRegistry::global(cx);
+        let mut theme_settings = ThemeSettings::get_global(cx).clone();
+        theme_settings.active_theme = theme_registry.get("One Light").unwrap();
+        ThemeSettings::override_global(theme_settings, cx);
+
         Project::init_settings(cx);
         editor::init(cx);
-        theme::init(LoadThemes::JustBase, cx);
+
         Assets.load_fonts(cx).unwrap();
         KeymapFile::load_asset(DEFAULT_KEYMAP_PATH, cx).unwrap();
         client::init_settings(cx);
@@ -52,11 +58,13 @@ fn main() {
         }
         assistant2::init(client.clone(), cx);
 
-        let language_registry = Arc::new(LanguageRegistry::new(
-            Task::ready(()),
-            cx.background_executor().clone(),
-        ));
+        let mut language_registry =
+            LanguageRegistry::new(Task::ready(()), cx.background_executor().clone());
+        language_registry.set_language_server_download_dir(paths::LANGUAGES_DIR.clone());
+        let language_registry = Arc::new(language_registry);
+
         let node_runtime = node_runtime::RealNodeRuntime::new(client.http_client());
+        language::init(cx);
         languages::init(language_registry.clone(), node_runtime, cx);
 
         let http = Arc::new(HttpClientWithUrl::new("http://localhost:11434"));
@@ -76,10 +84,24 @@ fn main() {
         );
 
         cx.spawn(|mut cx| async move {
+            cx.update(|cx| {
+                let mut theme_settings = ThemeSettings::get_global(cx).clone();
+                theme_settings.active_theme = theme_registry.get("One Light").unwrap();
+                ThemeSettings::override_global(theme_settings, cx);
+            })
+            .log_err();
+
+            let theme = cx.update(|cx| ThemeSettings::get_global(cx).active_theme.name.clone())?;
+            dbg!(theme);
             let project_path = Path::new(&args[1]);
             dbg!(project_path);
             let project = Project::example([project_path], &mut cx).await;
             let mut semantic_index = semantic_index.await?;
+
+            let names = language_registry.language_names();
+            println!("Languages: {:?}", names);
+            let theme = cx.update(|cx| ThemeSettings::get_global(cx).active_theme.name.clone())?;
+            dbg!(theme);
 
             cx.update(|cx| {
                 let fs = project.read(cx).fs().clone();
@@ -114,7 +136,7 @@ impl Example {
 }
 
 impl Render for Example {
-    fn render(&mut self, _cx: &mut ViewContext<Self>) -> impl ui::prelude::IntoElement {
+    fn render(&mut self, cx: &mut ViewContext<Self>) -> impl ui::prelude::IntoElement {
         div().size_full().child(self.assistant_panel.clone())
     }
 }
