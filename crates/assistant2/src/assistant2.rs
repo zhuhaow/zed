@@ -6,8 +6,8 @@ use completion_provider::*;
 use editor::{Editor, EditorElement, EditorEvent, EditorStyle};
 use futures::{channel::oneshot, Future, FutureExt as _, StreamExt};
 use gpui::{
-    hsla, list, prelude::*, AnyElement, AppContext, FocusHandle, Global, ListAlignment, ListState,
-    Model, Render, Task, TextStyle, View,
+    hsla, list, prelude::*, AnyElement, AppContext, FocusHandle, Global, ImageSource,
+    ListAlignment, ListState, Model, Render, SharedUri, Task, TextStyle, View,
 };
 use language::{language_settings::SoftWrap, LanguageRegistry};
 use project::Fs;
@@ -17,7 +17,9 @@ use serde::Deserialize;
 use settings::Settings;
 use std::{cmp, sync::Arc};
 use theme::ThemeSettings;
-use ui::{popover_menu, prelude::*, ButtonLike, CollapsibleContainer, Color, ContextMenu, Tooltip};
+use ui::{
+    popover_menu, prelude::*, Avatar, ButtonLike, CollapsibleContainer, Color, ContextMenu, Tooltip,
+};
 use util::ResultExt;
 
 // gpui::actions!(assistant, [Submit]);
@@ -317,6 +319,7 @@ impl AssistantChat {
         let body = cx.new_view(|cx| {
             let mut editor = Editor::auto_height(80, cx);
             editor.set_soft_wrap_mode(SoftWrap::EditorWidth, cx);
+            editor.set_placeholder_text("Send a message...", cx);
 
             if focus {
                 cx.focus_self();
@@ -421,54 +424,115 @@ impl AssistantChat {
         let is_last = ix == self.messages.len() - 1;
 
         match &self.messages[ix] {
+            // ChatMessage::User(UserMessage { body, contexts, .. }) => div()
+            //     // .when(!is_last, |element| element.mb_3())
+            //     .child(div().h_3().w_full())
+            //     .child(
+            //         v_flex()
+            //             .group("")
+            //             .bg(hsla(1.0, 1.0, 1.0, 0.06))
+            //             .rounded_md()
+            //             .px_2p5()
+            //             .py_1p5()
+            //             .child(
+            //                 h_flex()
+            //                     .justify_between()
+            //                     .child(
+            //                         div()
+            //                             .mb_0p5()
+            //                             .child(Label::new("You").color(Color::Default)),
+            //                     )
+            //                     .child(
+            //                         h_flex()
+            //                             .mr_1()
+            //                             .child(
+            //                                 h_flex().visible_on_hover("").gap_1().child(
+            //                                     IconButton::new("copy_text", IconName::Copy)
+            //                                         .icon_size(IconSize::Small)
+            //                                         .icon_color(Color::Muted),
+            //                                 ),
+            //                             )
+            //                             .child(
+            //                                 IconButton::new("menu", IconName::Ellipsis)
+            //                                     .icon_size(IconSize::Small)
+            //                                     .icon_color(Color::Muted),
+            //                             ),
+            //                     ),
+            //             )
+            //             .child(
+            //                 div()
+            //                     .on_action(cx.listener(Self::submit))
+            //                     .mx_1()
+            //                     .mb_1()
+            //                     .p_1()
+            //                     .rounded_md()
+            //                     .text_color(cx.theme().colors().editor_foreground)
+            //                     .font(ThemeSettings::get_global(cx).buffer_font.clone())
+            //                     .hover(|this| this.bg(cx.theme().colors().editor_background))
+            //                     // .child(body.read(cx).set_read_only(true))
+            //                     .child(body.clone())
+            //                     .children(contexts.iter().map(|context| context.render(cx))),
+            //             ),
+            //     )
+            //     .into_any(),
+
+            // Composer variant
             ChatMessage::User(UserMessage { body, contexts, .. }) => div()
-                // .when(!is_last, |element| element.mb_3())
                 .child(div().h_3().w_full())
                 .child(
-                    v_flex()
-                        .group("")
-                        .bg(hsla(1.0, 1.0, 1.0, 0.06))
-                        .rounded_md()
-                        .px_2p5()
-                        .py_1p5()
+                    h_flex()
+                        .gap_2()
+                        .items_start()
+                        .justify_start()
                         .child(
-                            h_flex()
-                                .justify_between()
+                            div()
+                                .pt_0p5()
+                                .child(
+                                Avatar::new(
+                                    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRni2qBxMYI5UwXBrhb5Kds8BamU5DSwjI1bHvhr3S_Pq58Lp4M".to_string()
+                                ).size(rems(1.25))
+                            ),
+                        )
+                        .child(
+                            v_flex()
+                                .flex_1()
+                                .w_full()
+                                .group("")
+                                .bg(cx.theme().colors().editor_background)
+                                .rounded_md()
+                                .p_2()
                                 .child(
                                     div()
-                                        .mb_0p5()
-                                        .child(Label::new("You").color(Color::Default)),
+                                        .on_action(cx.listener(Self::submit))
+                                        .text_color(cx.theme().colors().editor_foreground)
+                                        .font(ThemeSettings::get_global(cx).ui_font.clone())
+                                        .child(body.clone())
                                 )
                                 .child(
                                     h_flex()
-                                        .mr_1()
+                                        .justify_between()
                                         .child(
-                                            h_flex().visible_on_hover("").gap_1().child(
-                                                IconButton::new("copy_text", IconName::Copy)
-                                                    .icon_size(IconSize::Small)
-                                                    .icon_color(Color::Muted),
-                                            ),
+                                            h_flex().gap_2().child(self.render_model_dropdown(cx))
                                         )
                                         .child(
-                                            IconButton::new("menu", IconName::Ellipsis)
-                                                .icon_size(IconSize::Small)
-                                                .icon_color(Color::Muted),
+                                            h_flex()
+                                                .mr_1()
+                                                .child(
+                                                    h_flex().visible_on_hover("").gap_1().child(
+                                                        IconButton::new(
+                                                            "copy_text",
+                                                            IconName::Copy,
+                                                        )
+                                                        .icon_size(IconSize::Small)
+                                                        .icon_color(Color::Muted),
+                                                    ),
+                                                )
+                                                .child(
+                                                    Button::new("send_message", "Send")
+                                                        .icon(IconName::Return).icon_color(Color::Muted).icon_position(IconPosition::Start).style(ButtonStyle::Filled)
+                                                ),
                                         ),
-                                ),
-                        )
-                        .child(
-                            div()
-                                .on_action(cx.listener(Self::submit))
-                                .mx_1()
-                                .mb_1()
-                                .p_1()
-                                .rounded_md()
-                                .text_color(cx.theme().colors().editor_foreground)
-                                .font(ThemeSettings::get_global(cx).buffer_font.clone())
-                                .hover(|this| this.bg(cx.theme().colors().editor_background))
-                                // .child(body.read(cx).set_read_only(true))
-                                .child(body.clone())
-                                .children(contexts.iter().map(|context| context.render(cx))),
+                                )
                         ),
                 )
                 .into_any(),
@@ -575,16 +639,81 @@ impl AssistantChat {
 
 impl Render for AssistantChat {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+        let message_2 = r#"To add a new item to the left side of the titlebar in your Rust code, you need to modify the section of the `CollabTitlebarItem`'s `render` method where you have the comment `// left side`. This section constructs the left side of the titlebar using a chain of `.child()` and `.children()` method calls to add elements horizontally.
+
+        Here is a simplified step-by-step approach:
+
+        1. **Decide on the Item to Add:** First, determine what item you want to add to the left side. For the sake of example, let's say you want to add a simple button.
+
+        2. **Create the New Item:** Based on the example, you'll want to create a new `Button` element, similar to how other UI elements are created in your existing code. Refer to other button creations in your code for examples on how to configure its properties, like label, style, or actions upon clicks.
+
+        3. **Insert the New Item in the Render Method:** Locate the section in the `render` method of `CollabTitlebarItem` where the left side elements are added. This is the section that starts with `TitleBar::new("collab-titlebar")` and adds children to it. You can directly insert the new item within the `h_flex()` block for the left side.
+
+        Assuming you are adding a new button named "NewButton" to the left side of the titlebar, here's an illustrative example showing where and how you might add it:
+
+        ```rust
+        impl Render for CollabTitlebarItem {
+            fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+                // Your existing code up to the left side modifications
+                TitleBar::new("collab-titlebar")
+                    .when(cfg!(not(windows)), |this| {
+                        // Existing double-click to zoom functionality
+                    })
+                    // Modify the left side starting here
+                    .child(
+                        h_flex()
+                            .gap_1() // Keep the existing gap
+                            // Add your new button here
+                            .child(
+                                Button::new("new_button", "New Button")
+                                    // You can chain any configuration methods you need
+                                    .style(ButtonStyle::Subtle)
+                                    .on_click(|_, cx| {
+                                        // Define click behavior
+                                    }),
+                            )
+                            .children(self.render_project_host(cx)) // Keep existing items
+                            .child(self.render_project_name(cx))
+                            .children(self.render_project_branch(cx)),
+                    )
+                    // Your existing code continues from here...
+                    .child(...)
+                    // The rest of the existing render method...
+            }
+        }
+        ```
+
+        In this example, we added a new button with the label "New Button" to the left side of the titlebar. You can replace the button creation with any other UI element or components you wish to add, and configure it according to your needs. Adjust the `.on_click` handler to define what should happen when the user clicks the new item."#.to_string();
+
+        let messages_vec = vec![
+            "How can I add a new item to the left side of the titlebar?".to_string(),
+            message_2.to_string(),
+        ];
+
+        let composer = cx.new_view(|cx| UIComposer::new(cx));
+
         v_flex()
+            .id("assistant-chat")
             .relative()
             .flex_1()
+            .justify_end()
+            .overflow_y_scroll()
             .px_5()
             .py_2p5()
             .key_context("AssistantChat")
             .text_color(Color::Default.color(cx))
             .bg(cx.theme().colors().surface_background)
-            .child(self.render_model_dropdown(cx))
-            .child(list(self.list_state.clone()).flex_1())
+            // .child(self.render_model_dropdown(cx))
+            // .child(list(self.list_state.clone()).flex_1())
+            .children(messages_vec.iter().map(|message| {
+                cx.new_view(|cx| {
+                    let rich_message =
+                        RichText::new(message.clone(), &[], &self.language_registry.clone());
+
+                    UIChatMessage::new(ChatRole::User, rich_message)
+                })
+            }))
+            .child(composer)
     }
 }
 
@@ -831,3 +960,162 @@ impl CodebaseContext {
         }
     }
 }
+
+struct UIChatAction {}
+
+enum ChatRole {
+    User,
+    Assistant,
+    Action,
+}
+
+struct UIChatMessage {
+    id: ElementId,
+    role: ChatRole,
+    content: RichText,
+}
+
+impl UIChatMessage {
+    fn new(role: ChatRole, content: RichText) -> Self {
+        Self {
+            id: ElementId::Name(nanoid::nanoid!().into()),
+            role,
+            content,
+        }
+    }
+}
+
+impl Render for UIChatMessage {
+    fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+        div().child(div().h_3().w_full()).child(
+            v_flex()
+                .group("")
+                .bg(hsla(1.0, 1.0, 1.0, 0.06))
+                .rounded_md()
+                .px_2p5()
+                .py_1p5()
+                .child(
+                    h_flex()
+                        .justify_between()
+                        .child(
+                            div()
+                                .mb_0p5()
+                                .child(Label::new("You").color(Color::Default)),
+                        )
+                        .child(
+                            h_flex()
+                                .mr_1()
+                                .child(
+                                    h_flex().visible_on_hover("").gap_1().child(
+                                        IconButton::new("copy_text", IconName::Copy)
+                                            .icon_size(IconSize::Small)
+                                            .icon_color(Color::Muted),
+                                    ),
+                                )
+                                .child(
+                                    IconButton::new("menu", IconName::Ellipsis)
+                                        .icon_size(IconSize::Small)
+                                        .icon_color(Color::Muted),
+                                ),
+                        ),
+                )
+                .child(
+                    div()
+                        // .on_action(cx.listener(Self::submit))
+                        .mx_1()
+                        .mb_1()
+                        .p_1()
+                        .rounded_md()
+                        .text_color(cx.theme().colors().editor_foreground)
+                        .font(ThemeSettings::get_global(cx).buffer_font.clone())
+                        .hover(|this| this.bg(cx.theme().colors().editor_background)) // .child(body.read(cx).set_read_only(true))
+                        .child(self.content.element(self.id.clone(), cx)),
+                ),
+        )
+    }
+}
+
+struct UIComposer {
+    editor: View<Editor>,
+}
+
+impl UIComposer {
+    fn new(cx: &mut ViewContext<Self>) -> Self {
+        let editor = cx.new_view(|cx| {
+            let mut editor = Editor::auto_height(80, cx);
+            editor.set_soft_wrap_mode(SoftWrap::EditorWidth, cx);
+            editor.set_placeholder_text("Send a message...", cx);
+
+            editor
+        });
+
+        Self { editor }
+    }
+}
+
+impl Render for UIComposer {
+    fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+        div()
+            .child(div().h_3().w_full())
+            .child(
+                h_flex()
+                    .gap_2()
+                    .items_start()
+                    .justify_start()
+                    .child(
+                        div()
+                            .pt_0p5()
+                            .child(
+                            Avatar::new(
+                                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRni2qBxMYI5UwXBrhb5Kds8BamU5DSwjI1bHvhr3S_Pq58Lp4M".to_string()
+                            ).size(rems(1.25))
+                        ),
+                    )
+                    .child(
+                        v_flex()
+                            .flex_1()
+                            .w_full()
+                            .group("")
+                            .bg(cx.theme().colors().editor_background)
+                            .rounded_md()
+                            .p_2()
+                            .child(
+                                div()
+                                    // .on_action(cx.listener(Self::submit))
+                                    .text_color(cx.theme().colors().editor_foreground)
+                                    .font(ThemeSettings::get_global(cx).ui_font.clone())
+                                    .child(self.editor.clone())
+                            )
+                            .child(
+                                h_flex()
+                                    .justify_between()
+                                    .child(
+                                        h_flex().gap_2().child("model_name")
+                                    )
+                                    .child(
+                                        h_flex()
+                                            .mr_1()
+                                            .child(
+                                                h_flex().visible_on_hover("").gap_1().child(
+                                                    IconButton::new(
+                                                        "copy_text",
+                                                        IconName::Copy,
+                                                    )
+                                                    .icon_size(IconSize::Small)
+                                                    .icon_color(Color::Muted),
+                                                ),
+                                            )
+                                            .child(
+                                                Button::new("send_message", "Send")
+                                                    .icon(IconName::Return).icon_color(Color::Muted).icon_position(IconPosition::Start).style(ButtonStyle::Filled)
+                                            ),
+                                    ),
+                            )
+                    ),
+            )
+    }
+}
+
+// ChatAction -> impl RenderOnce
+// ChatMessage -> impl Render
+// Composer -> impl Render
