@@ -334,6 +334,7 @@ name = "assistant"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assistant_chat",
  "chrono",
  "client",
  "collections",
@@ -369,6 +370,18 @@ dependencies = [
  "util",
  "uuid",
  "workspace",
+]
+
+[[package]]
+name = "assistant_chat"
+version = "0.1.0"
+dependencies = [
+ "client",
+ "editor",
+ "gpui",
+ "settings",
+ "theme",
+ "ui",
 ]
 
 [[package]]
