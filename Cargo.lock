@@ -379,9 +379,11 @@ dependencies = [
  "client",
  "editor",
  "gpui",
+ "language",
  "settings",
  "theme",
  "ui",
+ "workspace",
 ]
 
 [[package]]

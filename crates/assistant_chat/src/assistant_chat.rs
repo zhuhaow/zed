@@ -6,22 +6,34 @@ use std::sync::Arc;
 use client::{User, UserStore};
 use editor::*;
 use gpui::*;
+use language::{language_settings::SoftWrap, Buffer, LanguageRegistry, ToOffset as _};
 use settings::Settings;
 use theme::ThemeSettings;
 use ui::*;
+use workspace::Workspace;
 
 pub struct ChatList {
+    workspace: WeakView<Workspace>,
     user_store: Model<UserStore>,
+    languages: Arc<LanguageRegistry>,
     message_list: Vec<ChatMessage>,
     composer: View<Composer>,
 }
 
 impl ChatList {
-    pub fn new(cx: &mut ViewContext<Self>, user_store: Model<UserStore>) -> ChatList {
+    pub fn new(
+        cx: &mut ViewContext<Self>,
+        workspace: WeakView<Workspace>,
+        user_store: Model<UserStore>,
+    ) -> ChatList {
         let composer = cx.new_view(|_| Composer {});
+
+        let workspace_handle = workspace.clone();
 
         ChatList {
             user_store,
+            languages: workspace.app_state().languages.clone(),
+            workspace: workspace_handle,
             message_list: Vec::new(),
             composer,
         }
