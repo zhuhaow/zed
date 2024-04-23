@@ -1,3 +1,4 @@
+#![allow(unused, dead_code)]
 use crate::{
     assistant_settings::{AssistantDockPosition, AssistantSettings, ZedDotDevModel},
     codegen::{self, Codegen, CodegenKind},
@@ -9,7 +10,9 @@ use crate::{
     SavedMessage, Split, ToggleFocus, ToggleIncludeConversation,
 };
 use anyhow::{anyhow, Result};
+use assistant_chat::ChatList;
 use chrono::{DateTime, Local};
+use client::UserStore;
 use collections::{hash_map, HashMap, HashSet, VecDeque};
 use editor::{
     actions::{MoveDown, MoveUp},
@@ -95,6 +98,7 @@ pub struct AssistantPanel {
     _watch_saved_conversations: Task<Result<()>>,
     model: LanguageModel,
     authentication_prompt: Option<AnyView>,
+    user_store: Model<UserStore>,
 }
 
 struct ActiveConversationEditor {
@@ -108,6 +112,7 @@ impl AssistantPanel {
     pub fn load(
         workspace: WeakView<Workspace>,
         cx: AsyncWindowContext,
+        user_store: Model<UserStore>,
     ) -> Task<Result<View<Self>>> {
         cx.spawn(|mut cx| async move {
             let fs = workspace.update(&mut cx, |workspace, _| workspace.app_state().fs.clone())?;
@@ -190,6 +195,7 @@ impl AssistantPanel {
                         _watch_saved_conversations,
                         model,
                         authentication_prompt: None,
+                        user_store,
                     }
                 })
             })
@@ -197,14 +203,14 @@ impl AssistantPanel {
     }
 
     fn focus_in(&mut self, cx: &mut ViewContext<Self>) {
-        self.toolbar
-            .update(cx, |toolbar, cx| toolbar.focus_changed(true, cx));
-        cx.notify();
-        if self.focus_handle.is_focused(cx) {
-            if let Some(editor) = self.active_conversation_editor() {
-                cx.focus_view(editor);
-            }
-        }
+        // self.toolbar
+        //     .update(cx, |toolbar, cx| toolbar.focus_changed(true, cx));
+        // cx.notify();
+        // if self.focus_handle.is_focused(cx) {
+        //     if let Some(editor) = self.active_conversation_editor() {
+        //         cx.focus_view(editor);
+        //     }
+        // }
     }
 
     fn focus_out(&mut self, cx: &mut ViewContext<Self>) {
@@ -1171,11 +1177,17 @@ impl AssistantPanel {
 
 impl Render for AssistantPanel {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        if let Some(authentication_prompt) = self.authentication_prompt.as_ref() {
-            authentication_prompt.clone().into_any()
-        } else {
-            self.render_signed_in(cx).into_any_element()
-        }
+        let assistant_chat = cx.new_view(|cx| {
+            ChatList::new(self.workspace.clone(), self.user_store.clone(), cx)
+                .expect("failed to initialize ChatList")
+        });
+
+        assistant_chat.into_any_element()
+        // if let Some(authentication_prompt) = self.authentication_prompt.as_ref() {
+        //     authentication_prompt.clone().into_any()
+        // } else {
+        //     self.render_signed_in(cx).into_any_element()
+        // }
     }
 }
 

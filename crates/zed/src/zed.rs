@@ -183,10 +183,13 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut AppContext) {
                 })
             });
         }
+        let cloned_user_store = app_state.user_store.clone();
+
         cx.spawn(|workspace_handle, mut cx| async move {
             let project_panel = ProjectPanel::load(workspace_handle.clone(), cx.clone());
             let terminal_panel = TerminalPanel::load(workspace_handle.clone(), cx.clone());
-            let assistant_panel = AssistantPanel::load(workspace_handle.clone(), cx.clone());
+            let assistant_panel =
+                AssistantPanel::load(workspace_handle.clone(), cx.clone(), cloned_user_store);
             let channels_panel =
                 collab_ui::collab_panel::CollabPanel::load(workspace_handle.clone(), cx.clone());
             let chat_panel =

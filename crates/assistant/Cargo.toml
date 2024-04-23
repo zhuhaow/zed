@@ -43,6 +43,7 @@ ui.workspace = true
 util.workspace = true
 uuid.workspace = true
 workspace.workspace = true
+assistant_chat.workspace = true
 
 [dev-dependencies]
 ctor.workspace = true
