@@ -6,37 +6,109 @@ use std::sync::Arc;
 use client::{User, UserStore};
 use editor::*;
 use gpui::*;
+use indoc::indoc;
 use language::{language_settings::SoftWrap, Buffer, LanguageRegistry, ToOffset as _};
+use rich_text::RichText;
 use settings::Settings;
 use theme::ThemeSettings;
 use ui::*;
 use workspace::Workspace;
 
+// TODO next
+//
+// ## Chat Messsage
+// - [ ] render ChatMessages as RichText
+//  - [x] get the LanguageRegistry on to ChatList
+//  - [x] either pass a RichText to ChatMessage, or create the RichText from string in ChatMessage
+//  - [ ] split ChatMessage into new_user and new_assistant
+// - [ ] Build rendering for ChatContext
+// - [ ] Hook up message collapsing
+//
+// ## Chat List
+// - render a list of chat messages
+//
+// ## Composer
+// - build out composer static UI
+// - add editor
+// - add button on_click actions for Send and Quote Selection
+// - add model switcher
+
 pub struct ChatList {
     workspace: WeakView<Workspace>,
-    user_store: Model<UserStore>,
     languages: Arc<LanguageRegistry>,
-    message_list: Vec<ChatMessage>,
+    user_store: Model<UserStore>,
+    messages: Vec<(ChatRole, Arc<str>)>,
     composer: View<Composer>,
 }
 
 impl ChatList {
     pub fn new(
-        cx: &mut ViewContext<Self>,
         workspace: WeakView<Workspace>,
         user_store: Model<UserStore>,
-    ) -> ChatList {
+        cx: &mut ViewContext<Self>,
+    ) -> Result<ChatList> {
+        let message_1 = indoc! {r#"I want to write a python script to output all unique @{name} instancees across all highlight.scm files in my project. For example, @variable, @function, @class, etc.
+
+        The script should output all unique instances of @{name} in the highlight.scm files, and addionally add a count to each.
+
+        For example:
+
+        ```
+        @variable (100)
+        @function (50)
+        ```
+
+        The list should be sorted in alphabetical order."#};
+        let message_2 = indoc! {r#"Given your requirements, here's a Python script that will search for all unique instances of `@{name}` in `highlight.scm` files both in the core languages path and the extensions path. It will also count the occurrences of each instance and organize the output as specified:
+
+            ```python
+            def parse_arguments():
+                parser = argparse.ArgumentParser(description='Analyze highlight.scm files for unique instances and their languages.')
+                parser.add_argument('-v', '--verbose', action='store_true', help='Include a list of languages for each tag.')
+                return parser.parse_args()
+
+            def find_highlight_files(root_dir):
+                for path in Path(root_dir).rglob('highlights.scm'):
+                    yield path
+
+            def count_instances(files):
+                instances: defaultdict[list[Any], dict[str, Any]] = defaultdict(lambda: {'count': 0, 'languages': set()})
+                for file_path in files:
+                    language = file_path.parent.name
+                    with open(file_path, "r") as file:
+                        text = file.read()
+                        matches = pattern.findall(text)
+                        for match in matches:
+                            instances[match]['count'] += 1
+                            instances[match]['languages'].add(language)
+                return instances
+
+            ```
+
+            "#};
+
+        let static_messages = vec![
+            (ChatRole::User, message_1.into()),
+            (ChatRole::Assistant, message_2.into()),
+            (ChatRole::User, message_1.into()),
+            (ChatRole::Assistant, message_2.into()),
+            (ChatRole::User, message_1.into()),
+            (ChatRole::Assistant, message_2.into()),
+            (ChatRole::User, message_1.into()),
+            (ChatRole::Assistant, message_2.into()),
+        ];
+
         let composer = cx.new_view(|_| Composer {});
 
         let workspace_handle = workspace.clone();
 
-        ChatList {
+        workspace.update(cx, |workspace, cx| Self {
             user_store,
             languages: workspace.app_state().languages.clone(),
             workspace: workspace_handle,
-            message_list: Vec::new(),
+            messages: static_messages,
             composer,
-        }
+        })
     }
 
     pub fn current_user(&self, cx: &ViewContext<Self>) -> Option<Arc<User>> {
@@ -62,28 +134,22 @@ impl ChatList {
 
 impl Render for ChatList {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        let current_user = self.current_user(cx);
-        let message = r#"# Zed
+        let Some(current_user) = self.current_user(cx) else {
+            return div().id("empty").child("Loading...");
+        };
 
-[![CI](https://github.com/zed-industries/zed/actions/workflows/ci.yml/badge.svg)](https://github.com/zed-industries/zed/actions/workflows/ci.yml)
+        let messages = self.messages.iter().map(|(role, message)| {
+            let rich_text =
+                rich_text::render_rich_text(message.to_string(), &[], &self.languages, None);
 
-Welcome to Zed, a high-performance, multiplayer code editor from the creators of [Atom](https://github.com/atom/atom) and [Tree-sitter](https://github.com/tree-sitter/tree-sitter)."#;
+            ChatMessage::new(*role, current_user.clone(), rich_text)
+        });
 
-        if current_user.is_some() {
-            div().id("chat-list").size_full().overflow_y_scroll().child(
-                v_flex()
-                    .max_w(rems(40.0))
-                    .gap_2()
-                    .p_4()
-                    .child(ChatMessage::new(
-                        ChatRole::User,
-                        current_user.expect("somehow user is not logged in"),
-                        message.to_string(),
-                    )),
-            )
-        } else {
-            div().id("empty").child("Loading...")
-        }
+        div()
+            .id("chat-list")
+            .size_full()
+            .overflow_y_scroll()
+            .child(v_flex().max_w(rems(40.0)).gap_2().p_4().children(messages))
     }
 }
 
@@ -99,13 +165,12 @@ impl Render for Composer {
 pub struct ChatMessage {
     role: ChatRole,
     player: Arc<User>,
-    // This will likely be RichText
-    message: String,
+    message: RichText,
     collapsed: bool,
 }
 
 impl ChatMessage {
-    pub fn new(role: ChatRole, player: Arc<User>, message: String) -> ChatMessage {
+    pub fn new(role: ChatRole, player: Arc<User>, message: RichText) -> ChatMessage {
         ChatMessage {
             role,
             player,
@@ -129,7 +194,10 @@ impl RenderOnce for ChatMessage {
             .w_5()
             .h_full()
             .child(div().w_px().h_full().bg(cx.theme().colors().border));
-        let content = div().overflow_hidden().w_full().child(self.message);
+        let content = div()
+            .overflow_hidden()
+            .w_full()
+            .child(self.message.element("message".into(), cx));
 
         v_flex()
             .child(header)
@@ -141,6 +209,7 @@ pub struct ChatInlineNotice {}
 
 // === Chat Header ===
 
+#[derive(Debug, Clone, Copy)]
 pub enum ChatRole {
     User,
     Assistant,
