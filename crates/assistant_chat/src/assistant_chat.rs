@@ -1,18 +1,25 @@
 #![allow(unused, dead_code)]
 //! # UI – Chat List
 
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex, RwLock},
+};
 
 use client::{User, UserStore};
 use editor::*;
 use gpui::*;
 use indoc::indoc;
 use language::{language_settings::SoftWrap, Buffer, LanguageRegistry, ToOffset as _};
+use nanoid::nanoid;
 use rich_text::RichText;
 use settings::Settings;
+use static_chat::static_chat;
 use theme::ThemeSettings;
 use ui::*;
 use workspace::Workspace;
+
+mod static_chat;
 
 // TODO next
 //
@@ -33,11 +40,16 @@ use workspace::Workspace;
 // - add button on_click actions for Send and Quote Selection
 // - add model switcher
 
+pub struct ChatListStore {
+    collapsed_messages: HashMap<Arc<str>, bool>,
+}
+
 pub struct ChatList {
     workspace: WeakView<Workspace>,
     languages: Arc<LanguageRegistry>,
     user_store: Model<UserStore>,
-    messages: Vec<(ChatRole, Arc<str>)>,
+    chat_store: Model<ChatListStore>,
+    messages: Vec<(Arc<str>, ChatRole, Arc<str>)>,
     composer: View<Composer>,
 }
 
@@ -47,57 +59,6 @@ impl ChatList {
         user_store: Model<UserStore>,
         cx: &mut ViewContext<Self>,
     ) -> Result<ChatList> {
-        let message_1 = indoc! {r#"I want to write a python script to output all unique @{name} instancees across all highlight.scm files in my project. For example, @variable, @function, @class, etc.
-
-        The script should output all unique instances of @{name} in the highlight.scm files, and addionally add a count to each.
-
-        For example:
-
-        ```
-        @variable (100)
-        @function (50)
-        ```
-
-        The list should be sorted in alphabetical order."#};
-        let message_2 = indoc! {r#"Given your requirements, here's a Python script that will search for all unique instances of `@{name}` in `highlight.scm` files both in the core languages path and the extensions path. It will also count the occurrences of each instance and organize the output as specified:
-
-            ```python
-            def parse_arguments():
-                parser = argparse.ArgumentParser(description='Analyze highlight.scm files for unique instances and their languages.')
-                parser.add_argument('-v', '--verbose', action='store_true', help='Include a list of languages for each tag.')
-                return parser.parse_args()
-
-            def find_highlight_files(root_dir):
-                for path in Path(root_dir).rglob('highlights.scm'):
-                    yield path
-
-            def count_instances(files):
-                instances: defaultdict[list[Any], dict[str, Any]] = defaultdict(lambda: {'count': 0, 'languages': set()})
-                for file_path in files:
-                    language = file_path.parent.name
-                    with open(file_path, "r") as file:
-                        text = file.read()
-                        matches = pattern.findall(text)
-                        for match in matches:
-                            instances[match]['count'] += 1
-                            instances[match]['languages'].add(language)
-                return instances
-
-            ```
-
-            "#};
-
-        let static_messages = vec![
-            (ChatRole::User, message_1.into()),
-            (ChatRole::Assistant, message_2.into()),
-            (ChatRole::User, message_1.into()),
-            (ChatRole::Assistant, message_2.into()),
-            (ChatRole::User, message_1.into()),
-            (ChatRole::Assistant, message_2.into()),
-            (ChatRole::User, message_1.into()),
-            (ChatRole::Assistant, message_2.into()),
-        ];
-
         let composer = cx.new_view(|_| Composer {});
 
         let workspace_handle = workspace.clone();
@@ -106,7 +67,10 @@ impl ChatList {
             user_store,
             languages: workspace.app_state().languages.clone(),
             workspace: workspace_handle,
-            messages: static_messages,
+            messages: static_chat(),
+            chat_store: cx.new_model(|cx| ChatListStore {
+                collapsed_messages: HashMap::default(),
+            }),
             composer,
         })
     }
@@ -138,17 +102,39 @@ impl Render for ChatList {
             return div().id("empty").child("Loading...");
         };
 
-        let messages = self.messages.iter().map(|(role, message)| {
+        let chat_store_handle = self.chat_store.clone();
+
+        let messages = self.messages.iter().map(|(id, role, message)| {
             let rich_text =
                 rich_text::render_rich_text(message.to_string(), &[], &self.languages, None);
 
-            ChatMessage::new(*role, current_user.clone(), rich_text)
+            ChatMessage::new(id.clone(), *role, current_user.clone(), rich_text, {
+                let id = id.clone();
+                let chat_store_handle = chat_store_handle.clone();
+                Box::new(move |collapsed, cx| {
+                    println!("Collapsing {id}: {collapsed}");
+                    cx.update_model(&chat_store_handle, |chat_store, cx| {
+                        println!("Updating model for {id}");
+                        let mut entry =
+                            chat_store.collapsed_messages.entry(id.clone()).or_default();
+                        *entry = collapsed;
+                    });
+                })
+            })
+            .collapsed(
+                self.chat_store
+                    .read(cx)
+                    .collapsed_messages
+                    .contains_key(id.as_ref()),
+            )
         });
 
         div()
             .id("chat-list")
             .size_full()
             .overflow_y_scroll()
+            .on_click(|_event, _cx| println!("Clicked chat list"))
+            .bg(cx.theme().colors().surface_background)
             .child(v_flex().max_w(rems(40.0)).gap_2().p_4().children(messages))
     }
 }
@@ -158,50 +144,6 @@ pub struct Composer {}
 impl Render for Composer {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         div()
-    }
-}
-
-#[derive(IntoElement)]
-pub struct ChatMessage {
-    role: ChatRole,
-    player: Arc<User>,
-    message: RichText,
-    collapsed: bool,
-}
-
-impl ChatMessage {
-    pub fn new(role: ChatRole, player: Arc<User>, message: RichText) -> ChatMessage {
-        ChatMessage {
-            role,
-            player,
-            message,
-            collapsed: false,
-        }
-    }
-
-    pub fn collapsed(&mut self, collapsed: bool) -> &mut Self {
-        self.collapsed = collapsed;
-        self
-    }
-}
-
-impl RenderOnce for ChatMessage {
-    fn render(self, cx: &mut WindowContext) -> impl IntoElement {
-        let header = ChatHeader::new(self.role, self.player);
-        let collapse_handle = h_flex()
-            .flex_none()
-            .justify_center()
-            .w_5()
-            .h_full()
-            .child(div().w_px().h_full().bg(cx.theme().colors().border));
-        let content = div()
-            .overflow_hidden()
-            .w_full()
-            .child(self.message.element("message".into(), cx));
-
-        v_flex()
-            .child(header)
-            .child(h_flex().gap_2().child(collapse_handle).child(content))
     }
 }
 
@@ -292,5 +234,83 @@ impl RenderOnce for ChatHeader {
                 this.child(Label::new(self.contexts.len().to_string()).color(Color::Muted))
                 // this.child(Button::new("View Contexts")))
             }))
+    }
+}
+
+#[derive(IntoElement)]
+pub struct ChatMessage {
+    id: Arc<str>,
+    role: ChatRole,
+    player: Arc<User>,
+    message: RichText,
+    collapsed: bool,
+    on_collapse: Box<dyn Fn(bool, &mut WindowContext) + 'static>,
+}
+
+impl ChatMessage {
+    pub fn new(
+        id: Arc<str>,
+        role: ChatRole,
+        player: Arc<User>,
+        message: RichText,
+        on_collapse: Box<dyn Fn(bool, &mut WindowContext) + 'static>,
+    ) -> ChatMessage {
+        ChatMessage {
+            id,
+            role,
+            player,
+            message,
+            collapsed: false,
+            on_collapse,
+        }
+    }
+
+    pub fn collapsed(mut self, collapsed: bool) -> Self {
+        self.collapsed = collapsed;
+        self
+    }
+}
+
+impl RenderOnce for ChatMessage {
+    fn render(self, cx: &mut WindowContext) -> impl IntoElement {
+        // TODO: This should be top padding + 1.5x line height
+        // Set the message height to cut off at exactly 1.5 lines when collapsed
+        let collapsed_height = rems(2.875);
+
+        let header = ChatHeader::new(self.role, self.player);
+        let collapse_handle_id = SharedString::from(format!("{}_collapse_handle", self.id.clone()));
+        let collapse_handle = h_flex()
+            .id(collapse_handle_id.clone())
+            .group(collapse_handle_id.clone())
+            .flex_none()
+            .justify_center()
+            .debug_bg_red()
+            .w_1()
+            .mx_2()
+            .h_full()
+            .on_click(move |_event, cx| (self.on_collapse)(!self.collapsed, cx))
+            .child(
+                div()
+                    .w_px()
+                    .h_full()
+                    .bg(cx.theme().colors().border)
+                    .group_hover(collapse_handle_id, |this| {
+                        this.bg(cx.theme().colors().element_hover)
+                    }),
+            );
+        let content = div()
+            .overflow_hidden()
+            .w_full()
+            .when(self.collapsed, |this| this.h(collapsed_height))
+            .child(self.message.element("message".into(), cx));
+
+        v_flex().child(header).child(
+            h_flex()
+                .rounded_lg()
+                .gap_2()
+                .bg(cx.theme().colors().elevated_surface_background)
+                .child(collapse_handle)
+                .child(content),
+        )
     }
 }

@@ -381,6 +381,7 @@ dependencies = [
  "gpui",
  "indoc",
  "language",
+ "nanoid",
  "rich_text",
  "settings",
  "theme",
