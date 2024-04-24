@@ -6,6 +6,7 @@ use std::{
     sync::{Arc, Mutex, RwLock},
 };
 
+use chrono::NaiveDateTime;
 use client::{User, UserStore};
 use editor::*;
 use gpui::*;
@@ -16,7 +17,10 @@ use rich_text::RichText;
 use settings::Settings;
 use static_chat::static_chat;
 use theme::ThemeSettings;
-use ui::*;
+use ui::{
+    utils::{format_distance_from_now, DateTimeType},
+    *,
+};
 use workspace::Workspace;
 
 mod static_chat;
@@ -49,7 +53,7 @@ pub struct ChatList {
     languages: Arc<LanguageRegistry>,
     user_store: Model<UserStore>,
     chat_store: Model<ChatListStore>,
-    messages: Vec<(Arc<str>, ChatRole, Arc<str>)>,
+    messages: Vec<(Arc<str>, ChatRole, Arc<str>, chrono::NaiveDateTime)>,
     composer: View<Composer>,
 }
 
@@ -59,7 +63,11 @@ impl ChatList {
         user_store: Model<UserStore>,
         cx: &mut ViewContext<Self>,
     ) -> Result<ChatList> {
-        let composer = cx.new_view(|_| Composer {});
+        let user = user_store.read(cx).current_user();
+
+        let composer = cx.new_view(|_| Composer {
+            player: user.clone(),
+        });
 
         let workspace_handle = workspace.clone();
 
@@ -86,14 +94,6 @@ impl ChatList {
             avatar_uri: "https://zed.dev/assistant_avatar.png".into(),
         }
     }
-
-    pub fn notice_user() -> User {
-        User {
-            id: 99998,
-            github_login: "Notice".into(),
-            avatar_uri: "https://avatars.githubusercontent.com/u/1714999?v=4".into(),
-        }
-    }
 }
 
 impl Render for ChatList {
@@ -104,17 +104,16 @@ impl Render for ChatList {
 
         let chat_store_handle = self.chat_store.clone();
 
-        let messages = self.messages.iter().map(|(id, role, message)| {
+        let messages = self.messages.iter().map(|(id, role, message, datetime)| {
             let user = match role {
                 ChatRole::User => current_user.clone(),
                 ChatRole::Assistant => Arc::new(Self::assistant_user()),
-                _ => Arc::new(Self::notice_user()),
             };
 
             let rich_text =
                 rich_text::render_rich_text(message.to_string(), &[], &self.languages, None);
 
-            ChatMessage::new(id.clone(), *role, user, rich_text, {
+            ChatMessage::new(id.clone(), *role, user, datetime.clone(), rich_text, {
                 let id = id.clone();
                 let chat_store_handle = chat_store_handle.clone();
                 Box::new(move |collapsed, cx| {
@@ -139,22 +138,104 @@ impl Render for ChatList {
             .id("chat-list")
             .size_full()
             .overflow_y_scroll()
-            .mx_auto()
             .on_click(|_event, _cx| println!("Clicked chat list"))
-            .bg(cx.theme().colors().surface_background)
-            .child(v_flex().max_w(rems(48.0)).gap_2().p_4().children(messages))
+            .bg(cx.theme().colors().background)
+            .child(
+                v_flex()
+                    .mx_auto()
+                    .justify_between()
+                    .min_h_full()
+                    .max_w(rems(42.0))
+                    .gap_2()
+                    .p_4()
+                    .child(v_flex().gap_2().children(messages))
+                    .child(self.composer.clone()),
+            )
     }
 }
 
-pub struct Composer {}
+pub struct Composer {
+    player: Option<Arc<User>>,
+}
 
 impl Render for Composer {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        div()
+        let mut player_avatar = div().into_any_element();
+        if let Some(player) = self.player.clone() {
+            player_avatar = Avatar::new(player.avatar_uri.clone())
+                .size(rems(20.0 / 16.0))
+                .into_any_element();
+        }
+
+        h_flex()
+            .w_full()
+            .items_start()
+            .gap_3()
+            .child(player_avatar)
+            .child(
+                v_flex()
+                    .w_full()
+                    .gap_1()
+                    .child(
+                        div()
+                            .overflow_hidden()
+                            .w_full()
+                            .p_4()
+                            .bg(cx.theme().colors().editor_background)
+                            .rounded_lg()
+                            .child(
+                                v_flex()
+                                    .w_full()
+                                    .gap_1()
+                                    .child(
+                                        // Editor
+                                        div().w_full().min_h(rems(80.0 / 16.0)).child(
+                                            div()
+                                                .text_color(cx.theme().colors().text_placeholder)
+                                                .child("placeholder"),
+                                        ),
+                                    )
+                                    .child(
+                                        h_flex()
+                                            .gap_2()
+                                            .justify_between()
+                                            .w_full()
+                                            .child(
+                                                h_flex()
+                                                    .gap_1()
+                                                    .child(
+                                                        IconButton::new(
+                                                            "add-context",
+                                                            IconName::FileDoc,
+                                                        )
+                                                        .icon_color(Color::Muted),
+                                                    )
+                                                    .child(
+                                                        IconButton::new(
+                                                            "add-context",
+                                                            IconName::Plus,
+                                                        )
+                                                        .icon_color(Color::Muted),
+                                                    ),
+                                            )
+                                            .child(
+                                                // Send button
+                                                Button::new("send-button", "Send")
+                                                    .style(ButtonStyle::Filled),
+                                            ),
+                                    ),
+                            ),
+                    )
+                    .child(
+                        h_flex()
+                            .w_full()
+                            .justify_between()
+                            .child(Button::new("swich-model", "gpt-4-turbo").color(Color::Muted))
+                            .child(Button::new("quote", "Quote Selection").color(Color::Muted)),
+                    ),
+            )
     }
 }
-
-pub struct ChatInlineNotice {}
 
 // === Chat Header ===
 
@@ -162,7 +243,6 @@ pub struct ChatInlineNotice {}
 pub enum ChatRole {
     User,
     Assistant,
-    Notice,
 }
 
 pub enum ChatContextType {
@@ -189,10 +269,7 @@ pub struct ChatHeader {
 }
 
 impl ChatHeader {
-    pub fn new(role: ChatRole, player: Arc<User>) -> ChatHeader {
-        // use something real
-        let sent_at = "now".to_string();
-
+    pub fn new(role: ChatRole, player: Arc<User>, sent_at: String) -> ChatHeader {
         ChatHeader {
             role,
             player,
@@ -249,6 +326,7 @@ pub struct ChatMessage {
     id: Arc<str>,
     role: ChatRole,
     player: Arc<User>,
+    sent_at: NaiveDateTime,
     message: RichText,
     collapsed: bool,
     on_collapse: Box<dyn Fn(bool, &mut WindowContext) + 'static>,
@@ -259,6 +337,7 @@ impl ChatMessage {
         id: Arc<str>,
         role: ChatRole,
         player: Arc<User>,
+        sent_at: NaiveDateTime,
         message: RichText,
         on_collapse: Box<dyn Fn(bool, &mut WindowContext) + 'static>,
     ) -> ChatMessage {
@@ -266,6 +345,7 @@ impl ChatMessage {
             id,
             role,
             player,
+            sent_at,
             message,
             collapsed: false,
             on_collapse,
@@ -283,8 +363,9 @@ impl RenderOnce for ChatMessage {
         // TODO: This should be top padding + 1.5x line height
         // Set the message height to cut off at exactly 1.5 lines when collapsed
         let collapsed_height = rems(2.875);
+        let sent_at = format_distance_from_now(DateTimeType::Naive(self.sent_at), true, true, true);
 
-        let header = ChatHeader::new(self.role, self.player);
+        let header = ChatHeader::new(self.role, self.player, sent_at);
         let collapse_handle_id = SharedString::from(format!("{}_collapse_handle", self.id.clone()));
         let collapse_handle = h_flex()
             .id(collapse_handle_id.clone())
@@ -302,7 +383,7 @@ impl RenderOnce for ChatMessage {
                     .h_full()
                     .rounded_lg()
                     .overflow_hidden()
-                    .bg(cx.theme().colors().border)
+                    .bg(cx.theme().colors().element_background)
                     .group_hover(collapse_handle_id, |this| {
                         this.bg(cx.theme().colors().element_hover)
                     }),
@@ -310,17 +391,15 @@ impl RenderOnce for ChatMessage {
         let content = div()
             .overflow_hidden()
             .w_full()
-            // .p_4()
+            .p_4()
+            .rounded_lg()
             .when(self.collapsed, |this| this.h(collapsed_height))
-            .bg(cx.theme().colors().background)
+            .bg(cx.theme().colors().surface_background)
             .child(self.message.element("message".into(), cx));
 
-        v_flex().gap_1().child(header).child(
-            h_flex()
-                .rounded_lg()
-                .gap_3()
-                .child(collapse_handle)
-                .child(content),
-        )
+        v_flex()
+            .gap_1()
+            .child(header)
+            .child(h_flex().gap_3().child(collapse_handle).child(content))
     }
 }

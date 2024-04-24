@@ -4,7 +4,7 @@ use crate::ChatRole;
 use indoc::indoc;
 use nanoid::nanoid;
 
-pub fn static_chat() -> Vec<(Arc<str>, ChatRole, Arc<str>)> {
+pub fn static_chat() -> Vec<(Arc<str>, ChatRole, Arc<str>, chrono::NaiveDateTime)> {
     let message_1 = indoc! {r#"I want to write a python script to output all unique @{name} instancees across all highlight.scm files in my project. For example, @variable, @function, @class, etc.
 
     The script should output all unique instances of @{name} in the highlight.scm files, and addionally add a count to each.
@@ -18,32 +18,34 @@ pub fn static_chat() -> Vec<(Arc<str>, ChatRole, Arc<str>)> {
 
     The list should be sorted in alphabetical order."#};
 
-    let message_2 = indoc! {r#"Given your requirements, here's a Python script that will search for all unique instances of `@{name}` in `highlight.scm` files both in the core languages path and the extensions path. It will also count the occurrences of each instance and organize the output as specified:
+    let message_2 = indoc! {r#"Given your requirements, here's a Python script that will search for all unique instances of `@{name}` in `highlight.scm` files both in the core languages path and the extensions path."#};
 
-    ```python
-    def parse_arguments():
-        parser = argparse.ArgumentParser(description='Analyze highlight.scm files for unique instances and their languages.')
-        parser.add_argument('-v', '--verbose', action='store_true', help='Include a list of languages for each tag.')
-        return parser.parse_args()
+    // let message_2 = indoc! {r#"Given your requirements, here's a Python script that will search for all unique instances of `@{name}` in `highlight.scm` files both in the core languages path and the extensions path. It will also count the occurrences of each instance and organize the output as specified:
 
-    def find_highlight_files(root_dir):
-        for path in Path(root_dir).rglob('highlights.scm'):
-            yield path
+    // ```python
+    // def parse_arguments():
+    //     parser = argparse.ArgumentParser(description='Analyze highlight.scm files for unique instances and their languages.')
+    //     parser.add_argument('-v', '--verbose', action='store_true', help='Include a list of languages for each tag.')
+    //     return parser.parse_args()
 
-    def count_instances(files):
-        instances: defaultdict[list[Any], dict[str, Any]] = defaultdict(lambda: {'count': 0, 'languages': set()})
-        for file_path in files:
-            language = file_path.parent.name
-            with open(file_path, "r") as file:
-                text = file.read()
-                matches = pattern.findall(text)
-                for match in matches:
-                    instances[match]['count'] += 1
-                    instances[match]['languages'].add(language)
-        return instances
-    ```
+    // def find_highlight_files(root_dir):
+    //     for path in Path(root_dir).rglob('highlights.scm'):
+    //         yield path
 
-    To execute this script successfully, it must be placed within a directory as specified in your instructions (script/analyze_highlights.py), and the project's directory structure should match what you've described for both core languages and extensions."#};
+    // def count_instances(files):
+    //     instances: defaultdict[list[Any], dict[str, Any]] = defaultdict(lambda: {'count': 0, 'languages': set()})
+    //     for file_path in files:
+    //         language = file_path.parent.name
+    //         with open(file_path, "r") as file:
+    //             text = file.read()
+    //             matches = pattern.findall(text)
+    //             for match in matches:
+    //                 instances[match]['count'] += 1
+    //                 instances[match]['languages'].add(language)
+    //     return instances
+    // ```
+
+    // To execute this script successfully, it must be placed within a directory as specified in your instructions (script/analyze_highlights.py), and the project's directory structure should match what you've described for both core languages and extensions."#};
 
     let message_3 = indoc! {r#"Ok, great. Let's add a -v or --verbose flag that will add a list of each language that uses that tag. The current output looks like this:
 
@@ -150,9 +152,29 @@ pub fn static_chat() -> Vec<(Arc<str>, ChatRole, Arc<str>)> {
     Let me know if there is anything else I can help with!"#};
 
     vec![
-        (nanoid!().into(), ChatRole::User, message_1.into()),
-        (nanoid!().into(), ChatRole::Assistant, message_2.into()),
-        (nanoid!().into(), ChatRole::User, message_3.into()),
-        (nanoid!().into(), ChatRole::Assistant, message_4.into()),
+        (
+            nanoid!().into(),
+            ChatRole::User,
+            message_1.into(),
+            chrono::NaiveDate::from_ymd(2024, 04, 24).and_hms(14, 38, 15),
+        ),
+        (
+            nanoid!().into(),
+            ChatRole::Assistant,
+            message_2.into(),
+            chrono::NaiveDate::from_ymd(2024, 04, 24).and_hms(14, 39, 23),
+        ),
+        // (
+        //     nanoid!().into(),
+        //     ChatRole::User,
+        //     message_3.into(),
+        //     chrono::NaiveDate::from_ymd(2024, 04, 24).and_hms(14, 40, 23),
+        // ),
+        // (
+        //     nanoid!().into(),
+        //     ChatRole::Assistant,
+        //     message_4.into(),
+        //     chrono::NaiveDate::from_ymd(2024, 04, 24).and_hms(14, 43, 23),
+        // ),
     ]
 }
