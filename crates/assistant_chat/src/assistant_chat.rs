@@ -83,14 +83,14 @@ impl ChatList {
         User {
             id: 99999,
             github_login: "Assistant".into(),
-            avatar_uri: "https://avatars.githubusercontent.com/u/1714999?v=4".into(),
+            avatar_uri: "https://zed.dev/assistant_avatar.png".into(),
         }
     }
 
-    pub fn static_user() -> User {
+    pub fn notice_user() -> User {
         User {
             id: 99998,
-            github_login: "iamnbutler".into(),
+            github_login: "Notice".into(),
             avatar_uri: "https://avatars.githubusercontent.com/u/1714999?v=4".into(),
         }
     }
@@ -105,10 +105,16 @@ impl Render for ChatList {
         let chat_store_handle = self.chat_store.clone();
 
         let messages = self.messages.iter().map(|(id, role, message)| {
+            let user = match role {
+                ChatRole::User => current_user.clone(),
+                ChatRole::Assistant => Arc::new(Self::assistant_user()),
+                _ => Arc::new(Self::notice_user()),
+            };
+
             let rich_text =
                 rich_text::render_rich_text(message.to_string(), &[], &self.languages, None);
 
-            ChatMessage::new(id.clone(), *role, current_user.clone(), rich_text, {
+            ChatMessage::new(id.clone(), *role, user, rich_text, {
                 let id = id.clone();
                 let chat_store_handle = chat_store_handle.clone();
                 Box::new(move |collapsed, cx| {
@@ -218,7 +224,7 @@ impl ChatHeader {
 
 impl RenderOnce for ChatHeader {
     fn render(self, cx: &mut WindowContext) -> impl IntoElement {
-        let player_avatar = Avatar::new(self.player.avatar_uri.clone());
+        let player_avatar = Avatar::new(self.player.avatar_uri.clone()).size(rems(20.0 / 16.0));
         let player_name = Label::new(self.player.github_login.clone()).color(Color::Default);
         let sent_at = Label::new(self.sent_at).color(Color::Muted);
 
