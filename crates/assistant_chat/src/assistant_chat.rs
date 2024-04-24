@@ -32,7 +32,7 @@ mod static_chat;
 // - [ ] Hook up message collapsing
 //
 // ## Chat List
-// - render a list of chat messages
+// - [x] render a list of chat messages
 //
 // ## Composer
 // - build out composer static UI
@@ -133,9 +133,10 @@ impl Render for ChatList {
             .id("chat-list")
             .size_full()
             .overflow_y_scroll()
+            .mx_auto()
             .on_click(|_event, _cx| println!("Clicked chat list"))
             .bg(cx.theme().colors().surface_background)
-            .child(v_flex().max_w(rems(40.0)).gap_2().p_4().children(messages))
+            .child(v_flex().max_w(rems(48.0)).gap_2().p_4().children(messages))
     }
 }
 
@@ -225,7 +226,7 @@ impl RenderOnce for ChatHeader {
             .justify_between()
             .child(
                 h_flex()
-                    .gap_2()
+                    .gap_3()
                     .child(player_avatar)
                     .child(player_name)
                     .child(sent_at),
@@ -284,7 +285,7 @@ impl RenderOnce for ChatMessage {
             .group(collapse_handle_id.clone())
             .flex_none()
             .justify_center()
-            .debug_bg_red()
+            // .debug_bg_red()
             .w_1()
             .mx_2()
             .h_full()
@@ -293,6 +294,8 @@ impl RenderOnce for ChatMessage {
                 div()
                     .w_px()
                     .h_full()
+                    .rounded_lg()
+                    .overflow_hidden()
                     .bg(cx.theme().colors().border)
                     .group_hover(collapse_handle_id, |this| {
                         this.bg(cx.theme().colors().element_hover)
@@ -301,14 +304,15 @@ impl RenderOnce for ChatMessage {
         let content = div()
             .overflow_hidden()
             .w_full()
+            // .p_4()
             .when(self.collapsed, |this| this.h(collapsed_height))
+            .bg(cx.theme().colors().background)
             .child(self.message.element("message".into(), cx));
 
-        v_flex().child(header).child(
+        v_flex().gap_1().child(header).child(
             h_flex()
                 .rounded_lg()
-                .gap_2()
-                .bg(cx.theme().colors().elevated_surface_background)
+                .gap_3()
                 .child(collapse_handle)
                 .child(content),
         )
