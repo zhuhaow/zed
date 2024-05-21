@@ -350,7 +350,6 @@ fn replace_command(
                 let range = snapshot
                     .anchor_before(Point::new(range.start.saturating_sub(1) as u32, 0))
                     ..snapshot.anchor_before(Point::new(range.end as u32, 0));
-
                 editor.set_search_within_ranges(&[range], cx)
             })
         }
@@ -391,9 +390,7 @@ fn replace_command(
                                 .timer(Duration::from_millis(200))
                                 .await;
                             editor
-                                .update(&mut cx, |editor, cx| {
-                                    editor.set_search_within_ranges(&[], cx)
-                                })
+                                .update(&mut cx, |editor, cx| editor.clear_search_within_ranges(cx))
                                 .ok();
                         })
                         .detach();
