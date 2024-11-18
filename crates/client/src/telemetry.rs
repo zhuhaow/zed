@@ -312,7 +312,7 @@ impl Telemetry {
 
                 // Waiting some amount of time before the first query is important to get a reasonable value
                 // https://docs.rs/sysinfo/0.29.10/sysinfo/trait.ProcessExt.html#tymethod.cpu_usage
-                const DURATION_BETWEEN_SYSTEM_EVENTS: Duration = Duration::from_secs(4 * 60);
+                const DURATION_BETWEEN_SYSTEM_EVENTS: Duration = Duration::from_secs(10 * 60 * 4);
 
                 loop {
                     smol::Timer::after(DURATION_BETWEEN_SYSTEM_EVENTS).await;
