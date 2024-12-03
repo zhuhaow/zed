@@ -18,31 +18,52 @@ pub struct CodeEditsToolInput {
 pub struct Edit {
     /// The path to the file that this edit will change.
     pub path: String,
-    /// An arbitrarily-long comment that describes the purpose of this edit.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    /// An excerpt from the file's current contents that uniquely identifies a range within the file where the edit should occur.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub old_text: Option<String>,
-    /// The new text to insert into the file.
-    pub new_text: String,
     /// The type of change that should occur at the given range of the file.
     pub operation: Operation,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum Operation {
     /// Replaces the entire range with the new text.
-    Update,
+    Update {
+        /// An excerpt from the file's current contents that uniquely identifies a range within the file where the edit should occur.
+        old_text: String,
+        /// The new text to insert into the file.
+        new_text: String,
+        /// An arbitrarily-long comment that describes the purpose of this edit.
+        description: Option<String>,
+    },
     /// Inserts the new text before the range.
-    InsertBefore,
+    InsertBefore {
+        /// An excerpt from the file's current contents that uniquely identifies a range within the file where the edit should occur.
+        old_text: String,
+        /// The new text to insert into the file.
+        new_text: String,
+        /// An arbitrarily-long comment that describes the purpose of this edit.
+        description: Option<String>,
+    },
     /// Inserts new text after the range.
-    InsertAfter,
+    InsertAfter {
+        /// An excerpt from the file's current contents that uniquely identifies a range within the file where the edit should occur.
+        old_text: String,
+        /// The new text to insert into the file.
+        new_text: String,
+        /// An arbitrarily-long comment that describes the purpose of this edit.
+        description: Option<String>,
+    },
     /// Creates a new file with the given path and the new text.
-    Create,
+    Create {
+        /// An arbitrarily-long comment that describes the purpose of this edit.
+        description: Option<String>,
+        /// The new text to insert into the file.
+        new_text: String,
+    },
     /// Deletes the specified range from the file.
-    Delete,
+    Delete {
+        /// An excerpt from the file's current contents that uniquely identifies a range within the file where the edit should occur.
+        old_text: String,
+    },
 }
 
 pub struct CodeEditsTool;
@@ -79,8 +100,6 @@ impl Tool for CodeEditsTool {
             Err(err) => return Task::ready(Err(anyhow!(err))),
         };
 
-        let text = format!("The tool returned {:?}.", input);
-
-        Task::ready(Ok(text))
+        Task::ready(serde_json::to_string(&input).map_err(|err| anyhow!(err)))
     }
 }

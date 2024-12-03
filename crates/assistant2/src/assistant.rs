@@ -1,4 +1,5 @@
 mod assistant_panel;
+mod edits;
 mod message_editor;
 mod thread;
 mod thread_store;
@@ -20,6 +21,7 @@ const NAMESPACE: &str = "assistant2";
 pub fn init(cx: &mut AppContext) {
     assistant_panel::init(cx);
     feature_gate_assistant2_actions(cx);
+    edits::init(cx);
 }
 
 fn feature_gate_assistant2_actions(cx: &mut AppContext) {

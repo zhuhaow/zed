@@ -15,6 +15,9 @@ use language_models::provider::cloud::{MaxMonthlySpendReachedError, PaymentRequi
 use serde::{Deserialize, Serialize};
 use util::post_inc;
 
+use crate::edits::patch::AssistantPatch;
+use crate::edits::CodeEditsTool;
+
 #[derive(Debug, Clone, Copy)]
 pub enum RequestKind {
     Chat,
@@ -167,6 +170,7 @@ impl Thread {
                                 }
                             }
                             LanguageModelCompletionEvent::ToolUse(tool_use) => {
+                                dbg!(&tool_use);
                                 if let Some(last_assistant_message) = thread
                                     .messages
                                     .iter()
@@ -258,6 +262,12 @@ impl Thread {
                 let output = output.await;
                 thread
                     .update(&mut cx, |thread, cx| {
+                        let Some(pending_tool_use) =
+                            thread.pending_tool_uses_by_id.get(&tool_use_id)
+                        else {
+                            return;
+                        };
+
                         // The tool use was requested by an Assistant message,
                         // so we want to attach the tool results to the next
                         // user message.
@@ -270,11 +280,17 @@ impl Thread {
 
                         match output {
                             Ok(output) => {
-                                tool_results.push(LanguageModelToolResult {
-                                    tool_use_id: tool_use_id.to_string(),
-                                    content: output,
-                                    is_error: false,
-                                });
+                                if pending_tool_use.name == CodeEditsTool::TOOL_NAME {
+                                    let patch = AssistantPatch::from_tool_use(&output);
+
+                                    dbg!(&patch);
+                                } else {
+                                    tool_results.push(LanguageModelToolResult {
+                                        tool_use_id: tool_use_id.to_string(),
+                                        content: output,
+                                        is_error: false,
+                                    });
+                                }
 
                                 cx.emit(ThreadEvent::ToolFinished { tool_use_id });
                             }
