@@ -131,6 +131,7 @@ members = [
     "crates/ui",
     "crates/ui_input",
     "crates/ui_macros",
+    "crates/refactor",
     "crates/reqwest_client",
     "crates/util",
     "crates/vcs_menu",
@@ -178,7 +179,7 @@ members = [
     # Tooling
     #
 
-    "tooling/xtask",
+    "tooling/xtask", "crates/refactor",
 ]
 default-members = ["crates/zed"]
 

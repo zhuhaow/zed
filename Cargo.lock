@@ -10200,6 +10200,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "refactor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-watch",
+ "client",
+ "clock",
+ "env_logger 0.11.5",
+ "fs",
+ "futures 0.3.31",
+ "git",
+ "gpui",
+ "http_client",
+ "language",
+ "languages",
+ "node_runtime",
+ "project",
+ "settings",
+ "worktree",
+]
+
+[[package]]
 name = "refineable"
 version = "0.1.0"
 dependencies = [
