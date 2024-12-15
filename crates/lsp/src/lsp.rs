@@ -388,6 +388,8 @@ impl LanguageServer {
             server.process_name = name.to_string_lossy().into();
         }
 
+        dbg!("!!!!!!! started server");
+
         Ok(server)
     }
 

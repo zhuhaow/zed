@@ -2793,6 +2793,78 @@ pub enum LspStoreEvent {
     },
 }
 
+impl std::fmt::Debug for LspStoreEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LspStoreEvent::LanguageServerAdded(id, name, worktree_id) => f
+                .debug_tuple("LanguageServerAdded")
+                .field(id)
+                .field(name)
+                .field(worktree_id)
+                .finish(),
+            LspStoreEvent::LanguageServerRemoved(id) => {
+                f.debug_tuple("LanguageServerRemoved").field(id).finish()
+            }
+            LspStoreEvent::LanguageServerUpdate {
+                language_server_id,
+                message,
+            } => f
+                .debug_struct("LanguageServerUpdate")
+                .field("language_server_id", language_server_id)
+                .field("message", message)
+                .finish(),
+            LspStoreEvent::LanguageServerLog(id, log_type, message) => f
+                .debug_tuple("LanguageServerLog")
+                .field(id)
+                .field(log_type)
+                .field(message)
+                .finish(),
+            LspStoreEvent::LanguageServerPrompt(request) => f
+                .debug_tuple("LanguageServerPrompt")
+                .field(request)
+                .finish(),
+            LspStoreEvent::LanguageDetected {
+                buffer,
+                new_language,
+            } => f
+                .debug_struct("LanguageDetected")
+                .field("buffer", buffer)
+                .field("new_language", new_language)
+                .finish(),
+            LspStoreEvent::Notification(message) => {
+                f.debug_tuple("Notification").field(message).finish()
+            }
+            LspStoreEvent::RefreshInlayHints => write!(f, "RefreshInlayHints"),
+            LspStoreEvent::DiagnosticsUpdated {
+                language_server_id,
+                path,
+            } => f
+                .debug_struct("DiagnosticsUpdated")
+                .field("language_server_id", language_server_id)
+                .field("path", path)
+                .finish(),
+            LspStoreEvent::DiskBasedDiagnosticsStarted { language_server_id } => f
+                .debug_struct("DiskBasedDiagnosticsStarted")
+                .field("language_server_id", language_server_id)
+                .finish(),
+            LspStoreEvent::DiskBasedDiagnosticsFinished { language_server_id } => f
+                .debug_struct("DiskBasedDiagnosticsFinished")
+                .field("language_server_id", language_server_id)
+                .finish(),
+            LspStoreEvent::SnippetEdit {
+                buffer_id,
+                edits,
+                most_recent_edit,
+            } => f
+                .debug_struct("SnippetEdit")
+                .field("buffer_id", buffer_id)
+                .field("edits", edits)
+                .field("most_recent_edit", most_recent_edit)
+                .finish(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct LanguageServerStatus {
     pub name: String,

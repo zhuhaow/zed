@@ -1,10 +1,12 @@
+use anyhow::anyhow;
 use client::{Client, UserStore};
 use clock::RealSystemClock;
 use gpui::Context;
 use http_client::{BlockedHttpClient, HttpClientWithUrl};
+use language::ToOffset;
 use language::{language_settings::AllLanguageSettings, LanguageRegistry, ParseStatus};
 use project::project_settings::ProjectSettings;
-use project::{Project, ProjectPath, WorktreeSettings};
+use project::{LspStoreEvent, Project, ProjectPath, WorktreeSettings};
 use settings::Settings;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -47,60 +49,96 @@ fn main() {
             None,
             cx,
         );
-        let worktree = project.update(cx, |project, cx| {
+        let (worktree, lsp_store) = project.update(cx, |project, cx| {
             let abs_path = std::fs::canonicalize("../zed").unwrap();
-            project.create_worktree(abs_path, true, cx)
+            let worktree = project.create_worktree(abs_path, true, cx);
+            let lsp_store = project.lsp_store();
+
+            cx.subscribe(&lsp_store, |_, _, event: &LspStoreEvent, cx| {
+                dbg!(event);
+            })
+            .detach();
+
+            (worktree, lsp_store)
         });
 
+        // Keep these alive the lifetime of the app.
+        std::mem::forget(lsp_store.clone());
+        std::mem::forget(project.clone());
+
         cx.spawn(|mut cx| async move {
-            let worktree = worktree.await?;
+            {
+                let worktree = worktree.await?;
 
-            let (worktree_id, scan_complete) = worktree.update(&mut cx, |worktree, _cx| {
-                (worktree.id(), worktree.as_local().unwrap().scan_complete())
-            })?;
+                let (worktree_id, scan_complete) = worktree.update(&mut cx, |worktree, _cx| {
+                    (worktree.id(), worktree.as_local().unwrap().scan_complete())
+                })?;
 
-            scan_complete.await;
-            println!("Worktree scan complete");
+                scan_complete.await;
+                println!("Worktree scan complete");
 
-            // Open model_context.rs and get its outline
-            let buffer = project
-                .update(&mut cx, |project, cx| {
-                    println!("Opening buffer");
-                    project.open_buffer(
-                        ProjectPath {
-                            worktree_id,
-                            path: Arc::from(PathBuf::from("crates/gpui/src/app/entity_map.rs")),
-                        },
-                        cx,
-                    )
-                })?
-                .await?;
+                // Open model_context.rs and get its outline
+                let buffer = project
+                    .update(&mut cx, |project, cx| {
+                        println!("Opening buffer");
+                        project.open_buffer(
+                            ProjectPath {
+                                worktree_id,
+                                path: Arc::from(PathBuf::from("crates/gpui/src/app/entity_map.rs")),
+                            },
+                            cx,
+                        )
+                    })?
+                    .await?;
 
-            println!("Opened buffer");
+                println!("Opened buffer");
 
-            let mut parse_status = buffer.read_with(&cx, |buffer, _cx| buffer.parse_status())?;
-            loop {
-                if parse_status.recv().await? == ParseStatus::Idle {
-                    break;
+                let mut parse_status =
+                    buffer.read_with(&cx, |buffer, _cx| buffer.parse_status())?;
+                loop {
+                    if parse_status.recv().await? == ParseStatus::Idle {
+                        break;
+                    }
                 }
+
+                println!("Parsing complete");
+
+                let language_server_handle = lsp_store
+                    .update(&mut cx, |lsp_store, cx| {
+                        lsp_store.register_buffer_with_language_servers(&buffer, cx)
+                    })
+                    .unwrap();
+                std::mem::forget(language_server_handle);
+
+                let outline_item = buffer
+                    .update(&mut cx, |b, _cx| {
+                        b.snapshot()
+                            .outline(None)
+                            .unwrap()
+                            .items
+                            .iter()
+                            .find(|item| item.text == "pub fn update")
+                            .cloned()
+                    })?
+                    .ok_or_else(|| anyhow!("No update function found"))?;
+
+                println!("Fetching references");
+
+                let references = project
+                    .update(&mut cx, |project, cx| {
+                        let mut position = outline_item.range.start.to_offset(buffer.read(cx));
+                        position += outline_item.name_ranges.first().unwrap().start;
+                        project.references(&buffer, position, cx)
+                    })?
+                    .await?;
+
+                println!("References: {:?}", references);
+
+                anyhow::Ok(())
             }
-
-            println!("Parsing complete");
-
-            buffer.update(&mut cx, |buffer, _cx| {
-                for layer in buffer.snapshot().syntax_layers() {
-                    println!("Layer: {:?}", layer);
-                }
-
-                let outline = buffer.snapshot().outline(None).unwrap();
-
-                for item in outline.items {
-                    println!("{}", item.text);
-                }
-            })?;
-
-            anyhow::Ok(())
         })
         .detach();
+
+        dbg!("ABOUT TO FINISH INITIALIZATION OF APP");
     });
 }
