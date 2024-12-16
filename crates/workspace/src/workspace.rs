@@ -1169,7 +1169,7 @@ impl Workspace {
                     .await;
             }
             let window = if let Some(window) = requesting_window {
-                cx.update_window(window.into(), |_, cx| {
+                cx.update_window(window.into(), |_, window, cx| {
                     cx.replace_root_view(|cx| {
                         Workspace::new(
                             Some(workspace_id),
@@ -1690,11 +1690,11 @@ impl Workspace {
         cx.defer(|cx| {
             cx.windows().iter().find(|window| {
                 window
-                    .update(cx, |_, window| {
-                        if window.is_window_active() {
+                    .update(cx, |_, window, cx| {
+                        if cx.is_window_active() {
                             //This can only get called when the window's project connection has been lost
                             //so we don't need to prompt the user for anything and instead just close the window
-                            window.remove_window();
+                            cx.remove_window();
                             true
                         } else {
                             false
@@ -1710,7 +1710,7 @@ impl Workspace {
         let window = cx.window_handle();
         cx.spawn(|_, mut cx| async move {
             if prepare.await? {
-                window.update(&mut cx, |_, cx| {
+                window.update(&mut cx, |_, window, cx| {
                     cx.remove_window();
                 })?;
             }
@@ -1745,7 +1745,7 @@ impl Workspace {
                     && workspace_count == 1
                     && active_call.read_with(&cx, |call, _| call.room().is_some())?
                 {
-                    let answer = window.update(&mut cx, |_, cx| {
+                    let answer = window.update(&mut cx, |_, _, cx| {
                         cx.prompt(
                             PromptLevel::Warning,
                             "Do you want to leave the current call?",
@@ -5665,7 +5665,7 @@ pub fn open_ssh_project(
                 .unwrap_or_else(|| anyhow!("no paths given")));
         }
 
-        cx.update_window(window.into(), |_, cx| {
+        cx.update_window(window.into(), |_, _, cx| {
             cx.replace_root_view(|cx| {
                 let mut workspace =
                     Workspace::new(Some(workspace_id), project, app_state.clone(), cx);
@@ -5941,7 +5941,9 @@ pub fn client_side_decorations(element: impl IntoElement, cx: &mut WindowContext
                     let edge = cx.try_global::<GlobalResizeEdge>();
                     if new_edge != edge.map(|edge| edge.0) {
                         cx.window_handle()
-                            .update(cx, |workspace, cx| cx.notify(Some(workspace.entity_id())))
+                            .update(cx, |workspace, _, cx| {
+                                cx.notify(Some(workspace.entity_id()))
+                            })
                             .ok();
                     }
                 })

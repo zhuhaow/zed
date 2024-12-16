@@ -77,7 +77,7 @@ impl Context for TestAppContext {
 
     fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Result<T>
     where
-        F: FnOnce(AnyView, &mut WindowContext<'_>) -> T,
+        F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
         let mut lock = self.app.borrow_mut();
         lock.update_window(window, f)
@@ -365,7 +365,9 @@ impl TestAppContext {
         A: Action,
     {
         window
-            .update(self, |_, cx| cx.dispatch_action(action.boxed_clone()))
+            .update(self, |_, window, cx| {
+                cx.dispatch_action(action.boxed_clone())
+            })
             .unwrap();
 
         self.background_executor.run_until_parked()
@@ -401,7 +403,7 @@ impl TestAppContext {
 
     /// dispatches a single Keystroke (see also `simulate_keystrokes` and `simulate_input`)
     pub fn dispatch_keystroke(&mut self, window: AnyWindowHandle, keystroke: Keystroke) {
-        self.update_window(window, |_, cx| cx.dispatch_keystroke(keystroke))
+        self.update_window(window, |_, _, cx| cx.dispatch_keystroke(keystroke))
             .unwrap();
     }
 
@@ -664,7 +666,9 @@ impl VisualTestContext {
 
     /// Provides the `WindowContext` for the duration of the closure.
     pub fn update<R>(&mut self, f: impl FnOnce(&mut WindowContext) -> R) -> R {
-        self.cx.update_window(self.window, |_, cx| f(cx)).unwrap()
+        self.cx
+            .update_window(self.window, |_, _, cx| f(cx))
+            .unwrap()
     }
 
     /// Creates a new VisualTestContext. You would typically shadow the passed in
@@ -794,20 +798,21 @@ impl VisualTestContext {
     where
         E: Element,
     {
-        self.update(|cx| {
+        self.update_window(self.window, |_, window, cx: &mut WindowContext| {
             cx.window.draw_phase = DrawPhase::Prepaint;
-            let mut element = Drawable::new(f(todo!(), cx));
-            element.layout_as_root(space.into(), todo!(), cx);
-            cx.with_absolute_element_offset(origin, |cx| element.prepaint(todo!(), cx));
+            let mut element = Drawable::new(f(window, cx));
+            element.layout_as_root(space.into(), window, cx);
+            cx.with_absolute_element_offset(origin, |cx| element.prepaint(window, cx));
 
             cx.window.draw_phase = DrawPhase::Paint;
-            let (request_layout_state, prepaint_state) = element.paint(todo!(), cx);
+            let (request_layout_state, prepaint_state) = element.paint(window, cx);
 
             cx.window.draw_phase = DrawPhase::None;
             cx.refresh();
 
             (request_layout_state, prepaint_state)
         })
+        .unwrap()
     }
 
     /// Simulate an event from the platform, e.g. a SrollWheelEvent
@@ -831,7 +836,7 @@ impl VisualTestContext {
     pub fn simulate_close(&mut self) -> bool {
         let handler = self
             .cx
-            .update_window(self.window, |_, cx| {
+            .update_window(self.window, |_, _, cx| {
                 cx.window
                     .platform_window
                     .as_test()
@@ -845,7 +850,7 @@ impl VisualTestContext {
         if let Some(mut handler) = handler {
             let should_close = handler();
             self.cx
-                .update_window(self.window, |_, cx| {
+                .update_window(self.window, |_, _, cx| {
                     cx.window.platform_window.on_should_close(handler);
                 })
                 .unwrap();
@@ -916,7 +921,7 @@ impl Context for VisualTestContext {
 
     fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Result<T>
     where
-        F: FnOnce(AnyView, &mut WindowContext<'_>) -> T,
+        F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
         self.cx.update_window(window, f)
     }
@@ -942,7 +947,7 @@ impl VisualContext for VisualTestContext {
         V: 'static + Render,
     {
         self.window
-            .update(&mut self.cx, |_, cx| cx.new_view(build_view))
+            .update(&mut self.cx, |_, window, cx| cx.new_view(build_view))
             .unwrap()
     }
 
@@ -952,7 +957,7 @@ impl VisualContext for VisualTestContext {
         update: impl FnOnce(&mut V, &mut ViewContext<'_, V>) -> R,
     ) -> Self::Result<R> {
         self.window
-            .update(&mut self.cx, |_, cx| cx.update_view(view, update))
+            .update(&mut self.cx, |_, window, cx| cx.update_view(view, update))
             .unwrap()
     }
 
@@ -964,13 +969,15 @@ impl VisualContext for VisualTestContext {
         V: 'static + Render,
     {
         self.window
-            .update(&mut self.cx, |_, cx| cx.replace_root_view(build_view))
+            .update(&mut self.cx, |_, window, cx| {
+                cx.replace_root_view(build_view)
+            })
             .unwrap()
     }
 
     fn focus_view<V: crate::FocusableView>(&mut self, view: &View<V>) -> Self::Result<()> {
         self.window
-            .update(&mut self.cx, |_, cx| {
+            .update(&mut self.cx, |_, window, cx| {
                 view.read(cx).focus_handle(cx).clone().focus(cx)
             })
             .unwrap()
@@ -981,7 +988,7 @@ impl VisualContext for VisualTestContext {
         V: crate::ManagedView,
     {
         self.window
-            .update(&mut self.cx, |_, cx| {
+            .update(&mut self.cx, |_, window, cx| {
                 view.update(cx, |_, cx| cx.emit(crate::DismissEvent))
             })
             .unwrap()
@@ -995,6 +1002,7 @@ impl AnyWindowHandle {
         cx: &mut TestAppContext,
         build_view: impl FnOnce(&mut ViewContext<'_, V>) -> V,
     ) -> View<V> {
-        self.update(cx, |_, cx| cx.new_view(build_view)).unwrap()
+        self.update(cx, |_, window, cx| cx.new_view(build_view))
+            .unwrap()
     }
 }

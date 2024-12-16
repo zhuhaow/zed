@@ -130,7 +130,7 @@ impl Replayer {
                 utf16_range_to_replace,
             } => {
                 cx.window_handle()
-                    .update(cx, |handle, cx| {
+                    .update(cx, |handle, _, cx| {
                         let Ok(workspace) = handle.downcast::<Workspace>() else {
                             return;
                         };

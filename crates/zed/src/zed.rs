@@ -1454,7 +1454,7 @@ mod tests {
         assert_eq!(cx.update(|cx| cx.windows().len()), 2);
         let window2 = cx.update(|cx| cx.active_window().unwrap());
         assert!(window1 != window2);
-        cx.update_window(window1, |_, cx| cx.activate_window())
+        cx.update_window(window1, |_, _, cx| cx.activate_window())
             .unwrap();
 
         cx.update(|cx| {
@@ -3544,11 +3544,11 @@ mod tests {
         line: u32,
     ) {
         let available_actions = cx
-            .update(|cx| window.update(cx, |_, cx| cx.available_actions()))
+            .update(|cx| window.update(cx, |_, _, cx| cx.available_actions()))
             .unwrap();
         for (key, action) in actions {
             let bindings = cx
-                .update(|cx| window.update(cx, |_, cx| cx.bindings_for_action(action)))
+                .update(|cx| window.update(cx, |_, _, cx| cx.bindings_for_action(action)))
                 .unwrap();
             // assert that...
             assert!(

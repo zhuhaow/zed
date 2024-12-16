@@ -481,7 +481,7 @@ fn main() {
                 for &mut window in cx.windows().iter_mut() {
                     let background_appearance = cx.theme().window_background_appearance();
                     window
-                        .update(cx, |_, cx| {
+                        .update(cx, |_, _, cx| {
                             cx.set_background_appearance(background_appearance)
                         })
                         .ok();
@@ -703,7 +703,7 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
 
                 let mut promises = Vec::new();
                 for (channel_id, heading) in request.open_channel_notes {
-                    promises.push(cx.update_window(workspace_window.into(), |_, cx| {
+                    promises.push(cx.update_window(workspace_window.into(), |_, _, cx| {
                         ChannelView::open(
                             client::ChannelId(channel_id),
                             heading,

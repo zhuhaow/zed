@@ -9804,7 +9804,7 @@ async fn test_following_with_multiple_excerpts(cx: &mut gpui::TestAppContext) {
     // Start following the editor when it has no excerpts.
     let mut state_message = leader.update(cx, |leader, cx| leader.to_state_proto(cx));
     let follower_1 = cx
-        .update_window(*workspace.deref(), |_, cx| {
+        .update_window(*workspace.deref(), |_, _, cx| {
             Editor::from_state_proto(
                 workspace.root_view(cx).unwrap(),
                 ViewId {
@@ -9895,7 +9895,7 @@ async fn test_following_with_multiple_excerpts(cx: &mut gpui::TestAppContext) {
     // Start following separately after it already has excerpts.
     let mut state_message = leader.update(cx, |leader, cx| leader.to_state_proto(cx));
     let follower_2 = cx
-        .update_window(*workspace.deref(), |_, cx| {
+        .update_window(*workspace.deref(), |_, _, cx| {
             Editor::from_state_proto(
                 workspace.root_view(cx).unwrap().clone(),
                 ViewId {
@@ -13626,12 +13626,12 @@ fn test_crease_insertion_and_rendering(cx: &mut TestAppContext) {
     assert!(!render_args.folded);
     assert!(!snapshot.is_line_folded(MultiBufferRow(1)));
 
-    cx.update_window(*editor, |_, cx| (render_args.callback)(true, cx))
+    cx.update_window(*editor, |_, _, cx| (render_args.callback)(true, cx))
         .unwrap();
     let snapshot = editor.update(cx, |editor, cx| editor.snapshot(cx)).unwrap();
     assert!(snapshot.is_line_folded(MultiBufferRow(1)));
 
-    cx.update_window(*editor, |_, cx| (render_args.callback)(false, cx))
+    cx.update_window(*editor, |_, _, cx| (render_args.callback)(false, cx))
         .unwrap();
     let snapshot = editor.update(cx, |editor, cx| editor.snapshot(cx)).unwrap();
     assert!(!snapshot.is_line_folded(MultiBufferRow(1)));

@@ -430,7 +430,7 @@ impl remote::SshClientDelegate for SshClientDelegate {
             tx.send(Ok(password)).ok();
         } else {
             self.window
-                .update(cx, |_, cx| {
+                .update(cx, |_, _, cx| {
                     self.ui.update(cx, |modal, cx| {
                         modal.set_prompt(prompt, tx, cx);
                     })
@@ -498,7 +498,7 @@ impl remote::SshClientDelegate for SshClientDelegate {
 impl SshClientDelegate {
     fn update_status(&self, status: Option<&str>, cx: &mut AsyncAppContext) {
         self.window
-            .update(cx, |_, cx| {
+            .update(cx, |_, _, cx| {
                 self.ui.update(cx, |modal, cx| {
                     modal.set_status(status.map(|s| s.to_string()), cx);
                 })

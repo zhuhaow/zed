@@ -6945,7 +6945,7 @@ mod tests {
         let snapshot = window.update(cx, |editor, cx| editor.snapshot(cx)).unwrap();
 
         let layouts = cx
-            .update_window(*window, |_, cx| {
+            .update_window(*window, |_, _, cx| {
                 element.layout_line_numbers(
                     DisplayRow(0)..DisplayRow(6),
                     (0..6).map(MultiBufferRow).map(Some),

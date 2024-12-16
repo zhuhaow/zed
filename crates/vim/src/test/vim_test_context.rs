@@ -91,7 +91,7 @@ impl VimTestContext {
         F: FnOnce(&mut T, &mut ViewContext<T>) -> R + 'static,
     {
         let window = self.window;
-        self.update_window(window, move |_, cx| view.update(cx, update))
+        self.update_window(window, move |_, _, cx| view.update(cx, update))
             .unwrap()
     }
 

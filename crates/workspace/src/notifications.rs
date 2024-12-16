@@ -591,7 +591,7 @@ where
             Ok(value) => Some(value),
             Err(err) => {
                 log::error!("{err:?}");
-                cx.update_root(|view, cx| {
+                cx.update_root(|view, window, cx| {
                     if let Ok(workspace) = view.downcast::<Workspace>() {
                         workspace.update(cx, |workspace, cx| workspace.show_error(&err, cx))
                     }

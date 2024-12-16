@@ -1743,7 +1743,7 @@ pub mod tests {
         let editor = cx.editor.clone();
         let window = cx.window;
 
-        _ = cx.update_window(window, |_, cx| {
+        _ = cx.update_window(window, |_, _, cx| {
             let text_layout_details =
                 editor.update(cx, |editor, cx| editor.text_layout_details(cx));
 

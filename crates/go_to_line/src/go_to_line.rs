@@ -86,7 +86,7 @@ impl GoToLine {
 
     fn release(&mut self, window: AnyWindowHandle, cx: &mut AppContext) {
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, _, cx| {
                 let scroll_position = self.prev_scroll_position.take();
                 self.active_editor.update(cx, |editor, cx| {
                     editor.clear_row_highlights::<GoToLineRowHighlights>();

@@ -589,7 +589,7 @@ fn default_bounds(display_id: Option<DisplayId>, cx: &mut AppContext) -> Bounds<
     const DEFAULT_WINDOW_OFFSET: Point<Pixels> = point(px(0.), px(35.));
 
     cx.active_window()
-        .and_then(|w| w.update(cx, |_, cx| cx.bounds()).ok())
+        .and_then(|w| w.update(cx, |_, window, cx| cx.bounds()).ok())
         .map(|mut bounds| {
             bounds.origin += DEFAULT_WINDOW_OFFSET;
             bounds
@@ -671,7 +671,7 @@ impl Window {
         platform_window.on_close(Box::new({
             let mut cx = cx.to_async();
             move || {
-                let _ = handle.update(&mut cx, |_, cx| cx.remove_window());
+                let _ = handle.update(&mut cx, |_, window, cx| cx.remove_window());
             }
         }));
         platform_window.on_request_frame(Box::new({
@@ -685,7 +685,7 @@ impl Window {
                 let next_frame_callbacks = next_frame_callbacks.take();
                 if !next_frame_callbacks.is_empty() {
                     handle
-                        .update(&mut cx, |_, cx| {
+                        .update(&mut cx, |_, window, cx| {
                             for callback in next_frame_callbacks {
                                 callback(cx);
                             }
@@ -703,18 +703,20 @@ impl Window {
                 if dirty.get() {
                     measure("frame duration", || {
                         handle
-                            .update(&mut cx, |_, cx| {
+                            .update(&mut cx, |_, window, cx| {
                                 cx.draw();
                                 cx.present();
                             })
                             .log_err();
                     })
                 } else if needs_present {
-                    handle.update(&mut cx, |_, cx| cx.present()).log_err();
+                    handle
+                        .update(&mut cx, |_, window, cx| cx.present())
+                        .log_err();
                 }
 
                 handle
-                    .update(&mut cx, |_, cx| {
+                    .update(&mut cx, |_, window, cx| {
                         cx.complete_frame();
                     })
                     .log_err();
@@ -724,7 +726,7 @@ impl Window {
             let mut cx = cx.to_async();
             move |_, _| {
                 handle
-                    .update(&mut cx, |_, cx| cx.bounds_changed())
+                    .update(&mut cx, |_, window, cx| cx.bounds_changed())
                     .log_err();
             }
         }));
@@ -732,7 +734,7 @@ impl Window {
             let mut cx = cx.to_async();
             move || {
                 handle
-                    .update(&mut cx, |_, cx| cx.bounds_changed())
+                    .update(&mut cx, |_, window, cx| cx.bounds_changed())
                     .log_err();
             }
         }));
@@ -740,7 +742,7 @@ impl Window {
             let mut cx = cx.to_async();
             move || {
                 handle
-                    .update(&mut cx, |_, cx| cx.appearance_changed())
+                    .update(&mut cx, |_, window, cx| cx.appearance_changed())
                     .log_err();
             }
         }));
@@ -748,7 +750,7 @@ impl Window {
             let mut cx = cx.to_async();
             move |active| {
                 handle
-                    .update(&mut cx, |_, cx| {
+                    .update(&mut cx, |_, window, cx| {
                         cx.window.active.set(active);
                         cx.window
                             .activation_observers
@@ -763,7 +765,7 @@ impl Window {
             let mut cx = cx.to_async();
             move |active| {
                 handle
-                    .update(&mut cx, |_, cx| {
+                    .update(&mut cx, |_, window, cx| {
                         cx.window.hovered.set(active);
                         cx.refresh();
                     })
@@ -774,7 +776,7 @@ impl Window {
             let mut cx = cx.to_async();
             Box::new(move |event| {
                 handle
-                    .update(&mut cx, |_, cx| cx.dispatch_event(event))
+                    .update(&mut cx, |_, window, cx| cx.dispatch_event(event))
                     .log_err()
                     .unwrap_or(DispatchEventResult::default())
             })
@@ -1014,7 +1016,7 @@ impl<'a> WindowContext<'a> {
         let window = self.window.handle;
         self.app.defer(move |cx| {
             window
-                .update(cx, |_, cx| {
+                .update(cx, |_, window, cx| {
                     let node_id = focus_handle
                         .and_then(|handle| {
                             cx.window
@@ -1057,7 +1059,7 @@ impl<'a> WindowContext<'a> {
     pub fn defer(&mut self, f: impl FnOnce(&mut WindowContext) + 'static) {
         let handle = self.window.handle;
         self.app.defer(move |cx| {
-            handle.update(cx, |_, cx| f(cx)).ok();
+            handle.update(cx, |_, window, cx| f(cx)).ok();
         });
     }
 
@@ -1079,7 +1081,7 @@ impl<'a> WindowContext<'a> {
             entity_id,
             Box::new(move |cx| {
                 window_handle
-                    .update(cx, |_, cx| {
+                    .update(cx, |_, window, cx| {
                         if let Some(handle) = E::upgrade_from(&entity) {
                             on_notify(handle, cx);
                             true
@@ -1114,7 +1116,7 @@ impl<'a> WindowContext<'a> {
                 TypeId::of::<Evt>(),
                 Box::new(move |event, cx| {
                     window_handle
-                        .update(cx, |_, cx| {
+                        .update(cx, |_, window, cx| {
                             if let Some(handle) = E::upgrade_from(&entity) {
                                 let event = event.downcast_ref().expect("invalid event type");
                                 on_event(handle, event, cx);
@@ -1145,7 +1147,7 @@ impl<'a> WindowContext<'a> {
             entity_id,
             Box::new(move |entity, cx| {
                 let entity = entity.downcast_mut().expect("invalid entity type");
-                let _ = window_handle.update(cx, |_, cx| on_release(entity, cx));
+                let _ = window_handle.update(cx, |_, window, cx| on_release(entity, cx));
             }),
         );
         activate();
@@ -3620,7 +3622,7 @@ impl<'a> WindowContext<'a> {
         let window_handle = self.window.handle;
         let (subscription, activate) = self.global_observers.insert(
             TypeId::of::<G>(),
-            Box::new(move |cx| window_handle.update(cx, |_, cx| f(cx)).is_ok()),
+            Box::new(move |cx| window_handle.update(cx, |_, window, cx| f(cx)).is_ok()),
         );
         self.app.defer(move |_| activate());
         subscription
@@ -3900,11 +3902,11 @@ impl Context for WindowContext<'_> {
 
     fn update_window<T, F>(&mut self, window: AnyWindowHandle, update: F) -> Result<T>
     where
-        F: FnOnce(AnyView, &mut WindowContext<'_>) -> T,
+        F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
         if window == self.window.handle {
             let root_view = self.window.root_view.clone().unwrap();
-            Ok(update(root_view, self))
+            Ok(update(root_view, todo!(), self))
         } else {
             window.update(self.app, update)
         }
@@ -4163,7 +4165,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
             entity_id,
             Box::new(move |cx| {
                 window_handle
-                    .update(cx, |_, cx| {
+                    .update(cx, |_, window, cx| {
                         if let Some(handle) = E::upgrade_from(&entity) {
                             view.update(cx, |this, cx| on_notify(this, handle, cx))
                                 .is_ok()
@@ -4199,7 +4201,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
                 TypeId::of::<Evt>(),
                 Box::new(move |event, cx| {
                     window_handle
-                        .update(cx, |_, cx| {
+                        .update(cx, |_, window, cx| {
                             if let Some(handle) = E::upgrade_from(&handle) {
                                 let event = event.downcast_ref().expect("invalid event type");
                                 view.update(cx, |this, cx| on_event(this, handle, event, cx))
@@ -4252,7 +4254,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
             entity_id,
             Box::new(move |entity, cx| {
                 let entity = entity.downcast_mut().expect("invalid entity type");
-                let _ = window_handle.update(cx, |_, cx| {
+                let _ = window_handle.update(cx, |_, window, cx| {
                     view.update(cx, |this, cx| on_release(this, entity, cx))
                 });
             }),
@@ -4495,7 +4497,9 @@ impl<'a, V: 'static> ViewContext<'a, V> {
             TypeId::of::<G>(),
             Box::new(move |cx| {
                 window_handle
-                    .update(cx, |_, cx| view.update(cx, |view, cx| f(view, cx)).is_ok())
+                    .update(cx, |_, window, cx| {
+                        view.update(cx, |view, cx| f(view, cx)).is_ok()
+                    })
                     .unwrap_or(false)
             }),
         );
@@ -4599,7 +4603,7 @@ impl<V> Context for ViewContext<'_, V> {
 
     fn update_window<T, F>(&mut self, window: AnyWindowHandle, update: F) -> Result<T>
     where
-        F: FnOnce(AnyView, &mut WindowContext<'_>) -> T,
+        F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
         self.window_cx.update_window(window, update)
     }
@@ -4714,7 +4718,7 @@ impl<V: 'static + Render> WindowHandle<V> {
     where
         C: Context,
     {
-        Flatten::flatten(cx.update_window(self.any_handle, |root_view, _| {
+        Flatten::flatten(cx.update_window(self.any_handle, |root_view, _, _| {
             root_view
                 .downcast::<V>()
                 .map_err(|_| anyhow!("the type of the window's root view has changed"))
@@ -4732,7 +4736,7 @@ impl<V: 'static + Render> WindowHandle<V> {
     where
         C: Context,
     {
-        cx.update_window(self.any_handle, |root_view, cx| {
+        cx.update_window(self.any_handle, |root_view, _window, cx| {
             let view = root_view
                 .downcast::<V>()
                 .map_err(|_| anyhow!("the type of the window's root view has changed"))?;
@@ -4784,7 +4788,7 @@ impl<V: 'static + Render> WindowHandle<V> {
     /// Will return `None` if the window is closed or currently
     /// borrowed.
     pub fn is_active(&self, cx: &mut AppContext) -> Option<bool> {
-        cx.update_window(self.any_handle, |_, cx| cx.is_window_active())
+        cx.update_window(self.any_handle, |_, _, cx| cx.is_window_active())
             .ok()
     }
 }
@@ -4852,7 +4856,7 @@ impl AnyWindowHandle {
     pub fn update<C, R>(
         self,
         cx: &mut C,
-        update: impl FnOnce(AnyView, &mut WindowContext<'_>) -> R,
+        update: impl FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> R,
     ) -> Result<R>
     where
         C: Context,

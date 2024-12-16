@@ -1780,7 +1780,7 @@ fn visible_push_notifications(
     let mut ret = Vec::new();
     for window in cx.windows() {
         window
-            .update(cx, |window, _| {
+            .update(cx, |window, _, _| {
                 if let Ok(handle) = window.downcast::<ProjectSharedNotification>() {
                     ret.push(handle)
                 }

@@ -812,7 +812,7 @@ impl AppContext {
                     })
                     .collect::<Vec<_>>()
                 {
-                    self.update_window(window, |_, cx| cx.draw()).unwrap();
+                    self.update_window(window, |_, _, cx| cx.draw()).unwrap();
                 }
 
                 if self.pending_effects.is_empty() {
@@ -846,7 +846,7 @@ impl AppContext {
     fn release_dropped_focus_handles(&mut self) {
         for window_handle in self.windows() {
             window_handle
-                .update(self, |_, cx| {
+                .update(self, |_, window, cx| {
                     let mut blur_window = false;
                     let focus = cx.window.focus;
                     cx.window.focus_handles.write().retain(|handle_id, count| {
@@ -1238,7 +1238,7 @@ impl AppContext {
     pub(crate) fn clear_pending_keystrokes(&mut self) {
         for window in self.windows() {
             window
-                .update(self, |_, cx| {
+                .update(self, |_, window, cx| {
                     cx.clear_pending_keystrokes();
                 })
                 .ok();
@@ -1251,7 +1251,7 @@ impl AppContext {
         let mut action_available = false;
         if let Some(window) = self.active_window() {
             if let Ok(window_action_available) =
-                window.update(self, |_, cx| cx.is_action_available(action))
+                window.update(self, |_, window, cx| cx.is_action_available(action))
             {
                 action_available = window_action_available;
             }
@@ -1291,7 +1291,9 @@ impl AppContext {
     pub fn dispatch_action(&mut self, action: &dyn Action) {
         if let Some(active_window) = self.active_window() {
             active_window
-                .update(self, |_, cx| cx.dispatch_action(action.boxed_clone()))
+                .update(self, |_, window, cx| {
+                    cx.dispatch_action(action.boxed_clone())
+                })
                 .log_err();
         } else {
             self.dispatch_global_action(action);
@@ -1479,7 +1481,7 @@ impl Context for AppContext {
 
     fn update_window<T, F>(&mut self, handle: AnyWindowHandle, update: F) -> Result<T>
     where
-        F: FnOnce(AnyView, &mut WindowContext<'_>) -> T,
+        F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
         self.update(|cx| {
             let mut window = cx
@@ -1490,7 +1492,7 @@ impl Context for AppContext {
                 .ok_or_else(|| anyhow!("window not found"))?;
 
             let root_view = window.root_view.clone().unwrap();
-            let result = update(root_view, &mut WindowContext::new(cx, &mut window));
+            let result = update(root_view, &mut window, todo!("pass &mut AppContext"));
 
             if window.removed {
                 cx.window_handles.remove(&handle.id);
