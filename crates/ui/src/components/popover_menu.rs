@@ -6,7 +6,7 @@ use gpui::{
     anchored, deferred, div, point, prelude::FluentBuilder, px, size, AnchorCorner, AnyElement,
     Bounds, DismissEvent, DispatchPhase, Element, ElementId, GlobalElementId, HitboxId,
     InteractiveElement, IntoElement, LayoutId, Length, ManagedView, MouseDownEvent, ParentElement,
-    Pixels, Point, Style, View, VisualContext, WindowContext,
+    Pixels, Point, Style, View, VisualContext, Window, WindowContext,
 };
 
 use crate::prelude::*;
@@ -245,6 +245,7 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
     fn request_layout(
         &mut self,
         global_id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (gpui::LayoutId, Self::RequestLayoutState) {
         cx.with_element_state(
@@ -266,7 +267,7 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
                         .with_priority(1)
                         .into_any();
 
-                    menu_layout_id = Some(element.request_layout(cx));
+                    menu_layout_id = Some(element.request_layout(window, cx));
                     element
                 });
 
@@ -285,7 +286,7 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
 
                 let child_layout_id = child_element
                     .as_mut()
-                    .map(|child_element| child_element.request_layout(cx));
+                    .map(|child_element| child_element.request_layout(window, cx));
 
                 let mut style = Style::default();
                 if self.full_width {

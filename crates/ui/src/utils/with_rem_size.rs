@@ -1,6 +1,6 @@
 use gpui::{
     div, AnyElement, Bounds, Div, DivFrameState, Element, ElementId, GlobalElementId, Hitbox,
-    IntoElement, LayoutId, ParentElement, Pixels, StyleRefinement, Styled, WindowContext,
+    IntoElement, LayoutId, ParentElement, Pixels, StyleRefinement, Styled, Window, WindowContext,
 };
 
 /// An element that sets a particular rem size for its children.
@@ -43,9 +43,12 @@ impl Element for WithRemSize {
     fn request_layout(
         &mut self,
         id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
-        cx.with_rem_size(Some(self.rem_size), |cx| self.div.request_layout(id, cx))
+        cx.with_rem_size(Some(self.rem_size), |cx| {
+            self.div.request_layout(id, window, cx)
+        })
     }
 
     fn prepaint(

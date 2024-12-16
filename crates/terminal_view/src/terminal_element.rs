@@ -724,7 +724,7 @@ impl Element for TerminalElement {
                         .id("terminal-element")
                         .tooltip(move |cx| Tooltip::text(hovered_word.word.clone(), cx))
                         .into_any_element();
-                    element.prepaint_as_root(offset, bounds.size.into(), cx);
+                    element.prepaint_as_root(offset, bounds.size.into(), window, cx);
                     element
                 });
 
@@ -833,7 +833,7 @@ impl Element for TerminalElement {
                             + point(px(0.), target_line as f32 * dimensions.line_height())
                             - point(px(0.), scroll_top);
                         cx.with_rem_size(rem_size, |cx| {
-                            element.prepaint_as_root(origin, available_space, cx);
+                            element.prepaint_as_root(origin, available_space, window, cx);
                         });
                         Some(element)
                     } else {

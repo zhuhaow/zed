@@ -4912,7 +4912,7 @@ impl Render for ConfigurationView {
         // because we couldn't the element to take up the size of the parent.
         canvas(
             move |bounds, cx| {
-                element.prepaint_as_root(bounds.origin, bounds.size.into(), cx);
+                element.prepaint_as_root(bounds.origin, bounds.size.into(), window, cx);
                 element
             },
             |_, mut element, cx| {

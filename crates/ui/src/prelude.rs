@@ -4,7 +4,7 @@ pub use gpui::prelude::*;
 pub use gpui::{
     div, px, relative, rems, AbsoluteLength, DefiniteLength, Div, Element, ElementId,
     InteractiveElement, ParentElement, Pixels, Rems, RenderOnce, SharedString, Styled, ViewContext,
-    WindowContext,
+    Window, WindowContext,
 };
 
 pub use crate::styles::{rems_from_px, vh, vw, PlatformStyle, StyledTypography, TextSize};

@@ -1018,7 +1018,8 @@ mod element {
         fn request_layout(
             &mut self,
             _global_id: Option<&GlobalElementId>,
-            cx: &mut ui::prelude::WindowContext,
+            window: &mut Window,
+            cx: &mut WindowContext,
         ) -> (gpui::LayoutId, Self::RequestLayoutState) {
             let style = Style {
                 flex_grow: 1.,
@@ -1092,7 +1093,7 @@ mod element {
                 };
 
                 bounding_boxes.push(Some(child_bounds));
-                child.layout_as_root(child_size.into(), cx);
+                child.layout_as_root(child_size.into(), todo!(), cx);
                 child.prepaint_at(origin, cx);
 
                 origin = origin.apply_along(self.axis, |val| val + child_size.along(self.axis));

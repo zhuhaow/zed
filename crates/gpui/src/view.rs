@@ -1,10 +1,10 @@
-use crate::Empty;
 use crate::{
     seal::Sealed, AnyElement, AnyModel, AnyWeakModel, AppContext, Bounds, ContentMask, Element,
     ElementId, Entity, EntityId, Flatten, FocusHandle, FocusableView, GlobalElementId, IntoElement,
     LayoutId, Model, PaintIndex, Pixels, PrepaintStateIndex, Render, Style, StyleRefinement,
     TextStyle, ViewContext, VisualContext, WeakModel, WindowContext,
 };
+use crate::{Empty, Window};
 use anyhow::{Context, Result};
 use refineable::Refineable;
 use std::mem;
@@ -102,10 +102,11 @@ impl<V: Render> Element for View<V> {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let mut element = self.update(cx, |view, cx| view.render(cx).into_any_element());
-        let layout_id = element.request_layout(cx);
+        let layout_id = element.request_layout(window, cx);
         (layout_id, element)
     }
 
@@ -300,6 +301,7 @@ impl Element for AnyView {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         if let Some(style) = self.cached_style.as_ref() {
@@ -309,7 +311,7 @@ impl Element for AnyView {
             (layout_id, None)
         } else {
             let mut element = (self.render)(self, cx);
-            let layout_id = element.request_layout(cx);
+            let layout_id = element.request_layout(window, cx);
             (layout_id, Some(element))
         }
     }
@@ -345,7 +347,7 @@ impl Element for AnyView {
                 let refreshing = mem::replace(&mut cx.window.refreshing, true);
                 let prepaint_start = cx.prepaint_index();
                 let mut element = (self.render)(self, cx);
-                element.layout_as_root(bounds.size.into(), cx);
+                element.layout_as_root(bounds.size.into(), todo!(), cx);
                 element.prepaint_at(bounds.origin, cx);
                 let prepaint_end = cx.prepaint_index();
                 cx.window.refreshing = refreshing;

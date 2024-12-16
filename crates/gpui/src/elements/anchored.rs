@@ -3,7 +3,7 @@ use taffy::style::{Display, Position};
 
 use crate::{
     point, AnyElement, Bounds, Edges, Element, GlobalElementId, IntoElement, LayoutId,
-    ParentElement, Pixels, Point, Size, Style, WindowContext,
+    ParentElement, Pixels, Point, Size, Style, Window, WindowContext,
 };
 
 /// The state that the anchored element element uses to track its children.
@@ -85,12 +85,13 @@ impl Element for Anchored {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (crate::LayoutId, Self::RequestLayoutState) {
         let child_layout_ids = self
             .children
             .iter_mut()
-            .map(|child| child.request_layout(cx))
+            .map(|child| child.request_layout(window, cx))
             .collect::<SmallVec<_>>();
 
         let anchored_style = Style {

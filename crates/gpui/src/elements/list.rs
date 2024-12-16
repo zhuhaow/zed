@@ -10,7 +10,7 @@
 use crate::{
     point, px, size, AnyElement, AvailableSpace, Bounds, ContentMask, DispatchPhase, Edges,
     Element, FocusHandle, GlobalElementId, Hitbox, IntoElement, Pixels, Point, ScrollWheelEvent,
-    Size, Style, StyleRefinement, Styled, WindowContext,
+    Size, Style, StyleRefinement, Styled, Window, WindowContext,
 };
 use collections::VecDeque;
 use refineable::Refineable as _;
@@ -439,6 +439,7 @@ impl StateInner {
         available_width: Option<Pixels>,
         available_height: Pixels,
         padding: &Edges<Pixels>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> LayoutItemsResponse {
         let old_items = self.items.clone();
@@ -473,7 +474,7 @@ impl StateInner {
             if visible_height < available_height || size.is_none() {
                 let item_index = scroll_top.item_ix + ix;
                 let mut element = (self.render_item)(item_index, cx);
-                let element_size = element.layout_as_root(available_item_space, cx);
+                let element_size = element.layout_as_root(available_item_space, window, cx);
                 size = Some(element_size);
                 if visible_height < available_height {
                     item_layouts.push_back(ItemLayout {
@@ -508,7 +509,7 @@ impl StateInner {
                 if let Some(item) = cursor.item() {
                     let item_index = cursor.start().0;
                     let mut element = (self.render_item)(item_index, cx);
-                    let element_size = element.layout_as_root(available_item_space, cx);
+                    let element_size = element.layout_as_root(available_item_space, window, cx);
                     let focus_handle = item.focus_handle();
                     rendered_height += element_size.height;
                     measured_items.push_front(ListItem::Measured {
@@ -557,7 +558,7 @@ impl StateInner {
                     *size
                 } else {
                     let mut element = (self.render_item)(cursor.start().0, cx);
-                    element.layout_as_root(available_item_space, cx)
+                    element.layout_as_root(available_item_space, window, cx)
                 };
 
                 leading_overdraw += size.height;
@@ -590,7 +591,7 @@ impl StateInner {
                 if item.contains_focused(cx) {
                     let item_index = cursor.start().0;
                     let mut element = (self.render_item)(cursor.start().0, cx);
-                    let size = element.layout_as_root(available_item_space, cx);
+                    let size = element.layout_as_root(available_item_space, window, cx);
                     item_layouts.push_back(ItemLayout {
                         index: item_index,
                         element,
@@ -617,8 +618,13 @@ impl StateInner {
         cx: &mut WindowContext,
     ) -> Result<LayoutItemsResponse, ListOffset> {
         cx.transact(|cx| {
-            let mut layout_response =
-                self.layout_items(Some(bounds.size.width), bounds.size.height, &padding, cx);
+            let mut layout_response = self.layout_items(
+                Some(bounds.size.width),
+                bounds.size.height,
+                &padding,
+                todo!(),
+                cx,
+            );
 
             // Avoid honoring autoscroll requests from elements other than our children.
             cx.take_autoscroll();
@@ -658,7 +664,7 @@ impl StateInner {
                                             bounds.size.width.into(),
                                             AvailableSpace::MinContent,
                                         );
-                                        item.layout_as_root(item_available_size, cx)
+                                        item.layout_as_root(item_available_size, todo!(), cx)
                                     });
                                     height -= size.height;
                                 }
@@ -716,7 +722,8 @@ impl Element for List {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
-        cx: &mut crate::WindowContext,
+        window: &mut Window,
+        cx: &mut WindowContext,
     ) -> (crate::LayoutId, Self::RequestLayoutState) {
         let layout_id = match self.sizing_behavior {
             ListSizingBehavior::Infer => {
@@ -738,7 +745,8 @@ impl Element for List {
                         cx.rem_size(),
                     );
 
-                    let layout_response = state.layout_items(None, available_height, &padding, cx);
+                    let layout_response =
+                        state.layout_items(None, available_height, &padding, window, cx);
                     let max_element_width = layout_response.max_item_width;
 
                     let summary = state.items.summary();

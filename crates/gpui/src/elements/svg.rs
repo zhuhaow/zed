@@ -1,7 +1,7 @@
 use crate::{
     geometry::Negate as _, point, px, radians, size, Bounds, Element, GlobalElementId, Hitbox,
     InteractiveElement, Interactivity, IntoElement, LayoutId, Pixels, Point, Radians, SharedString,
-    Size, StyleRefinement, Styled, TransformationMatrix, WindowContext,
+    Size, StyleRefinement, Styled, TransformationMatrix, Window, WindowContext,
 };
 use util::ResultExt;
 
@@ -47,6 +47,7 @@ impl Element for Svg {
     fn request_layout(
         &mut self,
         global_id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let layout_id = self

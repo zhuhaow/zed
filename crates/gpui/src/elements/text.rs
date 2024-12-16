@@ -1,8 +1,8 @@
 use crate::{
     ActiveTooltip, AnyTooltip, AnyView, Bounds, DispatchPhase, Element, ElementId, GlobalElementId,
     HighlightStyle, Hitbox, IntoElement, LayoutId, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
-    Pixels, Point, SharedString, Size, TextRun, TextStyle, Truncate, WhiteSpace, WindowContext,
-    WrappedLine, TOOLTIP_DELAY,
+    Pixels, Point, SharedString, Size, TextRun, TextStyle, Truncate, WhiteSpace, Window,
+    WindowContext, WrappedLine, TOOLTIP_DELAY,
 };
 use anyhow::anyhow;
 use parking_lot::{Mutex, MutexGuard};
@@ -27,6 +27,7 @@ impl Element for &'static str {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let mut state = TextLayout::default();
@@ -85,6 +86,7 @@ impl Element for SharedString {
 
         _id: Option<&GlobalElementId>,
 
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let mut state = TextLayout::default();
@@ -196,6 +198,7 @@ impl Element for StyledText {
 
         _id: Option<&GlobalElementId>,
 
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let layout_id = self.layout.layout(self.text.clone(), self.runs.take(), cx);
@@ -555,9 +558,10 @@ impl Element for InteractiveText {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
-        self.text.request_layout(None, cx)
+        self.text.request_layout(None, window, cx)
     }
 
     fn prepaint(

@@ -797,7 +797,7 @@ impl VisualTestContext {
         self.update(|cx| {
             cx.window.draw_phase = DrawPhase::Prepaint;
             let mut element = Drawable::new(f(cx));
-            element.layout_as_root(space.into(), cx);
+            element.layout_as_root(space.into(), todo!(), cx);
             cx.with_absolute_element_offset(origin, |cx| element.prepaint(cx));
 
             cx.window.draw_phase = DrawPhase::Paint;

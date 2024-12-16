@@ -261,7 +261,7 @@ impl Render for ProjectIndexDebugView {
 
             canvas(
                 move |bounds, cx| {
-                    list.prepaint_as_root(bounds.origin, bounds.size.into(), cx);
+                    list.prepaint_as_root(bounds.origin, bounds.size.into(), todo!(), cx);
                     list
                 },
                 |_, mut list, cx| {

@@ -2,7 +2,7 @@ use refineable::Refineable as _;
 
 use crate::{
     Bounds, Element, ElementId, GlobalElementId, IntoElement, Pixels, Style, StyleRefinement,
-    Styled, WindowContext,
+    Styled, Window, WindowContext,
 };
 
 /// Construct a canvas element with the given paint callback.
@@ -45,6 +45,7 @@ impl<T: 'static> Element for Canvas<T> {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (crate::LayoutId, Self::RequestLayoutState) {
         let mut style = Style::default();

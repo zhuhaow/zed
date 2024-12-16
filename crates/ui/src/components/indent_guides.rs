@@ -130,7 +130,7 @@ pub struct IndentGuideLayout {
 
 /// Implements the necessary functionality for rendering indent guides inside a uniform list.
 mod uniform_list {
-    use gpui::{DispatchPhase, Hitbox, MouseButton, MouseDownEvent, MouseMoveEvent};
+    use gpui::{DispatchPhase, Hitbox, MouseButton, MouseDownEvent, MouseMoveEvent, Window};
 
     use super::*;
 
@@ -222,6 +222,7 @@ mod uniform_list {
         fn request_layout(
             &mut self,
             _id: Option<&gpui::GlobalElementId>,
+            window: &mut Window,
             cx: &mut WindowContext,
         ) -> (gpui::LayoutId, Self::RequestLayoutState) {
             (cx.request_layout(gpui::Style::default(), []), ())

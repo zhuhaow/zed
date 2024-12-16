@@ -21,7 +21,7 @@ use crate::{
     HitboxId, IntoElement, IsZero, KeyContext, KeyDownEvent, KeyUpEvent, LayoutId,
     ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     ParentElement, Pixels, Point, Render, ScrollWheelEvent, SharedString, Size, Style,
-    StyleRefinement, Styled, Task, TooltipId, View, Visibility, WindowContext,
+    StyleRefinement, Styled, Task, TooltipId, View, Visibility, Window, WindowContext,
 };
 use collections::HashMap;
 use refineable::Refineable;
@@ -1152,6 +1152,7 @@ impl Element for Div {
     fn request_layout(
         &mut self,
         global_id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let mut child_layout_ids = SmallVec::new();
@@ -1162,7 +1163,7 @@ impl Element for Div {
                     child_layout_ids = self
                         .children
                         .iter_mut()
-                        .map(|child| child.request_layout(cx))
+                        .map(|child| child.request_layout(window, cx))
                         .collect::<SmallVec<_>>();
                     cx.request_layout(style, child_layout_ids.iter().copied())
                 })
@@ -2341,9 +2342,10 @@ where
     fn request_layout(
         &mut self,
         id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
-        self.element.request_layout(id, cx)
+        self.element.request_layout(id, window, cx)
     }
 
     fn prepaint(
@@ -2434,9 +2436,10 @@ where
     fn request_layout(
         &mut self,
         id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
-        self.element.request_layout(id, cx)
+        self.element.request_layout(id, window, cx)
     }
 
     fn prepaint(

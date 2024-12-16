@@ -6,7 +6,7 @@ use gpui::{
     anchored, deferred, div, px, AnchorCorner, AnyElement, Bounds, DismissEvent, DispatchPhase,
     Element, ElementId, GlobalElementId, Hitbox, InteractiveElement, IntoElement, LayoutId,
     ManagedView, MouseButton, MouseDownEvent, ParentElement, Pixels, Point, View, VisualContext,
-    WindowContext,
+    Window, WindowContext,
 };
 
 pub struct RightClickMenu<M: ManagedView> {
@@ -114,6 +114,7 @@ impl<M: ManagedView> Element for RightClickMenu<M> {
     fn request_layout(
         &mut self,
         id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (gpui::LayoutId, Self::RequestLayoutState) {
         self.with_element_state(id.unwrap(), cx, |this, element_state, cx| {
@@ -130,7 +131,7 @@ impl<M: ManagedView> Element for RightClickMenu<M> {
                     .with_priority(1)
                     .into_any();
 
-                menu_layout_id = Some(element.request_layout(cx));
+                menu_layout_id = Some(element.request_layout(window, cx));
                 element
             });
 
@@ -141,7 +142,7 @@ impl<M: ManagedView> Element for RightClickMenu<M> {
 
             let child_layout_id = child_element
                 .as_mut()
-                .map(|child_element| child_element.request_layout(cx));
+                .map(|child_element| child_element.request_layout(window, cx));
 
             let layout_id = cx.request_layout(
                 gpui::Style::default(),
