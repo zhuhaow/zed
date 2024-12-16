@@ -3,7 +3,7 @@ use taffy::style::{Display, Position};
 
 use crate::{
     point, AnyElement, Bounds, Edges, Element, GlobalElementId, IntoElement, LayoutId,
-    ParentElement, Pixels, Point, Size, Style, WindowContext,
+    ParentElement, Pixels, Point, Size, Style, Window, WindowContext,
 };
 
 /// The state that the anchored element element uses to track its children.
@@ -85,12 +85,13 @@ impl Element for Anchored {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (crate::LayoutId, Self::RequestLayoutState) {
         let child_layout_ids = self
             .children
             .iter_mut()
-            .map(|child| child.request_layout(cx))
+            .map(|child| child.request_layout(window, cx))
             .collect::<SmallVec<_>>();
 
         let anchored_style = Style {
@@ -109,6 +110,7 @@ impl Element for Anchored {
         _id: Option<&GlobalElementId>,
         bounds: Bounds<Pixels>,
         request_layout: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         if request_layout.child_layout_ids.is_empty() {
@@ -187,7 +189,7 @@ impl Element for Anchored {
 
         cx.with_element_offset(offset, |cx| {
             for child in &mut self.children {
-                child.prepaint(cx);
+                child.prepaint(window, cx);
             }
         })
     }
@@ -198,10 +200,11 @@ impl Element for Anchored {
         _bounds: crate::Bounds<crate::Pixels>,
         _request_layout: &mut Self::RequestLayoutState,
         _prepaint: &mut Self::PrepaintState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         for child in &mut self.children {
-            child.paint(cx);
+            child.paint(window, cx);
         }
     }
 }

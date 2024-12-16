@@ -4833,7 +4833,7 @@ impl Render for Workspace {
                                 .child({
                                     let this = cx.view().clone();
                                     canvas(
-                                        move |bounds, cx| {
+                                        move |bounds, window, cx| {
                                             this.update(cx, |this, cx| {
                                                 let bounds_changed = this.bounds != bounds;
                                                 this.bounds = bounds;
@@ -4856,7 +4856,7 @@ impl Render for Workspace {
                                                 }
                                             })
                                         },
-                                        |_, _, _| {},
+                                        |_, _, _, _| {},
                                     )
                                     .absolute()
                                     .size_full()
@@ -6010,7 +6010,7 @@ pub fn client_side_decorations(element: impl IntoElement, cx: &mut WindowContext
             Decorations::Server => div,
             Decorations::Client { tiling, .. } => div.child(
                 canvas(
-                    |_bounds, cx| {
+                    |_bounds, window, cx| {
                         cx.insert_hitbox(
                             Bounds::new(
                                 point(px(0.0), px(0.0)),
@@ -6019,7 +6019,7 @@ pub fn client_side_decorations(element: impl IntoElement, cx: &mut WindowContext
                             false,
                         )
                     },
-                    move |_bounds, hitbox, cx| {
+                    move |_bounds, hitbox, window, cx| {
                         let mouse = cx.mouse_position();
                         let size = cx.window_bounds().get_bounds().size;
                         let Some(edge) =

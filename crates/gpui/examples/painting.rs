@@ -113,8 +113,8 @@ impl Render for PaintingViewer {
                     .size_full()
                     .child(
                         canvas(
-                            move |_, _| {},
-                            move |_, _, cx| {
+                            move |_, _, _| {},
+                            move |bounds, _, _, cx| {
                                 const STROKE_WIDTH: Pixels = px(2.0);
                                 for path in default_lines {
                                     cx.paint_path(path, gpui::black());

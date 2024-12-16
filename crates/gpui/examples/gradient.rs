@@ -205,8 +205,8 @@ impl Render for GradientViewer {
                     ),
             )
             .child(div().h_24().child(canvas(
-                move |_, _| {},
-                move |bounds, _, cx| {
+                move |_, _, _| {},
+                move |bounds, _, _, cx| {
                     let size = size(bounds.size.width * 0.8, px(80.));
                     let square_bounds = Bounds {
                         origin: point(

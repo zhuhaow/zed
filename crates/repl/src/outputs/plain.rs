@@ -275,9 +275,9 @@ impl Render for TerminalOutput {
 
         canvas(
             // prepaint
-            move |_bounds, _| {},
+            move |_bounds, _window, _cx| {},
             // paint
-            move |bounds, _, cx| {
+            move |bounds, _, _window, cx| {
                 for rect in rects {
                     rect.paint(
                         bounds.origin,

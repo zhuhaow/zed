@@ -2,7 +2,7 @@ use crate::{
     px, swap_rgba_pa_to_bgra, AbsoluteLength, AnyElement, AppContext, Asset, AssetLogger, Bounds,
     DefiniteLength, Element, ElementId, GlobalElementId, Hitbox, Image, InteractiveElement,
     Interactivity, IntoElement, LayoutId, Length, ObjectFit, Pixels, RenderImage, Resource,
-    SharedString, SharedUri, StyleRefinement, Styled, SvgSize, Task, WindowContext,
+    SharedString, SharedUri, StyleRefinement, Styled, SvgSize, Task, Window, WindowContext,
 };
 use anyhow::{anyhow, Result};
 
@@ -248,6 +248,7 @@ impl Element for Img {
     fn request_layout(
         &mut self,
         global_id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let mut layout_state = ImgLayoutState {
@@ -330,7 +331,7 @@ impl Element for Img {
                         Some(_err) => {
                             if let Some(fallback) = self.style.fallback.as_ref() {
                                 let mut element = fallback();
-                                replacement_id = Some(element.request_layout(cx));
+                                replacement_id = Some(element.request_layout(window, cx));
                                 layout_state.replacement = Some(element);
                             }
                             if let Some(state) = &mut state {
@@ -343,7 +344,8 @@ impl Element for Img {
                                     if started_loading.elapsed() > LOADING_DELAY {
                                         if let Some(loading) = self.style.loading.as_ref() {
                                             let mut element = loading();
-                                            replacement_id = Some(element.request_layout(cx));
+                                            replacement_id =
+                                                Some(element.request_layout(window, cx));
                                             layout_state.replacement = Some(element);
                                         }
                                     }
@@ -376,12 +378,13 @@ impl Element for Img {
         global_id: Option<&GlobalElementId>,
         bounds: Bounds<Pixels>,
         request_layout: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Self::PrepaintState {
         self.interactivity
             .prepaint(global_id, bounds, bounds.size, cx, |_, _, hitbox, cx| {
                 if let Some(replacement) = &mut request_layout.replacement {
-                    replacement.prepaint(cx);
+                    replacement.prepaint(window, cx);
                 }
 
                 hitbox
@@ -394,6 +397,7 @@ impl Element for Img {
         bounds: Bounds<Pixels>,
         layout_state: &mut Self::RequestLayoutState,
         hitbox: &mut Self::PrepaintState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         let source = self.source.clone();
@@ -415,7 +419,7 @@ impl Element for Img {
                     )
                     .log_err();
                 } else if let Some(replacement) = &mut layout_state.replacement {
-                    replacement.paint(cx);
+                    replacement.paint(window, cx);
                 }
             })
     }

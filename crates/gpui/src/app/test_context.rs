@@ -5,7 +5,7 @@ use crate::{
     ModelContext, Modifiers, ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent,
     MouseUpEvent, Pixels, Platform, Point, Render, Result, Size, Task, TestDispatcher,
     TestPlatform, TestScreenCaptureSource, TestWindow, TextSystem, View, ViewContext,
-    VisualContext, WindowBounds, WindowContext, WindowHandle, WindowOptions,
+    VisualContext, Window, WindowBounds, WindowContext, WindowHandle, WindowOptions,
 };
 use anyhow::{anyhow, bail};
 use futures::{channel::oneshot, Stream, StreamExt};
@@ -789,19 +789,19 @@ impl VisualTestContext {
         &mut self,
         origin: Point<Pixels>,
         space: impl Into<Size<AvailableSpace>>,
-        f: impl FnOnce(&mut WindowContext) -> E,
+        f: impl FnOnce(&mut Window, &mut WindowContext) -> E,
     ) -> (E::RequestLayoutState, E::PrepaintState)
     where
         E: Element,
     {
         self.update(|cx| {
             cx.window.draw_phase = DrawPhase::Prepaint;
-            let mut element = Drawable::new(f(cx));
-            element.layout_as_root(space.into(), cx);
-            cx.with_absolute_element_offset(origin, |cx| element.prepaint(cx));
+            let mut element = Drawable::new(f(todo!(), cx));
+            element.layout_as_root(space.into(), todo!(), cx);
+            cx.with_absolute_element_offset(origin, |cx| element.prepaint(todo!(), cx));
 
             cx.window.draw_phase = DrawPhase::Paint;
-            let (request_layout_state, prepaint_state) = element.paint(cx);
+            let (request_layout_state, prepaint_state) = element.paint(todo!(), cx);
 
             cx.window.draw_phase = DrawPhase::None;
             cx.refresh();

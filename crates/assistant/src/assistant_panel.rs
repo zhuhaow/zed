@@ -4911,12 +4911,12 @@ impl Render for ConfigurationView {
         // We use a canvas here to get scrolling to work in the ConfigurationView. It's a workaround
         // because we couldn't the element to take up the size of the parent.
         canvas(
-            move |bounds, cx| {
-                element.prepaint_as_root(bounds.origin, bounds.size.into(), cx);
+            move |bounds, window, cx| {
+                element.prepaint_as_root(bounds.origin, bounds.size.into(), window, cx);
                 element
             },
-            |_, mut element, cx| {
-                element.paint(cx);
+            |_, mut element, window, cx| {
+                element.paint(window, cx);
             },
         )
         .flex_1()

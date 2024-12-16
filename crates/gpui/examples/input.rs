@@ -370,6 +370,7 @@ impl Element for TextElement {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let mut style = Style::default();
@@ -383,6 +384,7 @@ impl Element for TextElement {
         _id: Option<&GlobalElementId>,
         bounds: Bounds<Pixels>,
         _request_layout: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Self::PrepaintState {
         let input = self.input.read(cx);
@@ -481,6 +483,7 @@ impl Element for TextElement {
         bounds: Bounds<Pixels>,
         _request_layout: &mut Self::RequestLayoutState,
         prepaint: &mut Self::PrepaintState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         let focus_handle = self.input.read(cx).focus_handle.clone();

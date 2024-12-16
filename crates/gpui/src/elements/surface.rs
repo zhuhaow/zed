@@ -1,6 +1,6 @@
 use crate::{
     Bounds, Element, ElementId, GlobalElementId, IntoElement, LayoutId, ObjectFit, Pixels, Style,
-    StyleRefinement, Styled, WindowContext,
+    StyleRefinement, Styled, Window, WindowContext,
 };
 #[cfg(target_os = "macos")]
 use media::core_video::CVImageBuffer;
@@ -56,6 +56,7 @@ impl Element for Surface {
     fn request_layout(
         &mut self,
         _global_id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let mut style = Style::default();
@@ -69,6 +70,7 @@ impl Element for Surface {
         _global_id: Option<&GlobalElementId>,
         _bounds: Bounds<Pixels>,
         _request_layout: &mut Self::RequestLayoutState,
+        window: &mut Window,
         _cx: &mut WindowContext,
     ) -> Self::PrepaintState {
     }
@@ -79,6 +81,7 @@ impl Element for Surface {
         #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] bounds: Bounds<Pixels>,
         _: &mut Self::RequestLayoutState,
         _: &mut Self::PrepaintState,
+        window: &mut Window,
         #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] cx: &mut WindowContext,
     ) {
         match &self.source {

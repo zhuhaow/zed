@@ -8,7 +8,7 @@ use crate::{
     point, size, AnyElement, AvailableSpace, Bounds, ContentMask, Element, ElementId,
     GlobalElementId, Hitbox, InteractiveElement, Interactivity, IntoElement, IsZero, LayoutId,
     ListSizingBehavior, Pixels, Render, ScrollHandle, Size, StyleRefinement, Styled, View,
-    ViewContext, WindowContext,
+    ViewContext, Window, WindowContext,
 };
 use smallvec::SmallVec;
 use std::{cell::RefCell, cmp, ops::Range, rc::Rc};
@@ -160,10 +160,11 @@ impl Element for UniformList {
     fn request_layout(
         &mut self,
         global_id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let max_items = self.item_count;
-        let item_size = self.measure_item(None, cx);
+        let item_size = self.measure_item(None, window, cx);
         let layout_id = self
             .interactivity
             .request_layout(global_id, cx, |style, cx| match self.sizing_behavior {
@@ -171,7 +172,7 @@ impl Element for UniformList {
                     cx.with_text_style(style.text_style().cloned(), |cx| {
                         cx.request_measured_layout(
                             style,
-                            move |known_dimensions, available_space, _cx| {
+                            move |known_dimensions, available_space, _window, _cx| {
                                 let desired_height = item_size.height * max_items;
                                 let width = known_dimensions.width.unwrap_or(match available_space
                                     .width
@@ -211,6 +212,7 @@ impl Element for UniformList {
         global_id: Option<&GlobalElementId>,
         bounds: Bounds<Pixels>,
         frame_state: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<Hitbox> {
         let style = self.interactivity.compute_style(global_id, None, cx);
@@ -228,7 +230,7 @@ impl Element for UniformList {
             ListHorizontalSizingBehavior::Unconstrained
         );
 
-        let longest_item_size = self.measure_item(None, cx);
+        let longest_item_size = self.measure_item(None, window, cx);
         let content_width = if can_scroll_horizontally {
             padded_bounds.size.width.max(longest_item_size.width)
         } else {
@@ -353,8 +355,8 @@ impl Element for UniformList {
                                 AvailableSpace::Definite(available_width),
                                 AvailableSpace::Definite(item_height),
                             );
-                            item.layout_as_root(available_space, cx);
-                            item.prepaint_at(item_origin, cx);
+                            item.layout_as_root(available_space, window, cx);
+                            item.prepaint_at(item_origin, window, cx);
                             frame_state.items.push(item);
                         }
 
@@ -382,8 +384,8 @@ impl Element for UniformList {
                                 AvailableSpace::Definite(bounds.size.width),
                                 AvailableSpace::Definite(bounds.size.height),
                             );
-                            decoration.layout_as_root(available_space, cx);
-                            decoration.prepaint_at(bounds.origin, cx);
+                            decoration.layout_as_root(available_space, window, cx);
+                            decoration.prepaint_at(bounds.origin, window, cx);
                             frame_state.decorations.push(decoration);
                         }
                     });
@@ -400,15 +402,16 @@ impl Element for UniformList {
         bounds: Bounds<crate::Pixels>,
         request_layout: &mut Self::RequestLayoutState,
         hitbox: &mut Option<Hitbox>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         self.interactivity
             .paint(global_id, bounds, hitbox.as_ref(), cx, |_, cx| {
                 for item in &mut request_layout.items {
-                    item.paint(cx);
+                    item.paint(window, cx);
                 }
                 for decoration in &mut request_layout.decorations {
-                    decoration.paint(cx);
+                    decoration.paint(window, cx);
                 }
             })
     }
@@ -475,7 +478,12 @@ impl UniformList {
         self
     }
 
-    fn measure_item(&self, list_width: Option<Pixels>, cx: &mut WindowContext) -> Size<Pixels> {
+    fn measure_item(
+        &self,
+        list_width: Option<Pixels>,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) -> Size<Pixels> {
         if self.item_count == 0 {
             return Size::default();
         }
@@ -491,7 +499,7 @@ impl UniformList {
             }),
             AvailableSpace::MinContent,
         );
-        item_to_measure.layout_as_root(available_space, cx)
+        item_to_measure.layout_as_root(available_space, window, cx)
     }
 
     /// Track and render scroll state of this list with reference to the given scroll handle.

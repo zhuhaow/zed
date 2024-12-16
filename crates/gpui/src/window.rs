@@ -1510,7 +1510,12 @@ impl<'a> WindowContext<'a> {
 
         // Layout all root elements.
         let mut root_element = self.window.root_view.as_ref().unwrap().clone().into_any();
-        root_element.prepaint_as_root(Point::default(), self.window.viewport_size.into(), self);
+        root_element.prepaint_as_root(
+            Point::default(),
+            self.window.viewport_size.into(),
+            todo!(),
+            self,
+        );
 
         let mut sorted_deferred_draws =
             (0..self.window.next_frame.deferred_draws.len()).collect::<SmallVec<[_; 8]>>();
@@ -1522,13 +1527,18 @@ impl<'a> WindowContext<'a> {
         let mut tooltip_element = None;
         if let Some(prompt) = self.window.prompt.take() {
             let mut element = prompt.view.any_view().into_any();
-            element.prepaint_as_root(Point::default(), self.window.viewport_size.into(), self);
+            element.prepaint_as_root(
+                Point::default(),
+                self.window.viewport_size.into(),
+                todo!(),
+                self,
+            );
             prompt_element = Some(element);
             self.window.prompt = Some(prompt);
         } else if let Some(active_drag) = self.app.active_drag.take() {
             let mut element = active_drag.view.clone().into_any();
             let offset = self.mouse_position() - active_drag.cursor_offset;
-            element.prepaint_as_root(offset, AvailableSpace::min_size(), self);
+            element.prepaint_as_root(offset, AvailableSpace::min_size(), todo!(), self);
             active_drag_element = Some(element);
             self.app.active_drag = Some(active_drag);
         } else {
@@ -1539,16 +1549,16 @@ impl<'a> WindowContext<'a> {
 
         // Now actually paint the elements.
         self.window.draw_phase = DrawPhase::Paint;
-        root_element.paint(self);
+        root_element.paint(todo!(), self);
 
         self.paint_deferred_draws(&sorted_deferred_draws);
 
         if let Some(mut prompt_element) = prompt_element {
-            prompt_element.paint(self);
+            prompt_element.paint(todo!(), self);
         } else if let Some(mut drag_element) = active_drag_element {
-            drag_element.paint(self);
+            drag_element.paint(todo!(), self);
         } else if let Some(mut tooltip_element) = tooltip_element {
-            tooltip_element.paint(self);
+            tooltip_element.paint(todo!(), self);
         }
     }
 
@@ -1557,7 +1567,7 @@ impl<'a> WindowContext<'a> {
         let tooltip_request = tooltip_request.unwrap();
         let mut element = tooltip_request.tooltip.view.clone().into_any();
         let mouse_position = tooltip_request.tooltip.mouse_position;
-        let tooltip_size = element.layout_as_root(AvailableSpace::min_size(), self);
+        let tooltip_size = element.layout_as_root(AvailableSpace::min_size(), todo!(), self);
 
         let mut tooltip_bounds = Bounds::new(mouse_position + point(px(1.), px(1.)), tooltip_size);
         let window_bounds = Bounds {
@@ -1589,7 +1599,9 @@ impl<'a> WindowContext<'a> {
             }
         }
 
-        self.with_absolute_element_offset(tooltip_bounds.origin, |cx| element.prepaint(cx));
+        self.with_absolute_element_offset(tooltip_bounds.origin, |cx| {
+            element.prepaint(todo!(), cx)
+        });
 
         self.window.tooltip_bounds = Some(TooltipBounds {
             id: tooltip_request.id,
@@ -1618,7 +1630,7 @@ impl<'a> WindowContext<'a> {
             let prepaint_start = self.prepaint_index();
             if let Some(element) = deferred_draw.element.as_mut() {
                 self.with_absolute_element_offset(deferred_draw.absolute_offset, |cx| {
-                    element.prepaint(cx)
+                    element.prepaint(todo!(), cx)
                 });
             } else {
                 self.reuse_prepaint(deferred_draw.prepaint_range.clone());
@@ -1652,7 +1664,7 @@ impl<'a> WindowContext<'a> {
 
             let paint_start = self.paint_index();
             if let Some(element) = deferred_draw.element.as_mut() {
-                element.paint(self);
+                element.paint(todo!(), self);
             } else {
                 self.reuse_paint(deferred_draw.paint_range.clone());
             }
@@ -2747,7 +2759,12 @@ impl<'a> WindowContext<'a> {
     ///
     /// This method should only be called as part of the request_layout or prepaint phase of element drawing.
     pub fn request_measured_layout<
-        F: FnMut(Size<Option<Pixels>>, Size<AvailableSpace>, &mut WindowContext) -> Size<Pixels>
+        F: FnMut(
+                Size<Option<Pixels>>,
+                Size<AvailableSpace>,
+                &mut Window,
+                &mut WindowContext,
+            ) -> Size<Pixels>
             + 'static,
     >(
         &mut self,
@@ -2781,7 +2798,7 @@ impl<'a> WindowContext<'a> {
         );
 
         let mut layout_engine = self.window.layout_engine.take().unwrap();
-        layout_engine.compute_layout(layout_id, available_space, self);
+        layout_engine.compute_layout(layout_id, available_space, todo!(), self);
         self.window.layout_engine = Some(layout_engine);
     }
 

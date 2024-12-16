@@ -2651,8 +2651,8 @@ fn render_tree_branch(is_last: bool, overdraw: bool, cx: &mut WindowContext) -> 
     let color = cx.theme().colors().text;
 
     canvas(
-        |_, _| {},
-        move |bounds, _, cx| {
+        |_, _, _| {},
+        move |bounds, _, window, cx| {
             let start_x = (bounds.left() + bounds.right() - thickness) / 2.;
             let start_y = (bounds.top() + bounds.bottom() - thickness) / 2.;
             let right = bounds.right();

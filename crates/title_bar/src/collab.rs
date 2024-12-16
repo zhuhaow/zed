@@ -68,8 +68,8 @@ fn toggle_deafen(_: &ToggleDeafen, cx: &mut AppContext) {
 
 fn render_color_ribbon(color: Hsla) -> impl Element {
     canvas(
-        move |_, _| {},
-        move |bounds, _, cx| {
+        move |_, _, _| {},
+        move |bounds, _, window, cx| {
             let height = bounds.size.height;
             let horizontal_offset = height;
             let vertical_offset = px(height.0 / 2.0);

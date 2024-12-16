@@ -1018,6 +1018,7 @@ impl EditorElement {
         line_height: Pixels,
         em_width: Pixels,
         autoscroll_containing_element: bool,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Vec<CursorLayout> {
         let mut autoscroll_bounds = None;
@@ -1147,7 +1148,7 @@ impl EditorElement {
                         color: self.style.background,
                         is_top_row: cursor_position.row().0 == 0,
                     });
-                    cursor.layout(content_origin, cursor_name, cx);
+                    cursor.layout(content_origin, cursor_name, window, cx);
                     cursors.push(cursor);
                 }
             }
@@ -1247,6 +1248,7 @@ impl EditorElement {
         gutter_settings: crate::editor_settings::Gutter,
         scroll_pixel_position: gpui::Point<Pixels>,
         gutter_hitbox: &Hitbox,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         for (ix, crease_toggle) in crease_toggles.iter_mut().enumerate() {
@@ -1256,7 +1258,7 @@ impl EditorElement {
                     AvailableSpace::MinContent,
                     AvailableSpace::Definite(line_height * 0.55),
                 );
-                let crease_toggle_size = crease_toggle.layout_as_root(available_space, cx);
+                let crease_toggle_size = crease_toggle.layout_as_root(available_space, window, cx);
 
                 let position = point(
                     gutter_dimensions.width - gutter_dimensions.right_padding,
@@ -1267,7 +1269,7 @@ impl EditorElement {
                     (line_height - crease_toggle_size.height) / 2.,
                 );
                 let origin = gutter_hitbox.origin + position + centering_offset;
-                crease_toggle.prepaint_as_root(origin, available_space, cx);
+                crease_toggle.prepaint_as_root(origin, available_space, window, cx);
             }
         }
     }
@@ -1281,6 +1283,7 @@ impl EditorElement {
         content_origin: gpui::Point<Pixels>,
         scroll_pixel_position: gpui::Point<Pixels>,
         em_width: Pixels,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Vec<Option<CreaseTrailerLayout>> {
         trailers
@@ -1292,7 +1295,7 @@ impl EditorElement {
                     AvailableSpace::MinContent,
                     AvailableSpace::Definite(line_height),
                 );
-                let size = element.layout_as_root(available_space, cx);
+                let size = element.layout_as_root(available_space, window, cx);
 
                 let line = &lines[ix];
                 let padding = if line.width == Pixels::ZERO {
@@ -1306,7 +1309,7 @@ impl EditorElement {
                 );
                 let centering_offset = point(px(0.), (line_height - size.height) / 2.);
                 let origin = content_origin + position + centering_offset;
-                element.prepaint_as_root(origin, available_space, cx);
+                element.prepaint_as_root(origin, available_space, window, cx);
                 Some(CreaseTrailerLayout {
                     element,
                     bounds: Bounds::new(origin, size),
@@ -1425,6 +1428,7 @@ impl EditorElement {
         content_origin: gpui::Point<Pixels>,
         scroll_pixel_position: gpui::Point<Pixels>,
         line_height: Pixels,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<AnyElement> {
         if !self
@@ -1479,7 +1483,7 @@ impl EditorElement {
         };
 
         let absolute_offset = point(start_x, start_y);
-        element.prepaint_as_root(absolute_offset, AvailableSpace::min_size(), cx);
+        element.prepaint_as_root(absolute_offset, AvailableSpace::min_size(), window, cx);
 
         Some(element)
     }
@@ -1493,6 +1497,7 @@ impl EditorElement {
         line_height: Pixels,
         gutter_hitbox: &Hitbox,
         max_width: Option<Pixels>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<Vec<AnyElement>> {
         if !self
@@ -1538,6 +1543,7 @@ impl EditorElement {
                     element.prepaint_as_root(
                         absolute_offset,
                         size(width, AvailableSpace::MinContent),
+                        window,
                         cx,
                     );
 
@@ -1678,6 +1684,7 @@ impl EditorElement {
         gutter_hitbox: &Hitbox,
         rows_with_hunk_bounds: &HashMap<DisplayRow, Bounds<Pixels>>,
         snapshot: &EditorSnapshot,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Vec<AnyElement> {
         self.editor.update(cx, |editor, cx| {
@@ -1751,6 +1758,7 @@ impl EditorElement {
                         scroll_pixel_position,
                         gutter_hitbox,
                         rows_with_hunk_bounds,
+                        window,
                         cx,
                     );
                     Some(button)
@@ -1768,6 +1776,7 @@ impl EditorElement {
         gutter_dimensions: &GutterDimensions,
         gutter_hitbox: &Hitbox,
         rows_with_hunk_bounds: &HashMap<DisplayRow, Bounds<Pixels>>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<AnyElement> {
         let mut active = false;
@@ -1792,6 +1801,7 @@ impl EditorElement {
             scroll_pixel_position,
             gutter_hitbox,
             rows_with_hunk_bounds,
+            window,
             cx,
         );
 
@@ -1994,6 +2004,7 @@ impl EditorElement {
         style: &EditorStyle,
         editor_width: Pixels,
         is_row_soft_wrapped: impl Copy + Fn(usize) -> bool,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Vec<LineWithInvisibles> {
         if rows.start >= rows.end {
@@ -2045,6 +2056,7 @@ impl EditorElement {
                 snapshot.mode,
                 editor_width,
                 is_row_soft_wrapped,
+                window,
                 cx,
             )
         }
@@ -2057,6 +2069,7 @@ impl EditorElement {
         line_height: Pixels,
         scroll_pixel_position: gpui::Point<Pixels>,
         content_origin: gpui::Point<Pixels>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> SmallVec<[AnyElement; 1]> {
         let mut line_elements = SmallVec::new();
@@ -2068,6 +2081,7 @@ impl EditorElement {
                 row,
                 content_origin,
                 &mut line_elements,
+                window,
                 cx,
             );
         }
@@ -2094,6 +2108,7 @@ impl EditorElement {
         resized_blocks: &mut HashMap<CustomBlockId, u32>,
         selections: &[Selection<Point>],
         is_row_soft_wrapped: impl Copy + Fn(usize) -> bool,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (AnyElement, Size<Pixels>) {
         let header_padding = px(6.0);
@@ -2113,6 +2128,7 @@ impl EditorElement {
                             &self.style,
                             editor_width,
                             is_row_soft_wrapped,
+                            window,
                             cx,
                         )
                         .x_for_index(align_to.column() as usize)
@@ -2353,13 +2369,16 @@ impl EditorElement {
         };
 
         // Discover the element's content height, then round up to the nearest multiple of line height.
-        let preliminary_size =
-            element.layout_as_root(size(available_width, AvailableSpace::MinContent), cx);
+        let preliminary_size = element.layout_as_root(
+            size(available_width, AvailableSpace::MinContent),
+            window,
+            cx,
+        );
         let quantized_height = (preliminary_size.height / line_height).ceil() * line_height;
         let final_size = if preliminary_size.height == quantized_height {
             preliminary_size
         } else {
-            element.layout_as_root(size(available_width, quantized_height.into()), cx)
+            element.layout_as_root(size(available_width, quantized_height.into()), window, cx)
         };
 
         if let BlockId::Custom(custom_block_id) = block_id {
@@ -2549,6 +2568,7 @@ impl EditorElement {
         line_layouts: &[LineWithInvisibles],
         selections: &[Selection<Point>],
         is_row_soft_wrapped: impl Copy + Fn(usize) -> bool,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Result<Vec<BlockLayout>, HashMap<CustomBlockId, u32>> {
         let (fixed_blocks, non_fixed_blocks) = snapshot
@@ -2587,6 +2607,7 @@ impl EditorElement {
                 &mut resized_blocks,
                 selections,
                 is_row_soft_wrapped,
+                window,
                 cx,
             );
             fixed_block_max_width = fixed_block_max_width.max(element_size.width + em_width);
@@ -2633,6 +2654,7 @@ impl EditorElement {
                 &mut resized_blocks,
                 selections,
                 is_row_soft_wrapped,
+                window,
                 cx,
             );
 
@@ -2680,6 +2702,7 @@ impl EditorElement {
                             &mut resized_blocks,
                             selections,
                             is_row_soft_wrapped,
+                            window,
                             cx,
                         );
 
@@ -2712,6 +2735,7 @@ impl EditorElement {
         hitbox: &Hitbox,
         line_height: Pixels,
         scroll_pixel_position: gpui::Point<Pixels>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         for block in blocks {
@@ -2731,9 +2755,10 @@ impl EditorElement {
                 origin += point(-scroll_pixel_position.x, Pixels::ZERO);
             }
 
-            let focus_handle = block
-                .element
-                .prepaint_as_root(origin, block.available_space, cx);
+            let focus_handle =
+                block
+                    .element
+                    .prepaint_as_root(origin, block.available_space, window, cx);
 
             if let Some(focus_handle) = focus_handle {
                 self.editor.update(cx, |editor, _cx| {
@@ -2758,6 +2783,7 @@ impl EditorElement {
         line_layouts: &[LineWithInvisibles],
         newest_selection_head: DisplayPoint,
         gutter_overshoot: Pixels,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> bool {
         let max_height = cmp::min(
@@ -2774,7 +2800,7 @@ impl EditorElement {
             return false;
         };
 
-        let context_menu_size = context_menu.layout_as_root(AvailableSpace::min_size(), cx);
+        let context_menu_size = context_menu.layout_as_root(AvailableSpace::min_size(), window, cx);
 
         let (x, y) = match position {
             crate::ContextMenuOrigin::EditorPoint(point) => {
@@ -2824,6 +2850,7 @@ impl EditorElement {
         scroll_pixel_position: gpui::Point<Pixels>,
         editor_width: Pixels,
         style: &EditorStyle,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<AnyElement> {
         const PADDING_X: Pixels = Pixels(24.);
@@ -2863,9 +2890,9 @@ impl EditorElement {
                                 .child(Icon::new(IconName::ArrowUp).size(IconSize::Small)),
                         )
                         .into_any();
-                    let size = element.layout_as_root(AvailableSpace::min_size(), cx);
+                    let size = element.layout_as_root(AvailableSpace::min_size(), window, cx);
                     let offset = point((text_bounds.size.width - size.width) / 2., PADDING_Y);
-                    element.prepaint_at(text_bounds.origin + offset, cx);
+                    element.prepaint_at(text_bounds.origin + offset, window, cx);
                     Some(element)
                 } else if (target_display_point.row().as_f32() + 1.) > scroll_bottom {
                     let mut element = container_element
@@ -2876,12 +2903,12 @@ impl EditorElement {
                                 .child(Icon::new(IconName::ArrowDown).size(IconSize::Small)),
                         )
                         .into_any();
-                    let size = element.layout_as_root(AvailableSpace::min_size(), cx);
+                    let size = element.layout_as_root(AvailableSpace::min_size(), window, cx);
                     let offset = point(
                         (text_bounds.size.width - size.width) / 2.,
                         text_bounds.size.height - size.height - PADDING_Y,
                     );
-                    element.prepaint_at(text_bounds.origin + offset, cx);
+                    element.prepaint_at(text_bounds.origin + offset, window, cx);
                     Some(element)
                 } else {
                     let mut element = container_element
@@ -2899,6 +2926,7 @@ impl EditorElement {
                     element.prepaint_as_root(
                         text_bounds.origin + origin + point(PADDING_X, px(0.)),
                         AvailableSpace::min_size(),
+                        window,
                         cx,
                     );
                     Some(element)
@@ -2942,6 +2970,7 @@ impl EditorElement {
                         style,
                         editor_width,
                         |_| false,
+                        window,
                         cx,
                     )
                     .width
@@ -2959,7 +2988,7 @@ impl EditorElement {
                     .child(styled_text)
                     .into_any();
 
-                let element_bounds = element.layout_as_root(AvailableSpace::min_size(), cx);
+                let element_bounds = element.layout_as_root(AvailableSpace::min_size(), window, cx);
                 let is_fully_visible =
                     editor_width >= longest_line_width + PADDING_X + element_bounds.width;
 
@@ -2987,7 +3016,7 @@ impl EditorElement {
                         )
                 };
 
-                element.prepaint_as_root(origin, element_bounds.into(), cx);
+                element.prepaint_as_root(origin, element_bounds.into(), window, cx);
                 Some(element)
             }
         }
@@ -2998,6 +3027,7 @@ impl EditorElement {
         editor_snapshot: &EditorSnapshot,
         visible_range: Range<DisplayRow>,
         content_origin: gpui::Point<Pixels>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<AnyElement> {
         let position = self.editor.update(cx, |editor, cx| {
@@ -3054,7 +3084,7 @@ impl EditorElement {
             )
         })?;
 
-        element.prepaint_as_root(position, AvailableSpace::min_size(), cx);
+        element.prepaint_as_root(position, AvailableSpace::min_size(), window, cx);
         Some(element)
     }
 
@@ -3070,6 +3100,7 @@ impl EditorElement {
         line_layouts: &[LineWithInvisibles],
         line_height: Pixels,
         em_width: Pixels,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         struct MeasuredHoverPopover {
@@ -3109,7 +3140,7 @@ impl EditorElement {
         let mut overall_height = Pixels::ZERO;
         let mut measured_hover_popovers = Vec::new();
         for mut hover_popover in hover_popovers {
-            let size = hover_popover.layout_as_root(AvailableSpace::min_size(), cx);
+            let size = hover_popover.layout_as_root(AvailableSpace::min_size(), window, cx);
             let horizontal_offset =
                 (text_hitbox.upper_right().x - (hovered_point.x + size.width)).min(Pixels::ZERO);
 
@@ -3123,13 +3154,18 @@ impl EditorElement {
         }
         overall_height += HOVER_POPOVER_GAP;
 
-        fn draw_occluder(width: Pixels, origin: gpui::Point<Pixels>, cx: &mut WindowContext) {
+        fn draw_occluder(
+            width: Pixels,
+            origin: gpui::Point<Pixels>,
+            window: &mut Window,
+            cx: &mut WindowContext,
+        ) {
             let mut occlusion = div()
                 .size_full()
                 .occlude()
                 .on_mouse_move(|_, cx| cx.stop_propagation())
                 .into_any_element();
-            occlusion.layout_as_root(size(width, HOVER_POPOVER_GAP).into(), cx);
+            occlusion.layout_as_root(size(width, HOVER_POPOVER_GAP).into(), window, cx);
             cx.defer_draw(occlusion, origin, 2);
         }
 
@@ -3146,7 +3182,7 @@ impl EditorElement {
                 cx.defer_draw(popover.element, popover_origin, 2);
                 if position != itertools::Position::Last {
                     let origin = point(popover_origin.x, popover_origin.y - HOVER_POPOVER_GAP);
-                    draw_occluder(size.width, origin, cx);
+                    draw_occluder(size.width, origin, window, cx);
                 }
 
                 current_y = popover_origin.y - HOVER_POPOVER_GAP;
@@ -3161,7 +3197,7 @@ impl EditorElement {
                 cx.defer_draw(popover.element, popover_origin, 2);
                 if position != itertools::Position::Last {
                     let origin = point(popover_origin.x, popover_origin.y + size.height);
-                    draw_occluder(size.width, origin, cx);
+                    draw_occluder(size.width, origin, window, cx);
                 }
 
                 current_y = popover_origin.y + size.height + HOVER_POPOVER_GAP;
@@ -3180,6 +3216,7 @@ impl EditorElement {
         line_layouts: &[LineWithInvisibles],
         line_height: Pixels,
         em_width: Pixels,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         if !self.editor.focus_handle(cx).is_focused(cx) {
@@ -3227,7 +3264,7 @@ impl EditorElement {
         });
         if let Some(mut element) = maybe_element {
             let window_size = cx.viewport_size();
-            let size = element.layout_as_root(Size::<AvailableSpace>::default(), cx);
+            let size = element.layout_as_root(Size::<AvailableSpace>::default(), window, cx);
             let mut point = point(start_x, start_y - size.height);
 
             // Adjusting to ensure the popover does not overflow in the X-axis direction.
@@ -3617,20 +3654,25 @@ impl EditorElement {
         (0.275 * line_height).floor()
     }
 
-    fn paint_gutter_indicators(&self, layout: &mut EditorLayout, cx: &mut WindowContext) {
+    fn paint_gutter_indicators(
+        &self,
+        layout: &mut EditorLayout,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) {
         cx.paint_layer(layout.gutter_hitbox.bounds, |cx| {
             cx.with_element_namespace("crease_toggles", |cx| {
                 for crease_toggle in layout.crease_toggles.iter_mut().flatten() {
-                    crease_toggle.paint(cx);
+                    crease_toggle.paint(window, cx);
                 }
             });
 
             for test_indicator in layout.test_indicators.iter_mut() {
-                test_indicator.paint(cx);
+                test_indicator.paint(window, cx);
             }
 
             if let Some(indicator) = layout.code_actions_indicator.as_mut() {
-                indicator.paint(cx);
+                indicator.paint(window, cx);
             }
         });
     }
@@ -3686,19 +3728,29 @@ impl EditorElement {
         });
     }
 
-    fn paint_blamed_display_rows(&self, layout: &mut EditorLayout, cx: &mut WindowContext) {
+    fn paint_blamed_display_rows(
+        &self,
+        layout: &mut EditorLayout,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) {
         let Some(blamed_display_rows) = layout.blamed_display_rows.take() else {
             return;
         };
 
         cx.paint_layer(layout.gutter_hitbox.bounds, |cx| {
             for mut blame_element in blamed_display_rows.into_iter() {
-                blame_element.paint(cx);
+                blame_element.paint(window, cx);
             }
         })
     }
 
-    fn paint_text(&mut self, layout: &mut EditorLayout, cx: &mut WindowContext) {
+    fn paint_text(
+        &mut self,
+        layout: &mut EditorLayout,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) {
         cx.with_content_mask(
             Some(ContentMask {
                 bounds: layout.text_hitbox.bounds,
@@ -3718,13 +3770,13 @@ impl EditorElement {
                 cx.set_cursor_style(cursor_style, &layout.text_hitbox);
 
                 let invisible_display_ranges = self.paint_highlights(layout, cx);
-                self.paint_lines(&invisible_display_ranges, layout, cx);
+                self.paint_lines(&invisible_display_ranges, layout, window, cx);
                 self.paint_redactions(layout, cx);
-                self.paint_cursors(layout, cx);
-                self.paint_inline_blame(layout, cx);
+                self.paint_cursors(layout, window, cx);
+                self.paint_inline_blame(layout, window, cx);
                 cx.with_element_namespace("crease_trailers", |cx| {
                     for trailer in layout.crease_trailers.iter_mut().flatten() {
-                        trailer.element.paint(cx);
+                        trailer.element.paint(window, cx);
                     }
                 });
             },
@@ -3776,6 +3828,7 @@ impl EditorElement {
         &mut self,
         invisible_display_ranges: &[Range<DisplayPoint>],
         layout: &mut EditorLayout,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         let whitespace_setting = self
@@ -3799,7 +3852,7 @@ impl EditorElement {
         }
 
         for line_element in &mut layout.line_elements {
-            line_element.paint(cx);
+            line_element.paint(window, cx);
         }
     }
 
@@ -3827,9 +3880,14 @@ impl EditorElement {
         });
     }
 
-    fn paint_cursors(&mut self, layout: &mut EditorLayout, cx: &mut WindowContext) {
+    fn paint_cursors(
+        &mut self,
+        layout: &mut EditorLayout,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) {
         for cursor in &mut layout.visible_cursors {
-            cursor.paint(layout.content_origin, cx);
+            cursor.paint(layout.content_origin, window, cx);
         }
     }
 
@@ -4201,33 +4259,49 @@ impl EditorElement {
         }
     }
 
-    fn paint_inline_blame(&mut self, layout: &mut EditorLayout, cx: &mut WindowContext) {
+    fn paint_inline_blame(
+        &mut self,
+        layout: &mut EditorLayout,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) {
         if let Some(mut inline_blame) = layout.inline_blame.take() {
             cx.paint_layer(layout.text_hitbox.bounds, |cx| {
-                inline_blame.paint(cx);
+                inline_blame.paint(window, cx);
             })
         }
     }
 
-    fn paint_blocks(&mut self, layout: &mut EditorLayout, cx: &mut WindowContext) {
+    fn paint_blocks(
+        &mut self,
+        layout: &mut EditorLayout,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) {
         for mut block in layout.blocks.drain(..) {
-            block.element.paint(cx);
+            block.element.paint(window, cx);
         }
     }
 
     fn paint_inline_completion_popover(
         &mut self,
         layout: &mut EditorLayout,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         if let Some(inline_completion_popover) = layout.inline_completion_popover.as_mut() {
-            inline_completion_popover.paint(cx);
+            inline_completion_popover.paint(window, cx);
         }
     }
 
-    fn paint_mouse_context_menu(&mut self, layout: &mut EditorLayout, cx: &mut WindowContext) {
+    fn paint_mouse_context_menu(
+        &mut self,
+        layout: &mut EditorLayout,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) {
         if let Some(mouse_context_menu) = layout.mouse_context_menu.as_mut() {
-            mouse_context_menu.paint(cx);
+            mouse_context_menu.paint(window, cx);
         }
     }
 
@@ -4549,6 +4623,7 @@ fn prepaint_gutter_button(
     scroll_pixel_position: gpui::Point<Pixels>,
     gutter_hitbox: &Hitbox,
     rows_with_hunk_bounds: &HashMap<DisplayRow, Bounds<Pixels>>,
+    window: &mut Window,
     cx: &mut WindowContext<'_>,
 ) -> AnyElement {
     let mut button = button.into_any_element();
@@ -4556,7 +4631,7 @@ fn prepaint_gutter_button(
         AvailableSpace::MinContent,
         AvailableSpace::Definite(line_height),
     );
-    let indicator_size = button.layout_as_root(available_space, cx);
+    let indicator_size = button.layout_as_root(available_space, window, cx);
 
     let blame_width = gutter_dimensions.git_blame_entries_width;
     let gutter_width = rows_with_hunk_bounds
@@ -4573,7 +4648,12 @@ fn prepaint_gutter_button(
     let mut y = row.as_f32() * line_height - scroll_pixel_position.y;
     y += (line_height - indicator_size.height) / 2.;
 
-    button.prepaint_as_root(gutter_hitbox.origin + point(x, y), available_space, cx);
+    button.prepaint_as_root(
+        gutter_hitbox.origin + point(x, y),
+        available_space,
+        window,
+        cx,
+    );
     button
 }
 
@@ -4770,6 +4850,7 @@ impl LineWithInvisibles {
         editor_mode: EditorMode,
         text_width: Pixels,
         is_row_soft_wrapped: impl Copy + Fn(usize) -> bool,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Vec<Self> {
         let text_style = &editor_style.text;
@@ -4834,6 +4915,7 @@ impl LineWithInvisibles {
                         let line_height = text_style.line_height_in_pixels(cx.rem_size());
                         let size = element.layout_as_root(
                             size(available_width, AvailableSpace::Definite(line_height)),
+                            window,
                             cx,
                         );
 
@@ -4970,6 +5052,7 @@ impl LineWithInvisibles {
         row: DisplayRow,
         content_origin: gpui::Point<Pixels>,
         line_elements: &mut SmallVec<[AnyElement; 1]>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         let line_y = line_height * (row.as_f32() - scroll_pixel_position.y / line_height);
@@ -4987,7 +5070,7 @@ impl LineWithInvisibles {
                     // Center the element vertically within the line.
                     let mut element_origin = fragment_origin;
                     element_origin.y += (line_height - size.height) / 2.;
-                    element.prepaint_at(element_origin, cx);
+                    element.prepaint_at(element_origin, window, cx);
                     line_elements.push(element);
 
                     fragment_origin.x += size.width;
@@ -5288,6 +5371,7 @@ impl Element for EditorElement {
     fn request_layout(
         &mut self,
         _: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (gpui::LayoutId, ()) {
         let rem_size = self.rem_size(cx);
@@ -5303,7 +5387,7 @@ impl Element for EditorElement {
                         if auto_width {
                             let editor_handle = cx.view().clone();
                             let style = self.style.clone();
-                            cx.request_measured_layout(Style::default(), move |_, _, cx| {
+                            cx.request_measured_layout(Style::default(), move |_, _, window, cx| {
                                 let editor_snapshot =
                                     editor_handle.update(cx, |editor, cx| editor.snapshot(cx));
                                 let line = Self::layout_lines(
@@ -5312,6 +5396,7 @@ impl Element for EditorElement {
                                     &style,
                                     px(f32::MAX),
                                     |_| false, // Single lines never soft wrap
+                                    window,
                                     cx,
                                 )
                                 .pop()
@@ -5341,7 +5426,7 @@ impl Element for EditorElement {
                             self.max_line_number_width(&editor.snapshot(cx), cx);
                         cx.request_measured_layout(
                             Style::default(),
-                            move |known_dimensions, available_space, cx| {
+                            move |known_dimensions, available_space, window, cx| {
                                 editor_handle
                                     .update(cx, |editor, cx| {
                                         compute_auto_height_layout(
@@ -5375,6 +5460,7 @@ impl Element for EditorElement {
         _: Option<&GlobalElementId>,
         bounds: Bounds<Pixels>,
         _: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Self::PrepaintState {
         let text_style = TextStyleRefinement {
@@ -5616,6 +5702,7 @@ impl Element for EditorElement {
                         &self.style,
                         editor_width,
                         is_row_soft_wrapped,
+                        window,
                         cx,
                     );
                     for line_with_invisibles in &line_layouts {
@@ -5630,6 +5717,7 @@ impl Element for EditorElement {
                         &style,
                         editor_width,
                         is_row_soft_wrapped,
+                        window,
                         cx,
                     )
                     .width;
@@ -5651,6 +5739,7 @@ impl Element for EditorElement {
                             &line_layouts,
                             &local_selections,
                             is_row_soft_wrapped,
+                            window,
                             cx,
                         )
                     });
@@ -5660,7 +5749,7 @@ impl Element for EditorElement {
                             self.editor.update(cx, |editor, cx| {
                                 editor.resize_blocks(resized_blocks, autoscroll_request, cx)
                             });
-                            return self.prepaint(None, bounds, &mut (), cx);
+                            return self.prepaint(None, bounds, &mut (), window, cx);
                         }
                     };
 
@@ -5719,6 +5808,7 @@ impl Element for EditorElement {
                             content_origin,
                             scroll_pixel_position,
                             em_width,
+                            window,
                             cx,
                         )
                     });
@@ -5739,6 +5829,7 @@ impl Element for EditorElement {
                                 content_origin,
                                 scroll_pixel_position,
                                 line_height,
+                                window,
                                 cx,
                             );
                         }
@@ -5751,6 +5842,7 @@ impl Element for EditorElement {
                         line_height,
                         &gutter_hitbox,
                         gutter_dimensions.git_blame_entries_width,
+                        window,
                         cx,
                     );
 
@@ -5787,6 +5879,7 @@ impl Element for EditorElement {
                         line_height,
                         scroll_pixel_position,
                         content_origin,
+                        window,
                         cx,
                     );
 
@@ -5798,6 +5891,7 @@ impl Element for EditorElement {
                             &hitbox,
                             line_height,
                             scroll_pixel_position,
+                            window,
                             cx,
                         );
                     });
@@ -5821,6 +5915,7 @@ impl Element for EditorElement {
                         line_height,
                         em_width,
                         autoscroll_containing_element,
+                        window,
                         cx,
                     );
 
@@ -5886,6 +5981,7 @@ impl Element for EditorElement {
                                 &line_layouts,
                                 newest_selection_head,
                                 gutter_dimensions.width - gutter_dimensions.left_padding,
+                                window,
                                 cx,
                             );
 
@@ -5924,6 +6020,7 @@ impl Element for EditorElement {
                                                         &gutter_dimensions,
                                                         &gutter_hitbox,
                                                         &rows_with_hunk_bounds,
+                                                        window,
                                                         cx,
                                                     );
                                             }
@@ -5943,6 +6040,7 @@ impl Element for EditorElement {
                             &gutter_hitbox,
                             &rows_with_hunk_bounds,
                             &snapshot,
+                            window,
                             cx,
                         )
                     } else {
@@ -5958,6 +6056,7 @@ impl Element for EditorElement {
                         &line_layouts,
                         line_height,
                         em_width,
+                        window,
                         cx,
                     );
 
@@ -5972,6 +6071,7 @@ impl Element for EditorElement {
                             &line_layouts,
                             line_height,
                             em_width,
+                            window,
                             cx,
                         );
                     }
@@ -5987,6 +6087,7 @@ impl Element for EditorElement {
                         scroll_pixel_position,
                         editor_width,
                         &style,
+                        window,
                         cx,
                     );
 
@@ -5994,6 +6095,7 @@ impl Element for EditorElement {
                         &snapshot,
                         start_row..end_row,
                         content_origin,
+                        window,
                         cx,
                     );
 
@@ -6005,6 +6107,7 @@ impl Element for EditorElement {
                             gutter_settings,
                             scroll_pixel_position,
                             &gutter_hitbox,
+                            window,
                             cx,
                         )
                     });
@@ -6096,6 +6199,7 @@ impl Element for EditorElement {
         bounds: Bounds<gpui::Pixels>,
         _: &mut Self::RequestLayoutState,
         layout: &mut Self::PrepaintState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         let focus_handle = self.editor.focus_handle(cx);
@@ -6148,26 +6252,26 @@ impl Element for EditorElement {
                     self.paint_indent_guides(layout, cx);
 
                     if layout.gutter_hitbox.size.width > Pixels::ZERO {
-                        self.paint_blamed_display_rows(layout, cx);
+                        self.paint_blamed_display_rows(layout, window, cx);
                         self.paint_line_numbers(layout, cx);
                     }
 
-                    self.paint_text(layout, cx);
+                    self.paint_text(layout, window, cx);
 
                     if layout.gutter_hitbox.size.width > Pixels::ZERO {
                         self.paint_gutter_highlights(layout, cx);
-                        self.paint_gutter_indicators(layout, cx);
+                        self.paint_gutter_indicators(layout, window, cx);
                     }
 
                     if !layout.blocks.is_empty() {
                         cx.with_element_namespace("blocks", |cx| {
-                            self.paint_blocks(layout, cx);
+                            self.paint_blocks(layout, window, cx);
                         });
                     }
 
                     self.paint_scrollbar(layout, cx);
-                    self.paint_inline_completion_popover(layout, cx);
-                    self.paint_mouse_context_menu(layout, cx);
+                    self.paint_inline_completion_popover(layout, window, cx);
+                    self.paint_mouse_context_menu(layout, window, cx);
                 });
             })
         })
@@ -6434,6 +6538,7 @@ fn layout_line(
     style: &EditorStyle,
     text_width: Pixels,
     is_row_soft_wrapped: impl Copy + Fn(usize) -> bool,
+    window: &mut Window,
     cx: &mut WindowContext,
 ) -> LineWithInvisibles {
     let chunks = snapshot.highlighted_chunks(row..row + DisplayRow(1), true, style);
@@ -6445,6 +6550,7 @@ fn layout_line(
         snapshot.mode,
         text_width,
         is_row_soft_wrapped,
+        window,
         cx,
     )
     .pop()
@@ -6528,6 +6634,7 @@ impl CursorLayout {
         &mut self,
         origin: gpui::Point<Pixels>,
         cursor_name: Option<CursorName>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         if let Some(cursor_name) = cursor_name {
@@ -6548,13 +6655,18 @@ impl CursorLayout {
                 .child(cursor_name.string.clone())
                 .into_any_element();
 
-            name_element.prepaint_as_root(name_origin, AvailableSpace::min_size(), cx);
+            name_element.prepaint_as_root(name_origin, AvailableSpace::min_size(), window, cx);
 
             self.cursor_name = Some(name_element);
         }
     }
 
-    pub fn paint(&mut self, origin: gpui::Point<Pixels>, cx: &mut WindowContext) {
+    pub fn paint(
+        &mut self,
+        origin: gpui::Point<Pixels>,
+        window: &mut Window,
+        cx: &mut WindowContext,
+    ) {
         let bounds = self.bounds(origin);
 
         //Draw background or border quad
@@ -6565,7 +6677,7 @@ impl CursorLayout {
         };
 
         if let Some(name) = &mut self.cursor_name {
-            name.paint(cx);
+            name.paint(window, cx);
         }
 
         cx.paint_quad(cursor);
@@ -6920,9 +7032,11 @@ mod tests {
             })
             .unwrap();
 
-        let (_, state) = cx.draw(point(px(500.), px(500.)), size(px(500.), px(500.)), |_| {
-            EditorElement::new(&editor, style)
-        });
+        let (_, state) = cx.draw(
+            point(px(500.), px(500.)),
+            size(px(500.), px(500.)),
+            |_, _| EditorElement::new(&editor, style),
+        );
 
         assert_eq!(state.selections.len(), 1);
         let local_selections = &state.selections[0].1;
@@ -7017,9 +7131,11 @@ mod tests {
             });
         });
 
-        let (_, state) = cx.draw(point(px(500.), px(500.)), size(px(500.), px(500.)), |_| {
-            EditorElement::new(&editor, style)
-        });
+        let (_, state) = cx.draw(
+            point(px(500.), px(500.)),
+            size(px(500.), px(500.)),
+            |_, _| EditorElement::new(&editor, style),
+        );
         assert_eq!(state.selections.len(), 1);
         let local_selections = &state.selections[0].1;
         assert_eq!(local_selections.len(), 2);
@@ -7077,9 +7193,11 @@ mod tests {
             })
             .unwrap();
 
-        let (_, state) = cx.draw(point(px(500.), px(500.)), size(px(500.), px(500.)), |_| {
-            EditorElement::new(&editor, style)
-        });
+        let (_, state) = cx.draw(
+            point(px(500.), px(500.)),
+            size(px(500.), px(500.)),
+            |_, _| EditorElement::new(&editor, style),
+        );
         assert_eq!(state.position_map.line_layouts.len(), 4);
         assert_eq!(
             state
@@ -7444,9 +7562,11 @@ mod tests {
                 editor.set_show_line_numbers(show_line_numbers, cx);
             })
             .unwrap();
-        let (_, state) = cx.draw(point(px(500.), px(500.)), size(px(500.), px(500.)), |_| {
-            EditorElement::new(&editor, style)
-        });
+        let (_, state) = cx.draw(
+            point(px(500.), px(500.)),
+            size(px(500.), px(500.)),
+            |_, _| EditorElement::new(&editor, style),
+        );
         state
             .position_map
             .line_layouts

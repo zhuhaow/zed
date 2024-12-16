@@ -1309,16 +1309,17 @@ impl RemoteServerProjects {
                         .child(ListSeparator)
                         .child(
                             canvas(
-                                |bounds, cx| {
+                                |bounds, window, cx| {
                                     modal_section.prepaint_as_root(
                                         bounds.origin,
                                         bounds.size.into(),
+                                        window,
                                         cx,
                                     );
                                     modal_section
                                 },
-                                |_, mut modal_section, cx| {
-                                    modal_section.paint(cx);
+                                |_, mut modal_section, window, cx| {
+                                    modal_section.paint(window, cx);
                                 },
                             )
                             .size_full(),

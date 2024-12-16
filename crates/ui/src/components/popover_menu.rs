@@ -6,7 +6,7 @@ use gpui::{
     anchored, deferred, div, point, prelude::FluentBuilder, px, size, AnchorCorner, AnyElement,
     Bounds, DismissEvent, DispatchPhase, Element, ElementId, GlobalElementId, HitboxId,
     InteractiveElement, IntoElement, LayoutId, Length, ManagedView, MouseDownEvent, ParentElement,
-    Pixels, Point, Style, View, VisualContext, WindowContext,
+    Pixels, Point, Style, View, VisualContext, Window, WindowContext,
 };
 
 use crate::prelude::*;
@@ -245,6 +245,7 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
     fn request_layout(
         &mut self,
         global_id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (gpui::LayoutId, Self::RequestLayoutState) {
         cx.with_element_state(
@@ -266,7 +267,7 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
                         .with_priority(1)
                         .into_any();
 
-                    menu_layout_id = Some(element.request_layout(cx));
+                    menu_layout_id = Some(element.request_layout(window, cx));
                     element
                 });
 
@@ -285,7 +286,7 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
 
                 let child_layout_id = child_element
                     .as_mut()
-                    .map(|child_element| child_element.request_layout(cx));
+                    .map(|child_element| child_element.request_layout(window, cx));
 
                 let mut style = Style::default();
                 if self.full_width {
@@ -316,14 +317,15 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
         global_id: Option<&GlobalElementId>,
         _bounds: Bounds<Pixels>,
         request_layout: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<HitboxId> {
         if let Some(child) = request_layout.child_element.as_mut() {
-            child.prepaint(cx);
+            child.prepaint(window, cx);
         }
 
         if let Some(menu) = request_layout.menu_element.as_mut() {
-            menu.prepaint(cx);
+            menu.prepaint(window, cx);
         }
 
         request_layout.child_layout_id.map(|layout_id| {
@@ -344,14 +346,15 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
         _: Bounds<gpui::Pixels>,
         request_layout: &mut Self::RequestLayoutState,
         child_hitbox: &mut Option<HitboxId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         if let Some(mut child) = request_layout.child_element.take() {
-            child.paint(cx);
+            child.paint(window, cx);
         }
 
         if let Some(mut menu) = request_layout.menu_element.take() {
-            menu.paint(cx);
+            menu.paint(window, cx);
 
             if let Some(child_hitbox) = *child_hitbox {
                 let menu_handle = request_layout.menu_handle.clone();

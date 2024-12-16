@@ -29,7 +29,7 @@ impl Render for WindowShadow {
                     .bg(gpui::transparent_black())
                     .child(
                         canvas(
-                            |_bounds, cx| {
+                            |_bounds, window, cx| {
                                 cx.insert_hitbox(
                                     Bounds::new(
                                         point(px(0.0), px(0.0)),
@@ -38,7 +38,7 @@ impl Render for WindowShadow {
                                     false,
                                 )
                             },
-                            move |_bounds, hitbox, cx| {
+                            move |_bounds, hitbox, window, cx| {
                                 let mouse = cx.mouse_position();
                                 let size = cx.window_bounds().get_bounds().size;
                                 let Some(edge) = resize_edge(mouse, shadow_size, size) else {

@@ -536,6 +536,7 @@ impl Element for MarkdownElement {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (gpui::LayoutId, Self::RequestLayoutState) {
         let mut builder = MarkdownElementBuilder::new(
@@ -728,7 +729,7 @@ impl Element for MarkdownElement {
             }
         }
         let mut rendered_markdown = builder.build();
-        let child_layout_id = rendered_markdown.element.request_layout(cx);
+        let child_layout_id = rendered_markdown.element.request_layout(window, cx);
         let layout_id = cx.request_layout(gpui::Style::default(), [child_layout_id]);
         (layout_id, rendered_markdown)
     }
@@ -738,13 +739,14 @@ impl Element for MarkdownElement {
         _id: Option<&GlobalElementId>,
         bounds: Bounds<Pixels>,
         rendered_markdown: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Self::PrepaintState {
         let focus_handle = self.markdown.read(cx).focus_handle.clone();
         cx.set_focus_handle(&focus_handle);
 
         let hitbox = cx.insert_hitbox(bounds, false);
-        rendered_markdown.element.prepaint(cx);
+        rendered_markdown.element.prepaint(window, cx);
         self.autoscroll(&rendered_markdown.text, cx);
         hitbox
     }
@@ -755,6 +757,7 @@ impl Element for MarkdownElement {
         bounds: Bounds<Pixels>,
         rendered_markdown: &mut Self::RequestLayoutState,
         hitbox: &mut Self::PrepaintState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         let mut context = KeyContext::default();
@@ -772,7 +775,7 @@ impl Element for MarkdownElement {
         });
 
         self.paint_mouse_listeners(hitbox, &rendered_markdown.text, cx);
-        rendered_markdown.element.paint(cx);
+        rendered_markdown.element.paint(window, cx);
         self.paint_selection(bounds, &rendered_markdown.text, cx);
     }
 }

@@ -1,10 +1,10 @@
-use crate::Empty;
 use crate::{
     seal::Sealed, AnyElement, AnyModel, AnyWeakModel, AppContext, Bounds, ContentMask, Element,
     ElementId, Entity, EntityId, Flatten, FocusHandle, FocusableView, GlobalElementId, IntoElement,
     LayoutId, Model, PaintIndex, Pixels, PrepaintStateIndex, Render, Style, StyleRefinement,
     TextStyle, ViewContext, VisualContext, WeakModel, WindowContext,
 };
+use crate::{Empty, Window};
 use anyhow::{Context, Result};
 use refineable::Refineable;
 use std::mem;
@@ -102,10 +102,11 @@ impl<V: Render> Element for View<V> {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         let mut element = self.update(cx, |view, cx| view.render(cx).into_any_element());
-        let layout_id = element.request_layout(cx);
+        let layout_id = element.request_layout(window, cx);
         (layout_id, element)
     }
 
@@ -114,10 +115,11 @@ impl<V: Render> Element for View<V> {
         _id: Option<&GlobalElementId>,
         _: Bounds<Pixels>,
         element: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         cx.set_view_id(self.entity_id());
-        element.prepaint(cx);
+        element.prepaint(window, cx);
     }
 
     fn paint(
@@ -126,9 +128,10 @@ impl<V: Render> Element for View<V> {
         _: Bounds<Pixels>,
         element: &mut Self::RequestLayoutState,
         _: &mut Self::PrepaintState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
-        element.paint(cx);
+        element.paint(window, cx);
     }
 }
 
@@ -300,6 +303,7 @@ impl Element for AnyView {
     fn request_layout(
         &mut self,
         _id: Option<&GlobalElementId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
         if let Some(style) = self.cached_style.as_ref() {
@@ -309,7 +313,7 @@ impl Element for AnyView {
             (layout_id, None)
         } else {
             let mut element = (self.render)(self, cx);
-            let layout_id = element.request_layout(cx);
+            let layout_id = element.request_layout(window, cx);
             (layout_id, Some(element))
         }
     }
@@ -319,6 +323,7 @@ impl Element for AnyView {
         global_id: Option<&GlobalElementId>,
         bounds: Bounds<Pixels>,
         element: &mut Self::RequestLayoutState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<AnyElement> {
         cx.set_view_id(self.entity_id());
@@ -345,8 +350,8 @@ impl Element for AnyView {
                 let refreshing = mem::replace(&mut cx.window.refreshing, true);
                 let prepaint_start = cx.prepaint_index();
                 let mut element = (self.render)(self, cx);
-                element.layout_as_root(bounds.size.into(), cx);
-                element.prepaint_at(bounds.origin, cx);
+                element.layout_as_root(bounds.size.into(), window, cx);
+                element.prepaint_at(bounds.origin, window, cx);
                 let prepaint_end = cx.prepaint_index();
                 cx.window.refreshing = refreshing;
 
@@ -365,7 +370,7 @@ impl Element for AnyView {
             })
         } else {
             let mut element = element.take().unwrap();
-            element.prepaint(cx);
+            element.prepaint(window, cx);
             Some(element)
         }
     }
@@ -376,6 +381,7 @@ impl Element for AnyView {
         _bounds: Bounds<Pixels>,
         _: &mut Self::RequestLayoutState,
         element: &mut Self::PrepaintState,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         if self.cached_style.is_some() {
@@ -386,7 +392,7 @@ impl Element for AnyView {
 
                 if let Some(element) = element {
                     let refreshing = mem::replace(&mut cx.window.refreshing, true);
-                    element.paint(cx);
+                    element.paint(window, cx);
                     cx.window.refreshing = refreshing;
                 } else {
                     cx.reuse_paint(element_state.paint_range.clone());
@@ -398,7 +404,7 @@ impl Element for AnyView {
                 ((), element_state)
             })
         } else {
-            element.as_mut().unwrap().paint(cx);
+            element.as_mut().unwrap().paint(window, cx);
         }
     }
 }

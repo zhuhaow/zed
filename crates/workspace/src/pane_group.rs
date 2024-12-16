@@ -1018,6 +1018,7 @@ mod element {
         fn request_layout(
             &mut self,
             _global_id: Option<&GlobalElementId>,
+            window: &mut Window,
             cx: &mut ui::prelude::WindowContext,
         ) -> (gpui::LayoutId, Self::RequestLayoutState) {
             let style = Style {
@@ -1035,6 +1036,7 @@ mod element {
             global_id: Option<&GlobalElementId>,
             bounds: Bounds<Pixels>,
             _state: &mut Self::RequestLayoutState,
+            window: &mut Window,
             cx: &mut WindowContext,
         ) -> PaneAxisLayout {
             let dragged_handle = cx.with_element_state::<Rc<RefCell<Option<usize>>>, _>(
@@ -1092,8 +1094,8 @@ mod element {
                 };
 
                 bounding_boxes.push(Some(child_bounds));
-                child.layout_as_root(child_size.into(), cx);
-                child.prepaint_at(origin, cx);
+                child.layout_as_root(child_size.into(), window, cx);
+                child.prepaint_at(origin, window, cx);
 
                 origin = origin.apply_along(self.axis, |val| val + child_size.along(self.axis));
                 layout.children.push(PaneAxisChildLayout {
@@ -1119,10 +1121,11 @@ mod element {
             bounds: gpui::Bounds<ui::prelude::Pixels>,
             _: &mut Self::RequestLayoutState,
             layout: &mut Self::PrepaintState,
+            window: &mut Window,
             cx: &mut ui::prelude::WindowContext,
         ) {
             for child in &mut layout.children {
-                child.element.paint(cx);
+                child.element.paint(window, cx);
             }
 
             let overlay_opacity = WorkspaceSettings::get(None, cx)
