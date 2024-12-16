@@ -14476,8 +14476,8 @@ pub fn diagnostic_block_renderer(
 
         let icon_size = buttons(&diagnostic).into_any_element().layout_as_root(
             AvailableSpace::min_size(),
-            todo!(),
-            cx,
+            cx.window,
+            cx.context,
         );
 
         h_flex()
