@@ -2149,6 +2149,7 @@ impl EditorElement {
                 div()
                     .size_full()
                     .child(block.render(&mut BlockContext {
+                        window,
                         context: cx,
                         anchor_x,
                         gutter_dimensions,

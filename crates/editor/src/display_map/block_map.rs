@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{EditorStyle, GutterDimensions};
 use collections::{Bound, HashMap, HashSet};
-use gpui::{AnyElement, AppContext, EntityId, Pixels, WindowContext};
+use gpui::{AnyElement, AppContext, EntityId, Pixels, Window, WindowContext};
 use language::{Chunk, Patch, Point};
 use multi_buffer::{
     Anchor, ExcerptId, ExcerptInfo, MultiBuffer, MultiBufferRow, MultiBufferSnapshot, ToOffset,
@@ -226,6 +226,7 @@ pub enum BlockStyle {
 }
 
 pub struct BlockContext<'a, 'b> {
+    pub window: &'b mut Window,
     pub context: &'b mut WindowContext<'a>,
     pub anchor_x: Pixels,
     pub max_width: Pixels,
