@@ -141,7 +141,7 @@ impl AsyncAppContext {
     pub fn open_window<V>(
         &self,
         options: crate::WindowOptions,
-        build_root_view: impl FnOnce(&mut WindowContext) -> View<V>,
+        build_root_view: impl FnOnce(&mut Window, &mut WindowContext) -> View<V>,
     ) -> Result<WindowHandle<V>>
     where
         V: 'static + Render,

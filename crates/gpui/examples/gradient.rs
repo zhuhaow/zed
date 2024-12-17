@@ -246,7 +246,7 @@ fn main() {
                 focus: true,
                 ..Default::default()
             },
-            |cx| cx.new_view(|_| GradientViewer::new()),
+            |window, cx| cx.new_view(|_| GradientViewer::new()),
         )
         .unwrap();
         cx.activate(true);

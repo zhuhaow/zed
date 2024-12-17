@@ -42,7 +42,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |cx| {
+            |window, cx| {
                 cx.new_view(|_cx| HelloWorld {
                     text: "World".into(),
                 })

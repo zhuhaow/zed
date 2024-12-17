@@ -109,7 +109,7 @@ pub fn open_prompt_library(
                         window_bounds: Some(WindowBounds::Windowed(bounds)),
                         ..Default::default()
                     },
-                    |cx| cx.new_view(|cx| PromptLibrary::new(store, language_registry, cx)),
+                    |window, cx| cx.new_view(|cx| PromptLibrary::new(store, language_registry, cx)),
                 )
             })?
         })

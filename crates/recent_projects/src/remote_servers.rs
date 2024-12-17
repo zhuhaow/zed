@@ -159,7 +159,7 @@ impl ProjectPicker {
                         .update(|cx| (app_state.build_window_options)(None, cx))
                         .log_err()?;
 
-                    cx.open_window(options, |cx| {
+                    cx.open_window(options, |window, cx| {
                         cx.activate_window();
 
                         let fs = app_state.fs.clone();

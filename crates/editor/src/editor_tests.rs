@@ -608,7 +608,9 @@ fn test_clone(cx: &mut TestAppContext) {
 
     let cloned_editor = editor
         .update(cx, |editor, cx| {
-            cx.open_window(Default::default(), |cx| cx.new_view(|cx| editor.clone(cx)))
+            cx.open_window(Default::default(), |window, cx| {
+                cx.new_view(|cx| editor.clone(cx))
+            })
         })
         .unwrap()
         .unwrap();
@@ -9638,7 +9640,7 @@ async fn test_following(cx: &mut gpui::TestAppContext) {
                 ))),
                 ..Default::default()
             },
-            |cx| cx.new_view(|cx| build_editor(buffer.clone(), cx)),
+            |window, cx| cx.new_view(|cx| build_editor(buffer.clone(), cx)),
         )
         .unwrap()
     });

@@ -36,7 +36,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |cx| cx.new_view(|_cx| UniformListExample {}),
+            |window, cx| cx.new_view(|_cx| UniformListExample {}),
         )
         .unwrap();
     });

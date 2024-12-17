@@ -191,7 +191,7 @@ fn main() {
                 focus: true,
                 ..Default::default()
             },
-            |cx| cx.new_view(|_| PaintingViewer::new()),
+            |window, cx| cx.new_view(|_| PaintingViewer::new()),
         )
         .unwrap();
         cx.activate(true);

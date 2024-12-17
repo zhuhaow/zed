@@ -70,7 +70,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 fn fail_to_launch(e: anyhow::Error) {
     eprintln!("Zed failed to launch: {e:?}");
     App::new().run(move |cx| {
-        if let Ok(window) = cx.open_window(gpui::WindowOptions::default(), |cx| cx.new_view(|_| gpui::Empty)) {
+        if let Ok(window) = cx.open_window(gpui::WindowOptions::default(), |window, cx| cx.new_view(|_| gpui::Empty)) {
             window.update(cx, |_, cx| {
                 let response = cx.prompt(gpui::PromptLevel::Critical, "Zed failed to launch", Some(&format!("{e}\n\nFor help resolving this, please open an issue on https://github.com/zed-industries/zed")), &["Exit"]);
 

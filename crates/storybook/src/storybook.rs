@@ -95,7 +95,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            move |cx| {
+            move |window, cx| {
                 theme::setup_ui_font(cx);
 
                 cx.new_view(|cx| StoryWrapper::new(selector.story(cx)))

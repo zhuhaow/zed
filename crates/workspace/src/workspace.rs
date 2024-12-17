@@ -1227,7 +1227,7 @@ impl Workspace {
                 cx.open_window(options, {
                     let app_state = app_state.clone();
                     let project_handle = project_handle.clone();
-                    move |cx| {
+                    move |window, cx| {
                         cx.new_view(|cx| {
                             let mut workspace =
                                 Workspace::new(Some(workspace_id), project_handle, app_state, cx);
@@ -5824,7 +5824,7 @@ pub fn join_in_room_project(
             cx.update(|cx| {
                 let mut options = (app_state.build_window_options)(None, cx);
                 options.window_bounds = window_bounds_override.map(WindowBounds::Windowed);
-                cx.open_window(options, |cx| {
+                cx.open_window(options, |window, cx| {
                     cx.new_view(|cx| {
                         Workspace::new(Default::default(), project, app_state.clone(), cx)
                     })

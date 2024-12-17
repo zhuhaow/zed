@@ -139,7 +139,7 @@ impl LivekitWindow {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
                     ..Default::default()
                 },
-                |cx| {
+                |window, cx| {
                     cx.new_view(|cx| {
                         let _events_task = cx.spawn(|this, mut cx| async move {
                             while let Some(event) = events.recv().await {

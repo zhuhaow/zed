@@ -546,7 +546,7 @@ pub async fn open_ssh_project(
         window
     } else {
         let options = cx.update(|cx| (app_state.build_window_options)(None, cx))?;
-        cx.open_window(options, |cx| {
+        cx.open_window(options, |window, cx| {
             let project = project::Project::local(
                 app_state.client.clone(),
                 app_state.node_runtime.clone(),

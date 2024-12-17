@@ -207,7 +207,7 @@ fn main() {
                 window_decorations: Some(WindowDecorations::Client),
                 ..Default::default()
             },
-            |cx| {
+            |window, cx| {
                 cx.new_view(|cx| {
                     cx.observe_window_appearance(|_, cx| {
                         cx.refresh();

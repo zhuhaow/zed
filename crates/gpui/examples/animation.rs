@@ -78,7 +78,7 @@ fn main() {
                 ))),
                 ..Default::default()
             };
-            cx.open_window(options, |cx| {
+            cx.open_window(options, |window, cx| {
                 cx.activate(false);
                 cx.new_view(|_cx| AnimationExample {})
             })

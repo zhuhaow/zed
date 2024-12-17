@@ -35,7 +35,7 @@ pub fn main() {
         Assets.load_fonts(cx).unwrap();
 
         cx.activate(true);
-        let _ = cx.open_window(WindowOptions::default(), |cx| {
+        let _ = cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new_view(|cx| {
                 let markdown_style = MarkdownStyle {
                     base_text_style: gpui::TextStyle {

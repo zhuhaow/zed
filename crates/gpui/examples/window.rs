@@ -81,7 +81,7 @@ impl Render for WindowDemo {
                         window_bounds: Some(window_bounds),
                         ..Default::default()
                     },
-                    |cx| {
+                    |window, cx| {
                         cx.new_view(|_cx| SubWindow {
                             custom_titlebar: false,
                         })
@@ -96,7 +96,7 @@ impl Render for WindowDemo {
                         kind: WindowKind::PopUp,
                         ..Default::default()
                     },
-                    |cx| {
+                    |window, cx| {
                         cx.new_view(|_cx| SubWindow {
                             custom_titlebar: false,
                         })
@@ -111,7 +111,7 @@ impl Render for WindowDemo {
                         window_bounds: Some(window_bounds),
                         ..Default::default()
                     },
-                    |cx| {
+                    |window, cx| {
                         cx.new_view(|_cx| SubWindow {
                             custom_titlebar: true,
                         })
@@ -126,7 +126,7 @@ impl Render for WindowDemo {
                         window_bounds: Some(window_bounds),
                         ..Default::default()
                     },
-                    |cx| {
+                    |window, cx| {
                         cx.new_view(|_cx| SubWindow {
                             custom_titlebar: false,
                         })
@@ -142,7 +142,7 @@ impl Render for WindowDemo {
                         window_bounds: Some(window_bounds),
                         ..Default::default()
                     },
-                    |cx| {
+                    |window, cx| {
                         cx.new_view(|_cx| SubWindow {
                             custom_titlebar: false,
                         })
@@ -173,7 +173,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |cx| cx.new_view(|_cx| WindowDemo {}),
+            |window, cx| cx.new_view(|_cx| WindowDemo {}),
         )
         .unwrap();
     });

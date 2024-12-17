@@ -28,7 +28,7 @@ pub fn init(app_state: &Arc<AppState>, cx: &mut AppContext) {
             for screen in cx.displays() {
                 let options = notification_window_options(screen, window_size, cx);
                 let Some(window) = cx
-                    .open_window(options, |cx| {
+                    .open_window(options, |window, cx| {
                         cx.new_view(|_| {
                             ProjectSharedNotification::new(
                                 owner.clone(),
