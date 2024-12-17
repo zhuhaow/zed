@@ -66,10 +66,10 @@ impl Render for ThreadHistory {
                                 threads[range]
                                     .iter()
                                     .map(|thread| {
-                                        PastThread::new(
+                                        h_flex().w_full().pb_1().child(PastThread::new(
                                             thread.clone(),
                                             history.assistant_panel.clone(),
-                                        )
+                                        ))
                                     })
                                     .collect()
                             },
@@ -120,9 +120,13 @@ impl RenderOnce for PastThread {
 
         ListItem::new(("past-thread", self.thread.entity_id()))
             .outlined()
-            .start_slot(Icon::new(IconName::MessageBubbles))
+            .start_slot(
+                Icon::new(IconName::MessageCircle)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
             .spacing(ListItemSpacing::Sparse)
-            .child(Label::new(summary).size(LabelSize::Small))
+            .child(Label::new(summary).size(LabelSize::Small).text_ellipsis())
             .end_slot(
                 h_flex()
                     .gap_2()
