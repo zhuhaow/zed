@@ -671,7 +671,7 @@ fn main() {
             .unwrap();
         cx.observe_keystrokes(move |ev, cx| {
             window
-                .update(cx, |view, cx| {
+                .update(cx, |view, window, cx| {
                     view.recent_keystrokes.push(ev.keystroke.clone());
                     cx.notify();
                 })
@@ -680,13 +680,13 @@ fn main() {
         .detach();
         cx.on_keyboard_layout_change({
             move |cx| {
-                window.update(cx, |_, cx| cx.notify()).ok();
+                window.update(cx, |_, window, cx| cx.notify()).ok();
             }
         })
         .detach();
 
         window
-            .update(cx, |view, cx| {
+            .update(cx, |view, window, cx| {
                 cx.focus_view(&view.text_input);
                 cx.activate(true);
             })

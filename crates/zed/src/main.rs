@@ -71,7 +71,7 @@ fn fail_to_launch(e: anyhow::Error) {
     eprintln!("Zed failed to launch: {e:?}");
     App::new().run(move |cx| {
         if let Ok(window) = cx.open_window(gpui::WindowOptions::default(), |window, cx| cx.new_view(|_| gpui::Empty)) {
-            window.update(cx, |_, cx| {
+            window.update(cx, |_, window, cx| {
                 let response = cx.prompt(gpui::PromptLevel::Critical, "Zed failed to launch", Some(&format!("{e}\n\nFor help resolving this, please open an issue on https://github.com/zed-industries/zed")), &["Exit"]);
 
                 cx.spawn(|_, mut cx| async move {
@@ -569,7 +569,7 @@ fn handle_keymap_changed(error: Option<anyhow::Error>, cx: &mut AppContext) {
 
     for workspace in workspace::local_workspace_windows(cx) {
         workspace
-            .update(cx, |workspace, cx| match &error {
+            .update(cx, |workspace, window, cx| match &error {
                 Some(error) => {
                     workspace.show_notification(id.clone(), cx, |cx| {
                         cx.new_view(|_| {
@@ -594,7 +594,7 @@ fn handle_settings_changed(error: Option<anyhow::Error>, cx: &mut AppContext) {
 
     for workspace in workspace::local_workspace_windows(cx) {
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 match error.as_ref() {
                     Some(error) => {
                         if let Some(InvalidSettingsError::LocalSettings { .. }) =

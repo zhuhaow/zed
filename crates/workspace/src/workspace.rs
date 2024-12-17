@@ -367,7 +367,7 @@ pub fn init(app_state: Arc<AppState>, cx: &mut AppContext) {
                                     .and_then(|window| window.downcast::<Workspace>())
                                 {
                                     workspace_window
-                                        .update(cx, |workspace, cx| {
+                                        .update(cx, |workspace, window, cx| {
                                             workspace.show_portal_error(err.to_string(), cx);
                                         })
                                         .ok();
@@ -1240,14 +1240,14 @@ impl Workspace {
 
             notify_if_database_failed(window, &mut cx);
             let opened_items = window
-                .update(&mut cx, |_workspace, cx| {
+                .update(&mut cx, |_workspace, window, cx| {
                     open_items(serialized_workspace, project_paths, cx)
                 })?
                 .await
                 .unwrap_or_default();
 
             window
-                .update(&mut cx, |_, cx| cx.activate_window())
+                .update(&mut cx, |_, window, cx| cx.activate_window())
                 .log_err();
             Ok((window, opened_items))
         })
@@ -1502,7 +1502,11 @@ impl Workspace {
         self.navigate_history(pane, NavigationMode::GoingForward, cx)
     }
 
-    pub fn reopen_closed_item(&mut self, cx: &mut ViewContext<Workspace>) -> Task<Result<()>> {
+    pub fn reopen_closed_item(
+        &mut self,
+        window: &mut Window,
+        cx: &mut ViewContext<Workspace>,
+    ) -> Task<Result<()>> {
         self.navigate_history(
             self.active_pane().downgrade(),
             NavigationMode::ReopeningClosedItem,
@@ -1673,7 +1677,7 @@ impl Workspace {
             let task = Self::new_local(Vec::new(), self.app_state.clone(), None, env, cx);
             cx.spawn(|_vh, mut cx| async move {
                 let (workspace, _) = task.await?;
-                workspace.update(&mut cx, callback)
+                workspace.update(&mut cx, |workspace, _window, cx| callback(workspace, cx))
             })
         }
     }
@@ -4503,11 +4507,11 @@ impl Workspace {
                     workspace.clear_all_notifications(cx);
                 }),
             )
-            .on_action(
-                cx.listener(|workspace: &mut Workspace, _: &ReopenClosedItem, cx| {
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ReopenClosedItem, window, cx| {
                     workspace.reopen_closed_item(cx).detach();
-                }),
-            )
+                },
+            ))
             .on_action(cx.listener(Workspace::toggle_centered_layout))
     }
 
@@ -4775,7 +4779,7 @@ fn notify_if_database_failed(workspace: WindowHandle<Workspace>, cx: &mut AsyncA
     const REPORT_ISSUE_URL: &str = "https://github.com/zed-industries/zed/issues/new?assignees=&labels=admin+read%2Ctriage%2Cbug&projects=&template=1_bug_report.yml";
 
     workspace
-        .update(cx, |workspace, cx| {
+        .update(cx, |workspace, window, cx| {
             if (*db::ALL_FILE_DB_FAILED).load(std::sync::atomic::Ordering::Acquire) {
                 struct DatabaseFailedNotification;
 
@@ -5090,7 +5094,7 @@ impl WorkspaceStore {
             let mut response = proto::FollowResponse::default();
             this.workspaces.retain(|workspace| {
                 workspace
-                    .update(cx, |workspace, cx| {
+                    .update(cx, |workspace, window, cx| {
                         let handler_response = workspace.handle_follow(follower.project_id, cx);
                         if let Some(active_view) = handler_response.active_view.clone() {
                             if workspace.project.read(cx).remote_id() == follower.project_id {
@@ -5116,7 +5120,7 @@ impl WorkspaceStore {
         this.update(&mut cx, |this, cx| {
             this.workspaces.retain(|workspace| {
                 workspace
-                    .update(cx, |workspace, cx| {
+                    .update(cx, |workspace, window, cx| {
                         let project_id = workspace.project.read(cx).remote_id();
                         if update.project_id != project_id && update.project_id.is_some() {
                             return;
@@ -5191,7 +5195,7 @@ pub fn activate_workspace_for_project(
         };
 
         let predicate = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let project = workspace.project.read(cx);
                 if predicate(project, cx) {
                     cx.activate_window();
@@ -5267,7 +5271,7 @@ async fn join_channel_internal(
     if should_prompt {
         if let Some(workspace) = requesting_window {
             let answer = workspace
-                .update(cx, |_, cx| {
+                .update(cx, |_, window, cx| {
                     cx.prompt(
                         PromptLevel::Warning,
                         "Do you want to switch channels?",
@@ -5330,7 +5334,7 @@ async fn join_channel_internal(
         // If you are the first to join a channel, see if you should share your project.
         if room.remote_participants().is_empty() && !room.local_participant_is_guest() {
             if let Some(workspace) = requesting_window {
-                let project = workspace.update(cx, |workspace, cx| {
+                let project = workspace.update(cx, |workspace, window, cx| {
                     let project = workspace.project.read(cx);
 
                     if !CallSettings::get_global(cx).share_on_join {
@@ -5414,7 +5418,7 @@ pub fn join_channel(
             log::error!("failed to join channel: {}", err);
             if let Some(active_window) = active_window {
                 active_window
-                    .update(&mut cx, |_, cx| {
+                    .update(&mut cx, |_, window, cx| {
                         let detail: SharedString = match err.error_code() {
                             ErrorCode::SignedOut => {
                                 "Please sign in to continue.".into()
@@ -5473,7 +5477,7 @@ fn activate_any_workspace_window(cx: &mut AsyncAppContext) -> Option<WindowHandl
         for window in cx.windows() {
             if let Some(workspace_window) = window.downcast::<Workspace>() {
                 workspace_window
-                    .update(cx, |_, cx| cx.activate_window())
+                    .update(cx, |_, window, cx| cx.activate_window())
                     .ok();
                 return Some(workspace_window);
             }
@@ -5566,7 +5570,7 @@ pub fn open_paths(
             Ok((
                 existing,
                 existing
-                    .update(&mut cx, |workspace, cx| {
+                    .update(&mut cx, |workspace, window, cx| {
                         cx.activate_window();
                         workspace.open_paths(abs_paths, open_visible, None, cx)
                     })?
@@ -5596,7 +5600,7 @@ pub fn open_new(
     let task = Workspace::new_local(Vec::new(), app_state, None, open_options.env, cx);
     cx.spawn(|mut cx| async move {
         let (workspace, opened_paths) = task.await?;
-        workspace.update(&mut cx, |workspace, cx| {
+        workspace.update(&mut cx, |workspace, window, cx| {
             if opened_paths.is_empty() {
                 init(workspace, cx)
             }
@@ -5720,14 +5724,14 @@ pub fn open_ssh_project(
         })?;
 
         window
-            .update(&mut cx, |_, cx| {
+            .update(&mut cx, |_, window, cx| {
                 cx.activate_window();
 
                 open_items(serialized_workspace, project_paths_to_open, cx)
             })?
             .await?;
 
-        window.update(&mut cx, |workspace, cx| {
+        window.update(&mut cx, |workspace, window, cx| {
             for error in project_path_errors {
                 if error.error_code() == proto::ErrorCode::DevServerProjectPathDoesNotExist {
                     if let Some(path) = error.error_tag("path") {
@@ -5788,11 +5792,11 @@ pub fn join_in_room_project(
 ) -> Task<Result<()>> {
     let windows = cx.windows();
     cx.spawn(|mut cx| async move {
-        let existing_workspace = windows.into_iter().find_map(|window| {
+        let existing_workspace_window = windows.into_iter().find_map(|window| {
             window.downcast::<Workspace>().and_then(|window| {
                 window
-                    .update(&mut cx, |workspace, cx| {
-                        if workspace.project().read(cx).remote_id() == Some(project_id) {
+                    .update(&mut cx, |handle, _window, cx| {
+                        if handle.project().read(cx).remote_id() == Some(project_id) {
                             Some(window)
                         } else {
                             None
@@ -5802,7 +5806,7 @@ pub fn join_in_room_project(
             })
         });
 
-        let workspace = if let Some(existing_workspace) = existing_workspace {
+        let workspace_window = if let Some(existing_workspace) = existing_workspace_window {
             existing_workspace
         } else {
             let active_call = cx.update(|cx| ActiveCall::global(cx))?;
@@ -5832,7 +5836,7 @@ pub fn join_in_room_project(
             })??
         };
 
-        workspace.update(&mut cx, |workspace, cx| {
+        workspace_window.update(&mut cx, |workspace, window, cx| {
             cx.activate(true);
             cx.activate_window();
 
@@ -5879,7 +5883,7 @@ pub fn reload(reload: &Reload, cx: &mut AppContext) {
     let mut prompt = None;
     if let (true, Some(window)) = (should_confirm, workspace_windows.first()) {
         prompt = window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 cx.prompt(
                     PromptLevel::Info,
                     "Are you sure you want to restart?",
@@ -5901,7 +5905,7 @@ pub fn reload(reload: &Reload, cx: &mut AppContext) {
 
         // If the user cancels any save prompt, then keep the app open.
         for window in workspace_windows {
-            if let Ok(should_close) = window.update(&mut cx, |workspace, cx| {
+            if let Ok(should_close) = window.update(&mut cx, |workspace, window, cx| {
                 workspace.prepare_to_close(CloseIntent::Quit, cx)
             }) {
                 if !should_close.await? {

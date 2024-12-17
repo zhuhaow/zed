@@ -87,7 +87,7 @@ impl DispatchPhase {
 type AnyObserver = Box<dyn FnMut(&mut WindowContext) -> bool + 'static>;
 
 type AnyWindowFocusListener =
-    Box<dyn FnMut(&WindowFocusEvent, &mut WindowContext) -> bool + 'static>;
+    Box<dyn FnMut(&WindowFocusEvent, &mut Window, &mut WindowContext) -> bool + 'static>;
 
 struct WindowFocusEvent {
     previous_focus_path: SmallVec<[FocusId; 8]>,
@@ -836,8 +836,13 @@ impl Window {
             prompt: None,
         })
     }
+
     fn new_focus_listener(&self, value: AnyWindowFocusListener) -> (Subscription, impl FnOnce()) {
         self.focus_listeners.insert((), value)
+    }
+
+    pub fn handle(&self) -> AnyWindowHandle {
+        self.handle
     }
 }
 
@@ -1480,7 +1485,7 @@ impl<'a> WindowContext<'a> {
             self.window
                 .focus_listeners
                 .clone()
-                .retain(&(), |listener| listener(&event, self));
+                .retain(&(), |listener| listener(&event, todo!(), self));
         }
 
         self.reset_cursor_style();
@@ -2927,7 +2932,7 @@ impl<'a> WindowContext<'a> {
     /// This method should only be called as part of the paint phase of element drawing.
     pub fn on_mouse_event<Event: MouseEvent>(
         &mut self,
-        mut handler: impl FnMut(&Event, DispatchPhase, &mut WindowContext) + 'static,
+        mut handler: impl FnMut(&Event, DispatchPhase, &mut Window, &mut WindowContext) + 'static,
     ) {
         debug_assert_eq!(
             self.window.draw_phase,
@@ -2938,7 +2943,7 @@ impl<'a> WindowContext<'a> {
         self.window.next_frame.mouse_listeners.push(Some(Box::new(
             move |event: &dyn Any, phase: DispatchPhase, cx: &mut WindowContext<'_>| {
                 if let Some(event) = event.downcast_ref() {
-                    handler(event, phase, cx)
+                    handler(event, phase, todo!(), cx)
                 }
             },
         )));
@@ -2954,7 +2959,7 @@ impl<'a> WindowContext<'a> {
     /// This method should only be called as part of the paint phase of element drawing.
     pub fn on_key_event<Event: KeyEvent>(
         &mut self,
-        listener: impl Fn(&Event, DispatchPhase, &mut WindowContext) + 'static,
+        listener: impl Fn(&Event, DispatchPhase, &mut Window, &mut WindowContext) + 'static,
     ) {
         debug_assert_eq!(
             self.window.draw_phase,
@@ -2965,7 +2970,7 @@ impl<'a> WindowContext<'a> {
         self.window.next_frame.dispatch_tree.on_key_event(Rc::new(
             move |event: &dyn Any, phase, cx: &mut WindowContext<'_>| {
                 if let Some(event) = event.downcast_ref::<Event>() {
-                    listener(event, phase, cx)
+                    listener(event, phase, todo!(), cx)
                 }
             },
         ));
@@ -2979,7 +2984,7 @@ impl<'a> WindowContext<'a> {
     /// This method should only be called as part of the paint phase of element drawing.
     pub fn on_modifiers_changed(
         &mut self,
-        listener: impl Fn(&ModifiersChangedEvent, &mut WindowContext) + 'static,
+        listener: impl Fn(&ModifiersChangedEvent, &mut Window, &mut WindowContext) + 'static,
     ) {
         debug_assert_eq!(
             self.window.draw_phase,
@@ -2992,7 +2997,7 @@ impl<'a> WindowContext<'a> {
             .dispatch_tree
             .on_modifiers_changed(Rc::new(
                 move |event: &ModifiersChangedEvent, cx: &mut WindowContext<'_>| {
-                    listener(event, cx)
+                    listener(event, todo!(), cx)
                 },
             ));
     }
@@ -3003,16 +3008,17 @@ impl<'a> WindowContext<'a> {
     pub fn on_focus_in(
         &mut self,
         handle: &FocusHandle,
-        mut listener: impl FnMut(&mut WindowContext) + 'static,
+        mut listener: impl FnMut(&mut Window, &mut WindowContext) + 'static,
     ) -> Subscription {
         let focus_id = handle.id;
         let (subscription, activate) =
-            self.window.new_focus_listener(Box::new(move |event, cx| {
-                if event.is_focus_in(focus_id) {
-                    listener(cx);
-                }
-                true
-            }));
+            self.window
+                .new_focus_listener(Box::new(move |event, window, cx| {
+                    if event.is_focus_in(focus_id) {
+                        listener(window, cx);
+                    }
+                    true
+                }));
         self.app.defer(move |_| activate());
         subscription
     }
@@ -3022,24 +3028,25 @@ impl<'a> WindowContext<'a> {
     pub fn on_focus_out(
         &mut self,
         handle: &FocusHandle,
-        mut listener: impl FnMut(FocusOutEvent, &mut WindowContext) + 'static,
+        mut listener: impl FnMut(FocusOutEvent, &mut Window, &mut WindowContext) + 'static,
     ) -> Subscription {
         let focus_id = handle.id;
         let (subscription, activate) =
-            self.window.new_focus_listener(Box::new(move |event, cx| {
-                if let Some(blurred_id) = event.previous_focus_path.last().copied() {
-                    if event.is_focus_out(focus_id) {
-                        let event = FocusOutEvent {
-                            blurred: WeakFocusHandle {
-                                id: blurred_id,
-                                handles: Arc::downgrade(&cx.app.focus_handles),
-                            },
-                        };
-                        listener(event, cx)
+            self.window
+                .new_focus_listener(Box::new(move |event, window, cx| {
+                    if let Some(blurred_id) = event.previous_focus_path.last().copied() {
+                        if event.is_focus_out(focus_id) {
+                            let event = FocusOutEvent {
+                                blurred: WeakFocusHandle {
+                                    id: blurred_id,
+                                    handles: Arc::downgrade(&cx.app.focus_handles),
+                                },
+                            };
+                            listener(event, window, cx)
+                        }
                     }
-                }
-                true
-            }));
+                    true
+                }));
         self.app.defer(move |_| activate());
         subscription
     }
@@ -3549,7 +3556,7 @@ impl<'a> WindowContext<'a> {
             {
                 let any_action = action.as_any();
                 if action_type == any_action.type_id() {
-                    listener(any_action, DispatchPhase::Capture, self);
+                    listener(any_action, DispatchPhase::Capture, todo!(), self);
 
                     if !self.propagate_event {
                         return;
@@ -3569,7 +3576,7 @@ impl<'a> WindowContext<'a> {
                 let any_action = action.as_any();
                 if action_type == any_action.type_id() {
                     self.propagate_event = false; // Actions stop propagation by default during the bubble phase
-                    listener(any_action, DispatchPhase::Bubble, self);
+                    listener(any_action, DispatchPhase::Bubble, todo!(), self);
 
                     if !self.propagate_event {
                         return;
@@ -3817,7 +3824,7 @@ impl<'a> WindowContext<'a> {
     pub fn on_action(
         &mut self,
         action_type: TypeId,
-        listener: impl Fn(&dyn Any, DispatchPhase, &mut WindowContext) + 'static,
+        listener: impl Fn(&dyn Any, DispatchPhase, &mut Window, &mut WindowContext) + 'static,
     ) {
         self.window
             .next_frame
@@ -4355,16 +4362,17 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         let view = self.view.downgrade();
         let focus_id = handle.id;
         let (subscription, activate) =
-            self.window.new_focus_listener(Box::new(move |event, cx| {
-                view.update(cx, |view, cx| {
-                    if event.previous_focus_path.last() != Some(&focus_id)
-                        && event.current_focus_path.last() == Some(&focus_id)
-                    {
-                        listener(view, cx)
-                    }
-                })
-                .is_ok()
-            }));
+            self.window
+                .new_focus_listener(Box::new(move |event, window, cx| {
+                    view.update(cx, |view, cx| {
+                        if event.previous_focus_path.last() != Some(&focus_id)
+                            && event.current_focus_path.last() == Some(&focus_id)
+                        {
+                            listener(view, cx)
+                        }
+                    })
+                    .is_ok()
+                }));
         self.app.defer(|_| activate());
         subscription
     }
@@ -4380,14 +4388,15 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         let view = self.view.downgrade();
         let focus_id = handle.id;
         let (subscription, activate) =
-            self.window.new_focus_listener(Box::new(move |event, cx| {
-                view.update(cx, |view, cx| {
-                    if event.is_focus_in(focus_id) {
-                        listener(view, cx)
-                    }
-                })
-                .is_ok()
-            }));
+            self.window
+                .new_focus_listener(Box::new(move |event, window, cx| {
+                    view.update(cx, |view, cx| {
+                        if event.is_focus_in(focus_id) {
+                            listener(view, cx)
+                        }
+                    })
+                    .is_ok()
+                }));
         self.app.defer(move |_| activate());
         subscription
     }
@@ -4402,16 +4411,17 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         let view = self.view.downgrade();
         let focus_id = handle.id;
         let (subscription, activate) =
-            self.window.new_focus_listener(Box::new(move |event, cx| {
-                view.update(cx, |view, cx| {
-                    if event.previous_focus_path.last() == Some(&focus_id)
-                        && event.current_focus_path.last() != Some(&focus_id)
-                    {
-                        listener(view, cx)
-                    }
-                })
-                .is_ok()
-            }));
+            self.window
+                .new_focus_listener(Box::new(move |event, window, cx| {
+                    view.update(cx, |view, cx| {
+                        if event.previous_focus_path.last() == Some(&focus_id)
+                            && event.current_focus_path.last() != Some(&focus_id)
+                        {
+                            listener(view, cx)
+                        }
+                    })
+                    .is_ok()
+                }));
         self.app.defer(move |_| activate());
         subscription
     }
@@ -4443,22 +4453,23 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         let view = self.view.downgrade();
         let focus_id = handle.id;
         let (subscription, activate) =
-            self.window.new_focus_listener(Box::new(move |event, cx| {
-                view.update(cx, |view, cx| {
-                    if let Some(blurred_id) = event.previous_focus_path.last().copied() {
-                        if event.is_focus_out(focus_id) {
-                            let event = FocusOutEvent {
-                                blurred: WeakFocusHandle {
-                                    id: blurred_id,
-                                    handles: Arc::downgrade(&cx.app.focus_handles),
-                                },
-                            };
-                            listener(view, event, cx)
+            self.window
+                .new_focus_listener(Box::new(move |event, window, cx| {
+                    view.update(cx, |view, cx| {
+                        if let Some(blurred_id) = event.previous_focus_path.last().copied() {
+                            if event.is_focus_out(focus_id) {
+                                let event = FocusOutEvent {
+                                    blurred: WeakFocusHandle {
+                                        id: blurred_id,
+                                        handles: Arc::downgrade(&cx.app.focus_handles),
+                                    },
+                                };
+                                listener(view, event, cx)
+                            }
                         }
-                    }
-                })
-                .is_ok()
-            }));
+                    })
+                    .is_ok()
+                }));
         self.app.defer(move |_| activate());
         subscription
     }
@@ -4505,7 +4516,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     ) {
         let handle = self.view().clone();
         self.window_cx
-            .on_action(action_type, move |action, phase, cx| {
+            .on_action(action_type, move |action, phase, window, cx| {
                 handle.update(cx, |view, cx| {
                     listener(view, action, phase, cx);
                 })
@@ -4541,11 +4552,11 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     /// callbacks. This method provides a convenient way to do so.
     pub fn listener<E: ?Sized>(
         &self,
-        f: impl Fn(&mut V, &E, &mut ViewContext<V>) + 'static,
-    ) -> impl Fn(&E, &mut WindowContext) + 'static {
+        f: impl Fn(&mut V, &E, &mut Window, &mut ViewContext<V>) + 'static,
+    ) -> impl Fn(&E, &mut Window, &mut WindowContext) + 'static {
         let view = self.view().downgrade();
-        move |e: &E, cx: &mut WindowContext| {
-            view.update(cx, |view, cx| f(view, e, cx)).ok();
+        move |e: &E, window: &mut Window, cx: &mut WindowContext| {
+            view.update(cx, |view, cx| f(view, e, window, cx)).ok();
         }
     }
 }
@@ -4721,16 +4732,16 @@ impl<V: 'static + Render> WindowHandle<V> {
     pub fn update<C, R>(
         &self,
         cx: &mut C,
-        update: impl FnOnce(&mut V, &mut ViewContext<'_, V>) -> R,
+        update: impl FnOnce(&mut V, &mut Window, &mut ViewContext<'_, V>) -> R,
     ) -> Result<R>
     where
         C: Context,
     {
-        cx.update_window(self.any_handle, |root_view, _window, cx| {
+        cx.update_window(self.any_handle, |root_view, window, cx| {
             let view = root_view
                 .downcast::<V>()
                 .map_err(|_| anyhow!("the type of the window's root view has changed"))?;
-            Ok(cx.update_view(&view, update))
+            Ok(cx.update_view(&view, |view, cx| update(view, window, cx)))
         })?
     }
 

@@ -1324,7 +1324,7 @@ pub mod tests {
 
         let mut edits_made = 1;
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["0".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -1345,7 +1345,7 @@ pub mod tests {
             .unwrap();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.change_selections(None, cx, |s| s.select_ranges([13..13]));
                 editor.handle_input("some change", cx);
                 edits_made += 1;
@@ -1353,7 +1353,7 @@ pub mod tests {
             .unwrap();
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["0".to_string(), "1".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -1380,7 +1380,7 @@ pub mod tests {
         edits_made += 1;
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["0".to_string(), "1".to_string(), "2".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -1444,7 +1444,7 @@ pub mod tests {
 
         let mut edits_made = 1;
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["0".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -1477,7 +1477,7 @@ pub mod tests {
         cx.executor().run_until_parked();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["0".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -1503,7 +1503,7 @@ pub mod tests {
 
         edits_made += 1;
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["1".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -1824,7 +1824,7 @@ pub mod tests {
 
         let mut edits_made = 1;
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert_eq!(
                     lsp_request_count.load(Ordering::Relaxed),
                     1,
@@ -1861,7 +1861,7 @@ pub mod tests {
             .expect("inlay refresh request failed");
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert_eq!(
                     lsp_request_count.load(Ordering::Relaxed),
                     2,
@@ -1937,7 +1937,7 @@ pub mod tests {
                 })
             });
             cx.executor().run_until_parked();
-            editor.update(cx, |editor, cx| {
+            editor.update(cx, |editor, window, cx| {
                 assert_eq!(
                     lsp_request_count.load(Ordering::Relaxed),
                     2,
@@ -1985,7 +1985,7 @@ pub mod tests {
         });
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert_eq!(
                     lsp_request_count.load(Ordering::Relaxed),
                     2,
@@ -2016,7 +2016,7 @@ pub mod tests {
             .await
             .expect("inlay refresh request failed");
         cx.executor().run_until_parked();
-        editor.update(cx, |editor, cx| {
+        editor.update(cx, |editor, window, cx| {
             assert_eq!(
                 lsp_request_count.load(Ordering::Relaxed),
                 2,
@@ -2046,7 +2046,7 @@ pub mod tests {
         });
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert_eq!(
                     lsp_request_count.load(Ordering::Relaxed),
                     3,
@@ -2084,7 +2084,7 @@ pub mod tests {
             .expect("inlay refresh request failed");
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert_eq!(
                     lsp_request_count.load(Ordering::Relaxed),
                     4,
@@ -2159,7 +2159,7 @@ pub mod tests {
             "initial change #3",
         ] {
             editor
-                .update(cx, |editor, cx| {
+                .update(cx, |editor, window, cx| {
                     editor.change_selections(None, cx, |s| s.select_ranges([13..13]));
                     editor.handle_input(change_after_opening, cx);
                 })
@@ -2169,7 +2169,7 @@ pub mod tests {
 
         cx.executor().run_until_parked();
 
-        editor.update(cx, |editor, cx| {
+        editor.update(cx, |editor, window, cx| {
             let current_text = editor.text(cx);
             for change in &expected_changes {
                 assert!(
@@ -2201,7 +2201,7 @@ pub mod tests {
             let task_editor = editor;
             edits.push(cx.spawn(|mut cx| async move {
                 task_editor
-                    .update(&mut cx, |editor, cx| {
+                    .update(&mut cx, |editor, window, cx| {
                         editor.change_selections(None, cx, |s| s.select_ranges([13..13]));
                         editor.handle_input(async_later_change, cx);
                     })
@@ -2212,7 +2212,7 @@ pub mod tests {
         cx.executor().run_until_parked();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let current_text = editor.text(cx);
                 for change in &expected_changes {
                     assert!(
@@ -2731,7 +2731,7 @@ pub mod tests {
             .await;
         cx.executor().run_until_parked();
 
-        editor.update(cx, |editor, cx| {
+        editor.update(cx, |editor, window, cx| {
                 let expected_hints = vec![
                     "main hint #0".to_string(),
                     "main hint #1".to_string(),
@@ -2750,7 +2750,7 @@ pub mod tests {
             }).unwrap();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.change_selections(Some(Autoscroll::Next), cx, |s| {
                     s.select_ranges([Point::new(4, 0)..Point::new(4, 0)])
                 });
@@ -2763,7 +2763,7 @@ pub mod tests {
             })
             .unwrap();
         cx.executor().run_until_parked();
-        editor.update(cx, |editor, cx| {
+        editor.update(cx, |editor, window, cx| {
                 let expected_hints = vec![
                     "main hint #0".to_string(),
                     "main hint #1".to_string(),
@@ -2783,7 +2783,7 @@ pub mod tests {
             }).unwrap();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.change_selections(Some(Autoscroll::Next), cx, |s| {
                     s.select_ranges([Point::new(100, 0)..Point::new(100, 0)])
                 });
@@ -2793,7 +2793,7 @@ pub mod tests {
             INVISIBLE_RANGES_HINTS_REQUEST_DELAY_MILLIS + 100,
         ));
         cx.executor().run_until_parked();
-        let last_scroll_update_version = editor.update(cx, |editor, cx| {
+        let last_scroll_update_version = editor.update(cx, |editor, window, cx| {
                 let expected_hints = vec![
                     "main hint #0".to_string(),
                     "main hint #1".to_string(),
@@ -2816,7 +2816,7 @@ pub mod tests {
             }).unwrap();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.change_selections(Some(Autoscroll::Next), cx, |s| {
                     s.select_ranges([Point::new(4, 0)..Point::new(4, 0)])
                 });
@@ -2826,7 +2826,7 @@ pub mod tests {
             INVISIBLE_RANGES_HINTS_REQUEST_DELAY_MILLIS + 100,
         ));
         cx.executor().run_until_parked();
-        editor.update(cx, |editor, cx| {
+        editor.update(cx, |editor, window, cx| {
                 let expected_hints = vec![
                     "main hint #0".to_string(),
                     "main hint #1".to_string(),
@@ -2849,7 +2849,7 @@ pub mod tests {
 
         editor_edited.store(true, Ordering::Release);
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.change_selections(None, cx, |s| {
                     s.select_ranges([Point::new(57, 0)..Point::new(57, 0)])
                 });
@@ -2857,7 +2857,7 @@ pub mod tests {
             })
             .unwrap();
         cx.executor().run_until_parked();
-        editor.update(cx, |editor, cx| {
+        editor.update(cx, |editor, window, cx| {
             let expected_hints = vec![
                 "main hint #0".to_string(),
                 "main hint #1".to_string(),
@@ -3035,7 +3035,7 @@ pub mod tests {
             .await;
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert_eq!(
                     vec!["main hint #0".to_string(), "other hint #0".to_string()],
                     cached_hint_labels(editor),
@@ -3054,7 +3054,7 @@ pub mod tests {
             .unwrap();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.buffer().update(cx, |multibuffer, cx| {
                     multibuffer.remove_excerpts(buffer_2_excerpts, cx)
                 })
@@ -3062,7 +3062,7 @@ pub mod tests {
             .unwrap();
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert_eq!(
                     vec!["main hint #0".to_string()],
                     cached_hint_labels(editor),
@@ -3093,7 +3093,7 @@ pub mod tests {
         });
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["main hint #0".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -3191,7 +3191,7 @@ pub mod tests {
 
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.change_selections(None, cx, |s| {
                     s.select_ranges([Point::new(10, 0)..Point::new(10, 0)])
                 })
@@ -3199,7 +3199,7 @@ pub mod tests {
             .unwrap();
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["1".to_string()];
                 assert_eq!(expected_hints, cached_hint_labels(editor));
                 assert_eq!(expected_hints, visible_hint_labels(editor, cx));
@@ -3249,7 +3249,7 @@ pub mod tests {
         .await;
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.toggle_inlay_hints(&crate::ToggleInlayHints, cx)
             })
             .unwrap();
@@ -3257,7 +3257,7 @@ pub mod tests {
 
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["1".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -3274,13 +3274,13 @@ pub mod tests {
             .unwrap();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.toggle_inlay_hints(&crate::ToggleInlayHints, cx)
             })
             .unwrap();
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert!(
                     cached_hint_labels(editor).is_empty(),
                     "Should clear hints after 2nd toggle"
@@ -3303,7 +3303,7 @@ pub mod tests {
         });
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let expected_hints = vec!["2".to_string()];
                 assert_eq!(
                     expected_hints,
@@ -3316,13 +3316,13 @@ pub mod tests {
             .unwrap();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.toggle_inlay_hints(&crate::ToggleInlayHints, cx)
             })
             .unwrap();
         cx.executor().run_until_parked();
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert!(
                     cached_hint_labels(editor).is_empty(),
                     "Should clear hints after enabling in settings and a 3rd toggle"
@@ -3333,12 +3333,12 @@ pub mod tests {
             .unwrap();
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.toggle_inlay_hints(&crate::ToggleInlayHints, cx)
             })
             .unwrap();
         cx.executor().run_until_parked();
-        editor.update(cx, |editor, cx| {
+        editor.update(cx, |editor, window, cx| {
             let expected_hints = vec!["3".to_string()];
             assert_eq!(
                 expected_hints,
@@ -3406,7 +3406,7 @@ pub mod tests {
         let editor = cx.add_window(|cx| Editor::for_buffer(buffer, Some(project), cx));
 
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 assert!(cached_hint_labels(editor).is_empty());
                 assert!(visible_hint_labels(editor, cx).is_empty());
                 assert_eq!(editor.inlay_hint_cache().version, 0);

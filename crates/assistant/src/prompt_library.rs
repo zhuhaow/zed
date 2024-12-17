@@ -88,7 +88,7 @@ pub fn open_prompt_library(
         .find_map(|window| window.downcast::<PromptLibrary>());
     if let Some(existing_window) = existing_window {
         existing_window
-            .update(cx, |_, cx| cx.activate_window())
+            .update(cx, |_, window, cx| cx.activate_window())
             .ok();
         Task::ready(Ok(existing_window))
     } else {
@@ -699,7 +699,7 @@ impl PromptLibrary {
             for window in cx.windows() {
                 if let Some(workspace) = window.downcast::<Workspace>() {
                     let panel = workspace
-                        .update(cx, |workspace, cx| {
+                        .update(cx, |workspace, window, cx| {
                             cx.activate_window();
                             workspace.focus_panel::<AssistantPanel>(cx)
                         })

@@ -165,9 +165,11 @@ impl Element for UniformList {
     ) -> (LayoutId, Self::RequestLayoutState) {
         let max_items = self.item_count;
         let item_size = self.measure_item(None, window, cx);
-        let layout_id = self
-            .interactivity
-            .request_layout(global_id, cx, |style, cx| match self.sizing_behavior {
+        let layout_id = self.interactivity.request_layout(
+            global_id,
+            window,
+            cx,
+            |style, window, cx| match self.sizing_behavior {
                 ListSizingBehavior::Infer => {
                     cx.with_text_style(style.text_style().cloned(), |cx| {
                         cx.request_measured_layout(
@@ -196,7 +198,8 @@ impl Element for UniformList {
                 ListSizingBehavior::Auto => cx.with_text_style(style.text_style().cloned(), |cx| {
                     cx.request_layout(style, None)
                 }),
-            });
+            },
+        );
 
         (
             layout_id,
@@ -215,7 +218,9 @@ impl Element for UniformList {
         window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<Hitbox> {
-        let style = self.interactivity.compute_style(global_id, None, cx);
+        let style = self
+            .interactivity
+            .compute_style(global_id, None, window, cx);
         let border = style.border_widths.to_pixels(cx.rem_size());
         let padding = style.padding.to_pixels(bounds.size.into(), cx.rem_size());
 
@@ -256,8 +261,9 @@ impl Element for UniformList {
             global_id,
             bounds,
             content_size,
+            window,
             cx,
-            |style, mut scroll_offset, hitbox, cx| {
+            |style, mut scroll_offset, hitbox, window, cx| {
                 let border = style.border_widths.to_pixels(cx.rem_size());
                 let padding = style.padding.to_pixels(bounds.size.into(), cx.rem_size());
 
@@ -405,15 +411,21 @@ impl Element for UniformList {
         window: &mut Window,
         cx: &mut WindowContext,
     ) {
-        self.interactivity
-            .paint(global_id, bounds, hitbox.as_ref(), cx, |_, cx| {
+        self.interactivity.paint(
+            global_id,
+            bounds,
+            hitbox.as_ref(),
+            window,
+            cx,
+            |_, window, cx| {
                 for item in &mut request_layout.items {
                     item.paint(window, cx);
                 }
                 for decoration in &mut request_layout.decorations {
                     decoration.paint(window, cx);
                 }
-            })
+            },
+        )
     }
 }
 

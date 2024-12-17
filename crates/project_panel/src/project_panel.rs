@@ -4710,7 +4710,7 @@ mod tests {
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
         let panel = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let panel = ProjectPanel::new(workspace, cx);
                 workspace.add_panel(panel.clone(), cx);
                 panel
@@ -5004,7 +5004,7 @@ mod tests {
         );
 
         // Dismiss the rename editor when it loses focus.
-        workspace.update(cx, |_, cx| cx.blur()).unwrap();
+        workspace.update(cx, |_, window, cx| cx.blur()).unwrap();
         assert_eq!(
             visible_entries_as_strings(&panel, 0..10, cx),
             &[
@@ -5067,7 +5067,7 @@ mod tests {
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
         let panel = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let panel = ProjectPanel::new(workspace, cx);
                 workspace.add_panel(panel.clone(), cx);
                 panel
@@ -5175,7 +5175,7 @@ mod tests {
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
         let panel = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let panel = ProjectPanel::new(workspace, cx);
                 workspace.add_panel(panel.clone(), cx);
                 panel
@@ -5847,7 +5847,7 @@ mod tests {
         ensure_single_file_is_opened(&workspace, "test/second.rs", cx);
 
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let active_items = workspace
                     .panes()
                     .iter()
@@ -5893,7 +5893,7 @@ mod tests {
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
         let panel = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let panel = ProjectPanel::new(workspace, cx);
                 workspace.add_panel(panel.clone(), cx);
                 panel
@@ -6253,7 +6253,7 @@ mod tests {
 
         // Make a new buffer with no backing file
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 Editor::new_file(workspace, &Default::default(), cx)
             })
             .unwrap();
@@ -6262,7 +6262,7 @@ mod tests {
 
         // "Save as" the buffer, creating a new backing file for it
         let save_task = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace.save_active_item(workspace::SaveIntent::Save, cx)
             })
             .unwrap();
@@ -6292,7 +6292,7 @@ mod tests {
         );
 
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace.save_active_item(workspace::SaveIntent::Save, cx)
             })
             .unwrap()
@@ -6952,7 +6952,7 @@ mod tests {
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
         let panel = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let panel = ProjectPanel::new(workspace, cx);
                 workspace.add_panel(panel.clone(), cx);
                 panel
@@ -6965,7 +6965,7 @@ mod tests {
             &["v root1  <== selected", "      .dockerignore",]
         );
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 assert!(
                     workspace.active_item(cx).is_none(),
                     "Should have no active items in the beginning"
@@ -7002,7 +7002,7 @@ mod tests {
             );
         });
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let active_entry_path = workspace
                     .active_item(cx)
                     .expect("should have opened and activated the excluded item")
@@ -7057,7 +7057,7 @@ mod tests {
             );
         });
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let notifications = workspace.notification_ids();
                 assert_eq!(
                     notifications.len(),
@@ -7096,7 +7096,7 @@ mod tests {
             );
         });
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let notifications = workspace.notification_ids();
                 assert_eq!(
                     notifications.len(),
@@ -7134,7 +7134,7 @@ mod tests {
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
         let panel = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let panel = ProjectPanel::new(workspace, cx);
                 workspace.add_panel(panel.clone(), cx);
                 panel
@@ -7959,7 +7959,7 @@ mod tests {
         cx: &mut TestAppContext,
     ) {
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let worktrees = workspace.worktrees(cx).collect::<Vec<_>>();
                 assert_eq!(worktrees.len(), 1);
                 let worktree_id = worktrees[0].read(cx).id();

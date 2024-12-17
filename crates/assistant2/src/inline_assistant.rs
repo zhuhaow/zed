@@ -1858,7 +1858,7 @@ impl PromptEditor {
             EditorEvent::Edited { .. } => {
                 if let Some(workspace) = cx.window_handle().downcast::<Workspace>() {
                     workspace
-                        .update(cx, |workspace, cx| {
+                        .update(cx, |workspace, window, cx| {
                             let is_via_ssh = workspace
                                 .project()
                                 .update(cx, |project, _| project.is_via_ssh());

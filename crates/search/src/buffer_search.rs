@@ -1700,14 +1700,14 @@ mod tests {
         });
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| search_bar.search("a", None, cx))
             })
             .unwrap()
             .await
             .unwrap();
         let initial_selections = window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     let handle = search_bar.query_editor.focus_handle(cx);
                     cx.focus(&handle);
@@ -1755,7 +1755,7 @@ mod tests {
             }).unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 assert!(
                     editor.read(cx).is_focused(cx),
                     "Should still have editor focused after SelectNextMatch"
@@ -1784,7 +1784,7 @@ mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 assert!(
                     editor.read(cx).is_focused(cx),
                     "Should focus editor after successful SelectAllMatches"
@@ -1809,7 +1809,7 @@ mod tests {
             })
             .unwrap();
         let last_match_selections = window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 assert!(
                     editor.read(cx).is_focused(cx),
                     "Should still have editor focused after SelectPrevMatch"
@@ -1838,7 +1838,7 @@ mod tests {
             .unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     let handle = search_bar.query_editor.focus_handle(cx);
                     cx.focus(&handle);
@@ -1849,7 +1849,7 @@ mod tests {
             .await
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.select_all_matches(&SelectAllMatches, cx);
                 });

@@ -7316,7 +7316,9 @@ mod tests {
         let editor = window.root(cx).unwrap();
         let style = cx.update(|cx| editor.read(cx).style().unwrap().clone());
         let element = EditorElement::new(&editor, style);
-        let snapshot = window.update(cx, |editor, cx| editor.snapshot(cx)).unwrap();
+        let snapshot = window
+            .update(cx, |editor, window, cx| editor.snapshot(cx))
+            .unwrap();
 
         let layouts = cx
             .update_window(*window, |_, _, cx| {
@@ -7333,7 +7335,7 @@ mod tests {
         assert_eq!(layouts.len(), 6);
 
         let relative_rows = window
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let snapshot = editor.snapshot(cx);
                 element.calculate_relative_line_numbers(
                     &snapshot,
@@ -7351,7 +7353,7 @@ mod tests {
 
         // works if cursor is before screen
         let relative_rows = window
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let snapshot = editor.snapshot(cx);
                 element.calculate_relative_line_numbers(
                     &snapshot,
@@ -7367,7 +7369,7 @@ mod tests {
 
         // works if cursor is after screen
         let relative_rows = window
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 let snapshot = editor.snapshot(cx);
                 element.calculate_relative_line_numbers(
                     &snapshot,
@@ -7395,7 +7397,7 @@ mod tests {
         let style = cx.update(|cx| editor.read(cx).style().unwrap().clone());
 
         window
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.cursor_shape = CursorShape::Block;
                 editor.change_selections(None, cx, |s| {
                     s.select_ranges([
@@ -7496,7 +7498,7 @@ mod tests {
         });
         let editor = window.root(cx).unwrap();
         let style = cx.update(|cx| editor.read(cx).style().unwrap().clone());
-        let _state = window.update(cx, |editor, cx| {
+        let _state = window.update(cx, |editor, window, cx| {
             editor.cursor_shape = CursorShape::Block;
             editor.change_selections(None, cx, |s| {
                 s.select_display_ranges([
@@ -7549,7 +7551,7 @@ mod tests {
         let editor = window.root(cx).unwrap();
         let style = cx.update(|cx| editor.read(cx).style().unwrap().clone());
         window
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.set_placeholder_text("hello", cx);
                 editor.insert_blocks(
                     [BlockProperties {
@@ -7776,7 +7778,7 @@ mod tests {
 
         let style = cx.update(|cx| editor.read(cx).style().unwrap().clone());
         window
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.set_soft_wrap_mode(language_settings::SoftWrap::EditorWidth, cx);
                 editor.set_wrap_width(Some(editor_width), cx);
                 editor.set_show_line_numbers(show_line_numbers, cx);

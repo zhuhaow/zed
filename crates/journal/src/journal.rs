@@ -131,7 +131,7 @@ pub fn new_journal_entry(workspace: &Workspace, cx: &mut WindowContext) {
                 })?
                 .await?;
             new_workspace
-                .update(&mut cx, |workspace, cx| {
+                .update(&mut cx, |workspace, window, cx| {
                     workspace.open_paths(vec![entry_path], OpenVisible::All, None, cx)
                 })?
                 .await

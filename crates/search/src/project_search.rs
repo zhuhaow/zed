@@ -2222,7 +2222,7 @@ pub mod tests {
         );
 
         window
-            .update(cx, move |workspace, cx| {
+            .update(cx, move |workspace, window, cx| {
                 assert_eq!(workspace.panes().len(), 1);
                 workspace.panes()[0].update(cx, move |pane, cx| {
                     pane.toolbar()
@@ -2247,7 +2247,7 @@ pub mod tests {
 
         cx.spawn(|mut cx| async move {
             window
-                .update(&mut cx, |_, cx| {
+                .update(&mut cx, |_, window, cx| {
                     cx.dispatch_action(ToggleFocus.boxed_clone())
                 })
                 .unwrap();
@@ -2255,7 +2255,7 @@ pub mod tests {
         .detach();
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                 assert!(
                     search_view.query_editor.focus_handle(cx).is_focused(cx),
@@ -2265,7 +2265,7 @@ pub mod tests {
         }).unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     let query_editor = &search_view.query_editor;
                     assert!(
@@ -2289,7 +2289,7 @@ pub mod tests {
             .unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view.query_editor.update(cx, |query_editor, cx| {
                         query_editor.set_text("sOMETHINGtHATsURELYdOESnOTeXIST", cx)
@@ -2300,7 +2300,7 @@ pub mod tests {
             .unwrap();
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                 let results_text = search_view
                     .results_editor
@@ -2317,13 +2317,13 @@ pub mod tests {
         }).unwrap();
 
         cx.spawn(|mut cx| async move {
-            window.update(&mut cx, |_, cx| {
+            window.update(&mut cx, |_, window, cx| {
                 cx.dispatch_action(ToggleFocus.boxed_clone())
             })
         })
         .detach();
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                 assert!(
                     search_view.query_editor.focus_handle(cx).is_focused(cx),
@@ -2333,7 +2333,7 @@ pub mod tests {
         }).unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view
                         .query_editor
@@ -2343,7 +2343,7 @@ pub mod tests {
             })
             .unwrap();
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                 assert_eq!(
                     search_view
@@ -2360,14 +2360,14 @@ pub mod tests {
         }).unwrap();
         cx.spawn(|mut cx| async move {
             window
-                .update(&mut cx, |_, cx| {
+                .update(&mut cx, |_, window, cx| {
                     cx.dispatch_action(ToggleFocus.boxed_clone())
                 })
                 .unwrap();
         })
         .detach();
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                 assert!(
                     search_view.results_editor.focus_handle(cx).is_focused(cx),
@@ -2377,11 +2377,11 @@ pub mod tests {
         }).unwrap();
 
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 ProjectSearchView::deploy_search(workspace, &workspace::DeploySearch::find(), cx)
             })
             .unwrap();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                 assert_eq!(search_view.query_editor.read(cx).text(cx), "two", "Query should be updated to first search result after search view 2nd open in a row");
                 assert_eq!(
@@ -2400,14 +2400,14 @@ pub mod tests {
 
         cx.spawn(|mut cx| async move {
             window
-                .update(&mut cx, |_, cx| {
+                .update(&mut cx, |_, window, cx| {
                     cx.dispatch_action(ToggleFocus.boxed_clone())
                 })
                 .unwrap();
         })
         .detach();
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                 assert!(
                     search_view.results_editor.focus_handle(cx).is_focused(cx),
@@ -2452,7 +2452,7 @@ pub mod tests {
         );
 
         window
-            .update(cx, move |workspace, cx| {
+            .update(cx, move |workspace, window, cx| {
                 assert_eq!(workspace.panes().len(), 1);
                 workspace.panes()[0].update(cx, move |pane, cx| {
                     pane.toolbar()
@@ -2477,7 +2477,7 @@ pub mod tests {
 
         cx.spawn(|mut cx| async move {
             window
-                .update(&mut cx, |_, cx| {
+                .update(&mut cx, |_, window, cx| {
                     cx.dispatch_action(ToggleFocus.boxed_clone())
                 })
                 .unwrap();
@@ -2485,7 +2485,7 @@ pub mod tests {
         .detach();
         cx.background_executor.run_until_parked();
 
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                     assert!(
                         search_view.query_editor.focus_handle(cx).is_focused(cx),
@@ -2495,7 +2495,7 @@ pub mod tests {
         }).unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     let query_editor = &search_view.query_editor;
                     assert!(
@@ -2519,7 +2519,7 @@ pub mod tests {
             .unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view.query_editor.update(cx, |query_editor, cx| {
                         query_editor.set_text("sOMETHINGtHATsURELYdOESnOTeXIST", cx)
@@ -2531,7 +2531,7 @@ pub mod tests {
 
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     let results_text = search_view
                         .results_editor
@@ -2548,13 +2548,13 @@ pub mod tests {
             })
             .unwrap();
         cx.spawn(|mut cx| async move {
-            window.update(&mut cx, |_, cx| {
+            window.update(&mut cx, |_, window, cx| {
                 cx.dispatch_action(ToggleFocus.boxed_clone())
             })
         })
         .detach();
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                     assert!(
                         search_view.query_editor.focus_handle(cx).is_focused(cx),
@@ -2564,7 +2564,7 @@ pub mod tests {
         }).unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view
                         .query_editor
@@ -2574,7 +2574,7 @@ pub mod tests {
             })
             .unwrap();
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx|
+        window.update(cx, |_, window, cx|
         search_view.update(cx, |search_view, cx| {
                 assert_eq!(
                     search_view
@@ -2590,14 +2590,14 @@ pub mod tests {
             })).unwrap();
         cx.spawn(|mut cx| async move {
             window
-                .update(&mut cx, |_, cx| {
+                .update(&mut cx, |_, window, cx| {
                     cx.dispatch_action(ToggleFocus.boxed_clone())
                 })
                 .unwrap();
         })
         .detach();
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                     assert!(
                         search_view.results_editor.focus_handle(cx).is_focused(cx),
@@ -2607,7 +2607,7 @@ pub mod tests {
         }).unwrap();
 
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 ProjectSearchView::new_search(workspace, &workspace::NewSearch, cx)
             })
             .unwrap();
@@ -2628,7 +2628,7 @@ pub mod tests {
             "New search view should be open after `workspace::NewSearch` event"
         );
 
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "TWO", "First search view should not have an updated query");
                     assert_eq!(
@@ -2645,7 +2645,7 @@ pub mod tests {
                 });
         }).unwrap();
 
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view_2.update(cx, |search_view_2, cx| {
                     assert_eq!(
                         search_view_2.query_editor.read(cx).text(cx),
@@ -2667,7 +2667,7 @@ pub mod tests {
         }).unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view_2.update(cx, |search_view_2, cx| {
                     search_view_2
                         .query_editor
@@ -2678,7 +2678,7 @@ pub mod tests {
             .unwrap();
 
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view_2.update(cx, |search_view_2, cx| {
                     assert_eq!(
                         search_view_2
@@ -2696,14 +2696,14 @@ pub mod tests {
 
         cx.spawn(|mut cx| async move {
             window
-                .update(&mut cx, |_, cx| {
+                .update(&mut cx, |_, window, cx| {
                     cx.dispatch_action(ToggleFocus.boxed_clone())
                 })
                 .unwrap();
         })
         .detach();
         cx.background_executor.run_until_parked();
-        window.update(cx, |_, cx| {
+        window.update(cx, |_, window, cx| {
             search_view_2.update(cx, |search_view_2, cx| {
                     assert!(
                         search_view_2.results_editor.focus_handle(cx).is_focused(cx),
@@ -2753,7 +2753,7 @@ pub mod tests {
         );
 
         window
-            .update(cx, move |workspace, cx| {
+            .update(cx, move |workspace, window, cx| {
                 assert_eq!(workspace.panes().len(), 1);
                 workspace.panes()[0].update(cx, move |pane, cx| {
                     pane.toolbar()
@@ -2772,7 +2772,7 @@ pub mod tests {
         });
         assert!(a_dir_entry.is_dir());
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 ProjectSearchView::new_search_in_directory(workspace, &a_dir_entry.path, cx)
             })
             .unwrap();
@@ -2789,7 +2789,7 @@ pub mod tests {
         };
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert!(
                         search_view.query_editor.focus_handle(cx).is_focused(cx),
@@ -2812,7 +2812,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view
                         .query_editor
@@ -2823,7 +2823,7 @@ pub mod tests {
             .unwrap();
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(
                 search_view
@@ -2860,7 +2860,7 @@ pub mod tests {
         window
             .update(cx, {
                 let search_bar = search_bar.clone();
-                move |workspace, cx| {
+                move |workspace, window, cx| {
                     assert_eq!(workspace.panes().len(), 1);
                     workspace.panes()[0].update(cx, move |pane, cx| {
                         pane.toolbar()
@@ -2884,7 +2884,7 @@ pub mod tests {
 
         // Add 3 search items into the history + another unsubmitted one.
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view.search_options = SearchOptions::CASE_SENSITIVE;
                     search_view
@@ -2897,7 +2897,7 @@ pub mod tests {
 
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view
                         .query_editor
@@ -2908,7 +2908,7 @@ pub mod tests {
             .unwrap();
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view
                         .query_editor
@@ -2919,7 +2919,7 @@ pub mod tests {
             .unwrap();
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view.query_editor.update(cx, |query_editor, cx| {
                         query_editor.set_text("JUST_TEXT_INPUT", cx)
@@ -2931,7 +2931,7 @@ pub mod tests {
 
         // Ensure that the latest input with search settings is active.
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(
                         search_view.query_editor.read(cx).text(cx),
@@ -2944,7 +2944,7 @@ pub mod tests {
 
         // Next history query after the latest should set the query to the empty string.
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.next_history_query(&NextHistoryQuery, cx);
@@ -2952,7 +2952,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -2960,7 +2960,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.next_history_query(&NextHistoryQuery, cx);
@@ -2968,7 +2968,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -2978,7 +2978,7 @@ pub mod tests {
 
         // First previous query for empty current query should set the query to the latest submitted one.
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.previous_history_query(&PreviousHistoryQuery, cx);
@@ -2986,7 +2986,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "THREE");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -2996,7 +2996,7 @@ pub mod tests {
 
         // Further previous items should go over the history in reverse order.
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.previous_history_query(&PreviousHistoryQuery, cx);
@@ -3004,7 +3004,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "TWO");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3014,7 +3014,7 @@ pub mod tests {
 
         // Previous items should never go behind the first history item.
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.previous_history_query(&PreviousHistoryQuery, cx);
@@ -3022,7 +3022,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "ONE");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3030,7 +3030,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.previous_history_query(&PreviousHistoryQuery, cx);
@@ -3038,7 +3038,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "ONE");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3048,7 +3048,7 @@ pub mod tests {
 
         // Next items should go over the history in the original order.
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.next_history_query(&NextHistoryQuery, cx);
@@ -3056,7 +3056,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "TWO");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3065,7 +3065,7 @@ pub mod tests {
             .unwrap();
 
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     search_view
                         .query_editor
@@ -3076,7 +3076,7 @@ pub mod tests {
             .unwrap();
         cx.background_executor.run_until_parked();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "TWO_NEW");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3086,7 +3086,7 @@ pub mod tests {
 
         // New search input should add another entry to history and move the selection to the end of the history.
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.previous_history_query(&PreviousHistoryQuery, cx);
@@ -3094,7 +3094,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "THREE");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3102,7 +3102,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.previous_history_query(&PreviousHistoryQuery, cx);
@@ -3110,7 +3110,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "TWO");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3118,7 +3118,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.next_history_query(&NextHistoryQuery, cx);
@@ -3126,7 +3126,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "THREE");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3134,7 +3134,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.next_history_query(&NextHistoryQuery, cx);
@@ -3142,7 +3142,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "TWO_NEW");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3150,7 +3150,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_bar.update(cx, |search_bar, cx| {
                     search_bar.focus_search(cx);
                     search_bar.next_history_query(&NextHistoryQuery, cx);
@@ -3158,7 +3158,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 search_view.update(cx, |search_view, cx| {
                     assert_eq!(search_view.query_editor.read(cx).text(cx), "");
                     assert_eq!(search_view.search_options, SearchOptions::CASE_SENSITIVE);
@@ -3198,7 +3198,7 @@ pub mod tests {
         let first_pane = panes.first().cloned().unwrap();
         assert_eq!(cx.update(|cx| first_pane.read(cx).items_len()), 0);
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace.open_path(
                     (worktree_id, "one.rs"),
                     Some(first_pane.downgrade()),
@@ -3216,7 +3216,7 @@ pub mod tests {
             .update(cx, {
                 let search_bar = search_bar_1.clone();
                 let pane = first_pane.clone();
-                move |workspace, cx| {
+                move |workspace, window, cx| {
                     pane.update(cx, move |pane, cx| {
                         pane.toolbar()
                             .update(cx, |toolbar, cx| toolbar.add_item(search_bar, cx))
@@ -3235,7 +3235,7 @@ pub mod tests {
         });
 
         let second_pane = window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace.split_and_clone(first_pane.clone(), workspace::SplitDirection::Right, cx)
             })
             .unwrap()
@@ -3250,7 +3250,7 @@ pub mod tests {
             .update(cx, {
                 let search_bar = search_bar_2.clone();
                 let pane = second_pane.clone();
-                move |workspace, cx| {
+                move |workspace, window, cx| {
                     assert_eq!(workspace.panes().len(), 2);
                     pane.update(cx, move |pane, cx| {
                         pane.toolbar()
@@ -3277,7 +3277,7 @@ pub mod tests {
         let update_search_view =
             |search_view: &View<ProjectSearchView>, query: &str, cx: &mut TestAppContext| {
                 window
-                    .update(cx, |_, cx| {
+                    .update(cx, |_, window, cx| {
                         search_view.update(cx, |search_view, cx| {
                             search_view
                                 .query_editor
@@ -3291,7 +3291,7 @@ pub mod tests {
         let active_query =
             |search_view: &View<ProjectSearchView>, cx: &mut TestAppContext| -> String {
                 window
-                    .update(cx, |_, cx| {
+                    .update(cx, |_, window, cx| {
                         search_view.update(cx, |search_view, cx| {
                             search_view.query_editor.read(cx).text(cx).to_string()
                         })
@@ -3302,7 +3302,7 @@ pub mod tests {
         let select_prev_history_item =
             |search_bar: &View<ProjectSearchBar>, cx: &mut TestAppContext| {
                 window
-                    .update(cx, |_, cx| {
+                    .update(cx, |_, window, cx| {
                         search_bar.update(cx, |search_bar, cx| {
                             search_bar.focus_search(cx);
                             search_bar.previous_history_query(&PreviousHistoryQuery, cx);
@@ -3314,7 +3314,7 @@ pub mod tests {
         let select_next_history_item =
             |search_bar: &View<ProjectSearchBar>, cx: &mut TestAppContext| {
                 window
-                    .update(cx, |_, cx| {
+                    .update(cx, |_, window, cx| {
                         search_bar.update(cx, |search_bar, cx| {
                             search_bar.focus_search(cx);
                             search_bar.next_history_query(&NextHistoryQuery, cx);
@@ -3410,7 +3410,7 @@ pub mod tests {
         let first_pane = panes.first().cloned().unwrap();
         assert_eq!(cx.update(|cx| first_pane.read(cx).items_len()), 0);
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace.open_path(
                     (worktree_id, "one.rs"),
                     Some(first_pane.downgrade()),
@@ -3423,14 +3423,14 @@ pub mod tests {
             .unwrap();
         assert_eq!(cx.update(|cx| first_pane.read(cx).items_len()), 1);
         let second_pane = window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace.split_and_clone(first_pane.clone(), workspace::SplitDirection::Right, cx)
             })
             .unwrap()
             .unwrap();
         assert_eq!(cx.update(|cx| second_pane.read(cx).items_len()), 1);
         assert!(window
-            .update(cx, |_, cx| second_pane
+            .update(cx, |_, window, cx| second_pane
                 .focus_handle(cx)
                 .contains_focused(cx))
             .unwrap());
@@ -3439,7 +3439,7 @@ pub mod tests {
             .update(cx, {
                 let search_bar = search_bar.clone();
                 let pane = first_pane.clone();
-                move |workspace, cx| {
+                move |workspace, window, cx| {
                     assert_eq!(workspace.panes().len(), 2);
                     pane.update(cx, move |pane, cx| {
                         pane.toolbar()
@@ -3454,7 +3454,7 @@ pub mod tests {
             .update(cx, {
                 let search_bar = search_bar.clone();
                 let pane = second_pane.clone();
-                move |workspace, cx| {
+                move |workspace, window, cx| {
                     assert_eq!(workspace.panes().len(), 2);
                     pane.update(cx, move |pane, cx| {
                         pane.toolbar()
@@ -3472,7 +3472,7 @@ pub mod tests {
 
         // Focus the first pane
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 assert_eq!(workspace.active_pane(), &second_pane);
                 second_pane.update(cx, |this, cx| {
                     assert_eq!(this.active_item_index(), 1);
@@ -3483,7 +3483,7 @@ pub mod tests {
             })
             .unwrap();
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 assert_eq!(workspace.active_pane(), &first_pane);
                 assert_eq!(first_pane.read(cx).items_len(), 1);
                 assert_eq!(second_pane.read(cx).items_len(), 2);
@@ -3495,7 +3495,7 @@ pub mod tests {
 
         // Both panes should now have a project search in them
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 assert_eq!(workspace.active_pane(), &first_pane);
                 first_pane.update(cx, |this, _| {
                     assert_eq!(this.active_item_index(), 1);

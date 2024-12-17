@@ -88,7 +88,7 @@ async fn test_host_disconnect(
     let workspace_b_view = workspace_b.root_view(cx_b).unwrap();
 
     let editor_b = workspace_b
-        .update(cx_b, |workspace, cx| {
+        .update(cx_b, |workspace, window, cx| {
             workspace.open_path((worktree_id, "b.txt"), None, true, cx)
         })
         .unwrap()
@@ -121,7 +121,7 @@ async fn test_host_disconnect(
 
     // Ensure client B's edited state is reset and that the whole window is blurred.
     workspace_b
-        .update(cx_b, |workspace, cx| {
+        .update(cx_b, |workspace, window, cx| {
             assert!(workspace.active_modal::<DisconnectedOverlay>(cx).is_some());
             assert!(!workspace.is_edited());
         })
@@ -129,7 +129,7 @@ async fn test_host_disconnect(
 
     // Ensure client B is not prompted to save edits when closing window after disconnecting.
     let can_close = workspace_b
-        .update(cx_b, |workspace, cx| {
+        .update(cx_b, |workspace, window, cx| {
             workspace.prepare_to_close(CloseIntent::Quit, cx)
         })
         .unwrap()

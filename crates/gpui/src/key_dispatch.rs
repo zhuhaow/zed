@@ -51,7 +51,7 @@
 ///
 use crate::{
     Action, ActionRegistry, DispatchPhase, EntityId, FocusId, KeyBinding, KeyContext, Keymap,
-    Keystroke, ModifiersChangedEvent, WindowContext,
+    Keystroke, ModifiersChangedEvent, Window, WindowContext,
 };
 use collections::FxHashMap;
 use smallvec::SmallVec;
@@ -129,7 +129,7 @@ type ModifiersChangedListener = Rc<dyn Fn(&ModifiersChangedEvent, &mut WindowCon
 #[derive(Clone)]
 pub(crate) struct DispatchActionListener {
     pub(crate) action_type: TypeId,
-    pub(crate) listener: Rc<dyn Fn(&dyn Any, DispatchPhase, &mut WindowContext)>,
+    pub(crate) listener: Rc<dyn Fn(&dyn Any, DispatchPhase, &mut Window, &mut WindowContext)>,
 }
 
 impl DispatchTree {
@@ -333,7 +333,7 @@ impl DispatchTree {
     pub fn on_action(
         &mut self,
         action_type: TypeId,
-        listener: Rc<dyn Fn(&dyn Any, DispatchPhase, &mut WindowContext)>,
+        listener: Rc<dyn Fn(&dyn Any, DispatchPhase, &mut Window, &mut WindowContext)>,
     ) {
         self.active_node()
             .action_listeners

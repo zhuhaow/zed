@@ -55,7 +55,7 @@ pub fn init(app_state: &Arc<AppState>, cx: &mut AppContext) {
             if let Some(windows) = notification_windows.remove(project_id) {
                 for window in windows {
                     window
-                        .update(cx, |_, cx| {
+                        .update(cx, |_, window, cx| {
                             cx.remove_window();
                         })
                         .ok();
@@ -67,7 +67,7 @@ pub fn init(app_state: &Arc<AppState>, cx: &mut AppContext) {
             for (_, windows) in notification_windows.drain() {
                 for window in windows {
                     window
-                        .update(cx, |_, cx| {
+                        .update(cx, |_, window, cx| {
                             cx.remove_window();
                         })
                         .ok();

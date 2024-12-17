@@ -17,7 +17,7 @@ pub fn init(app_state: &Arc<AppState>, cx: &mut AppContext) {
         while let Some(incoming_call) = incoming_call.next().await {
             for window in notification_windows.drain(..) {
                 window
-                    .update(&mut cx, |_, cx| {
+                    .update(&mut cx, |_, window, cx| {
                         cx.remove_window();
                     })
                     .log_err();

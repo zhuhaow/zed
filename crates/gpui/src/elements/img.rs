@@ -267,9 +267,11 @@ impl Element for Img {
 
             let frame_index = state.as_ref().map(|state| state.frame_index).unwrap_or(0);
 
-            let layout_id = self
-                .interactivity
-                .request_layout(global_id, cx, |mut style, cx| {
+            let layout_id = self.interactivity.request_layout(
+                global_id,
+                window,
+                cx,
+                |mut style, window, cx| {
                     let mut replacement_id = None;
 
                     match self.source.use_data(cx) {
@@ -365,7 +367,8 @@ impl Element for Img {
                     }
 
                     cx.request_layout(style, replacement_id)
-                });
+                },
+            );
 
             layout_state.frame_index = frame_index;
 
@@ -381,14 +384,20 @@ impl Element for Img {
         window: &mut Window,
         cx: &mut WindowContext,
     ) -> Self::PrepaintState {
-        self.interactivity
-            .prepaint(global_id, bounds, bounds.size, cx, |_, _, hitbox, cx| {
+        self.interactivity.prepaint(
+            global_id,
+            bounds,
+            bounds.size,
+            window,
+            cx,
+            |_, _, hitbox, window, cx| {
                 if let Some(replacement) = &mut request_layout.replacement {
                     replacement.prepaint(window, cx);
                 }
 
                 hitbox
-            })
+            },
+        )
     }
 
     fn paint(
@@ -401,8 +410,13 @@ impl Element for Img {
         cx: &mut WindowContext,
     ) {
         let source = self.source.clone();
-        self.interactivity
-            .paint(global_id, bounds, hitbox.as_ref(), cx, |style, cx| {
+        self.interactivity.paint(
+            global_id,
+            bounds,
+            hitbox.as_ref(),
+            window,
+            cx,
+            |style, window, cx| {
                 let corner_radii = style.corner_radii.to_pixels(bounds.size, cx.rem_size());
 
                 if let Some(Ok(data)) = source.use_data(cx) {
@@ -421,7 +435,8 @@ impl Element for Img {
                 } else if let Some(replacement) = &mut layout_state.replacement {
                     replacement.paint(window, cx);
                 }
-            })
+            },
+        )
     }
 }
 

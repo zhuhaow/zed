@@ -87,7 +87,7 @@ impl Render for InlineCompletionButton {
                                 if let Some(workspace) = cx.window_handle().downcast::<Workspace>()
                                 {
                                     workspace
-                                        .update(cx, |workspace, cx| {
+                                        .update(cx, |workspace, window, cx| {
                                             workspace.show_toast(
                                                 Toast::new(
                                                     NotificationId::unique::<CopilotErrorToast>(),

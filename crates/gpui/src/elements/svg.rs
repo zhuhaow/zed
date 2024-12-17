@@ -50,9 +50,11 @@ impl Element for Svg {
         window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
-        let layout_id = self
-            .interactivity
-            .request_layout(global_id, cx, |style, cx| cx.request_layout(style, None));
+        let layout_id =
+            self.interactivity
+                .request_layout(global_id, window, cx, |style, window, cx| {
+                    cx.request_layout(style, None)
+                });
         (layout_id, ())
     }
 
@@ -64,8 +66,14 @@ impl Element for Svg {
         window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<Hitbox> {
-        self.interactivity
-            .prepaint(global_id, bounds, bounds.size, cx, |_, _, hitbox, _| hitbox)
+        self.interactivity.prepaint(
+            global_id,
+            bounds,
+            bounds.size,
+            window,
+            cx,
+            |_, _, hitbox, _, _| hitbox,
+        )
     }
 
     fn paint(
@@ -79,8 +87,13 @@ impl Element for Svg {
     ) where
         Self: Sized,
     {
-        self.interactivity
-            .paint(global_id, bounds, hitbox.as_ref(), cx, |style, cx| {
+        self.interactivity.paint(
+            global_id,
+            bounds,
+            hitbox.as_ref(),
+            window,
+            cx,
+            |style, window, cx| {
                 if let Some((path, color)) = self.path.as_ref().zip(style.text.color) {
                     let transformation = self
                         .transformation
@@ -93,7 +106,8 @@ impl Element for Svg {
                     cx.paint_svg(bounds, path.clone(), transformation, color)
                         .log_err();
                 }
-            })
+            },
+        )
     }
 }
 

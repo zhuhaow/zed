@@ -484,15 +484,13 @@ mod test {
             div().id("testview").child(
                 div()
                     .key_context("parent")
-                    .on_key_down(cx.listener(|this, _, cx| {
+                    .on_key_down(cx.listener(|this, _, window, cx| {
                         cx.stop_propagation();
                         this.saw_key_down = true
                     }))
-                    .on_action(
-                        cx.listener(|this: &mut TestView, _: &TestAction, _| {
-                            this.saw_action = true
-                        }),
-                    )
+                    .on_action(cx.listener(|this: &mut TestView, _: &TestAction, _, _| {
+                        this.saw_action = true
+                    }))
                     .child(
                         div()
                             .key_context("nested")
@@ -521,14 +519,16 @@ mod test {
         });
 
         window
-            .update(cx, |test_view, cx| cx.focus(&test_view.focus_handle))
+            .update(cx, |test_view, window, cx| {
+                cx.focus(&test_view.focus_handle)
+            })
             .unwrap();
 
         cx.dispatch_keystroke(*window, Keystroke::parse("a").unwrap());
         cx.dispatch_keystroke(*window, Keystroke::parse("ctrl-g").unwrap());
 
         window
-            .update(cx, |test_view, _| {
+            .update(cx, |test_view, window, _| {
                 assert!(test_view.saw_key_down || test_view.saw_action);
                 assert!(test_view.saw_key_down);
                 assert!(test_view.saw_action);

@@ -1406,7 +1406,7 @@ mod tests {
 
         let editor = cx.add_window(|cx| Editor::for_multibuffer(multibuffer, None, false, cx));
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 for (buffer, diff_base) in [
                     (buffer_1.clone(), diff_base_1),
                     (buffer_2.clone(), diff_base_2),
@@ -1424,7 +1424,9 @@ mod tests {
             .unwrap();
         cx.background_executor.run_until_parked();
 
-        let snapshot = editor.update(cx, |editor, cx| editor.snapshot(cx)).unwrap();
+        let snapshot = editor
+            .update(cx, |editor, window, cx| editor.snapshot(cx))
+            .unwrap();
 
         assert_eq!(
             snapshot.buffer_snapshot.text(),

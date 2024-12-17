@@ -565,7 +565,7 @@ pub async fn open_ssh_project(
         let delegate = window.update(cx, {
             let connection_options = connection_options.clone();
             let paths = paths.clone();
-            move |workspace, cx| {
+            move |workspace, window, cx| {
                 cx.activate_window();
                 workspace.toggle_modal(cx, |cx| {
                     SshConnectionModal::new(&connection_options, paths, cx)
@@ -606,7 +606,7 @@ pub async fn open_ssh_project(
             .await;
 
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 if let Some(ui) = workspace.active_modal::<SshConnectionModal>(cx) {
                     ui.update(cx, |modal, cx| modal.finished(cx))
                 }
@@ -616,7 +616,7 @@ pub async fn open_ssh_project(
         if let Err(e) = did_open_ssh_project {
             log::error!("Failed to open project: {:?}", e);
             let response = window
-                .update(cx, |_, cx| {
+                .update(cx, |_, window, cx| {
                     cx.prompt(
                         PromptLevel::Critical,
                         "Failed to connect over SSH",
@@ -632,7 +632,7 @@ pub async fn open_ssh_project(
         }
 
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 if let Some(client) = workspace.project().read(cx).ssh_client().clone() {
                     ExtensionStore::global(cx)
                         .update(cx, |store, cx| store.register_ssh_client(client, cx));

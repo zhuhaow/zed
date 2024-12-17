@@ -27,7 +27,7 @@ pub fn initiate_sign_in(cx: &mut WindowContext) {
                 return;
             };
 
-            let Ok(workspace) = workspace.update(cx, |workspace, cx| {
+            let Ok(workspace) = workspace.update(cx, |workspace, window, cx| {
                 workspace.show_toast(
                     Toast::new(
                         NotificationId::unique::<CopilotStartingToast>(),
@@ -70,7 +70,7 @@ pub fn initiate_sign_in(cx: &mut WindowContext) {
         _ => {
             copilot.update(cx, |this, cx| this.sign_in(cx)).detach();
             workspace
-                .update(cx, |this, cx| {
+                .update(cx, |this, window, cx| {
                     this.toggle_modal(cx, |cx| CopilotCodeVerification::new(&copilot, cx));
                 })
                 .ok();

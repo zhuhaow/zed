@@ -636,7 +636,7 @@ mod tests {
             })
             .unwrap();
         workspace
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 editor.update(cx, |editor, cx| editor.insert("EDIT", cx));
             })
             .unwrap();
@@ -646,7 +646,7 @@ mod tests {
 
         let recent_projects_picker = open_recent_projects(&workspace, cx);
         workspace
-            .update(cx, |_, cx| {
+            .update(cx, |_, window, cx| {
                 recent_projects_picker.update(cx, |picker, cx| {
                     assert_eq!(picker.query(cx), "");
                     let delegate = &mut picker.delegate;
@@ -670,7 +670,7 @@ mod tests {
         );
         cx.dispatch_action(*workspace, menu::Confirm);
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 assert!(
                     workspace.active_modal::<RecentProjects>(cx).is_none(),
                     "Should remove the modal after selecting new recent project"
@@ -708,7 +708,7 @@ mod tests {
             },
         );
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace
                     .active_modal::<RecentProjects>(cx)
                     .unwrap()

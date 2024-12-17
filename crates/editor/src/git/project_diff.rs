@@ -1142,7 +1142,7 @@ mod tests {
         let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
 
         let file_a_editor = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 let file_a_editor =
                     workspace.open_abs_path(PathBuf::from("/root/file_a"), true, cx);
                 ProjectDiffEditor::deploy(workspace, &Deploy, cx);
@@ -1154,7 +1154,7 @@ mod tests {
             .downcast::<Editor>()
             .expect("did not open an editor for file_a");
         let project_diff_editor = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace
                     .active_pane()
                     .read(cx)

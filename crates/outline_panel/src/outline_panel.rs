@@ -4768,12 +4768,12 @@ mod tests {
         outline_panel.update(cx, |outline_panel, cx| outline_panel.set_active(true, cx));
 
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 ProjectSearchView::deploy_search(workspace, &workspace::DeploySearch::default(), cx)
             })
             .unwrap();
         let search_view = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace
                     .active_pane()
                     .read(cx)
@@ -4976,12 +4976,12 @@ mod tests {
         outline_panel.update(cx, |outline_panel, cx| outline_panel.set_active(true, cx));
 
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 ProjectSearchView::deploy_search(workspace, &workspace::DeploySearch::default(), cx)
             })
             .unwrap();
         let search_view = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace
                     .active_pane()
                     .read(cx)
@@ -5099,12 +5099,12 @@ mod tests {
         outline_panel.update(cx, |outline_panel, cx| outline_panel.set_active(true, cx));
 
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 ProjectSearchView::deploy_search(workspace, &workspace::DeploySearch::default(), cx)
             })
             .unwrap();
         let search_view = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace
                     .active_pane()
                     .read(cx)
@@ -5322,12 +5322,12 @@ mod tests {
         outline_panel.update(cx, |outline_panel, cx| outline_panel.set_active(true, cx));
 
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 ProjectSearchView::deploy_search(workspace, &workspace::DeploySearch::default(), cx)
             })
             .unwrap();
         let search_view = workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace
                     .active_pane()
                     .read(cx)
@@ -5500,13 +5500,13 @@ mod tests {
         let window = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
 
         let outline_panel = window
-            .update(cx, |_, cx| cx.spawn(OutlinePanel::load))
+            .update(cx, |_, window, cx| cx.spawn(OutlinePanel::load))
             .unwrap()
             .await
             .expect("Failed to load outline panel");
 
         window
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace.add_panel(outline_panel, cx);
             })
             .unwrap();
@@ -5518,7 +5518,7 @@ mod tests {
         cx: &mut TestAppContext,
     ) -> View<OutlinePanel> {
         workspace
-            .update(cx, |workspace, cx| {
+            .update(cx, |workspace, window, cx| {
                 workspace
                     .panel::<OutlinePanel>(cx)
                     .expect("no outline panel")

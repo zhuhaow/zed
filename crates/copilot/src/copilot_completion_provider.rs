@@ -745,10 +745,12 @@ mod tests {
             multibuffer
         });
         let editor = cx.add_window(|cx| Editor::for_multibuffer(multibuffer, None, true, cx));
-        editor.update(cx, |editor, cx| editor.focus(cx)).unwrap();
+        editor
+            .update(cx, |editor, window, cx| editor.focus(cx))
+            .unwrap();
         let copilot_provider = cx.new_model(|_| CopilotCompletionProvider::new(copilot));
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.set_inline_completion_provider(Some(copilot_provider), cx)
             })
             .unwrap();
@@ -762,7 +764,7 @@ mod tests {
             }],
             vec![],
         );
-        _ = editor.update(cx, |editor, cx| {
+        _ = editor.update(cx, |editor, window, cx| {
             // Ensure copilot suggestions are shown for the first excerpt.
             editor.change_selections(None, cx, |s| {
                 s.select_ranges([Point::new(1, 5)..Point::new(1, 5)])
@@ -770,7 +772,7 @@ mod tests {
             editor.next_inline_completion(&Default::default(), cx);
         });
         executor.advance_clock(COPILOT_DEBOUNCE_TIMEOUT);
-        _ = editor.update(cx, |editor, cx| {
+        _ = editor.update(cx, |editor, window, cx| {
             assert!(editor.has_active_inline_completion());
             assert_eq!(
                 editor.display_text(cx),
@@ -788,7 +790,7 @@ mod tests {
             }],
             vec![],
         );
-        _ = editor.update(cx, |editor, cx| {
+        _ = editor.update(cx, |editor, window, cx| {
             // Move to another excerpt, ensuring the suggestion gets cleared.
             editor.change_selections(None, cx, |s| {
                 s.select_ranges([Point::new(4, 5)..Point::new(4, 5)])
@@ -812,7 +814,7 @@ mod tests {
 
         // Ensure the new suggestion is displayed when the debounce timeout expires.
         executor.advance_clock(COPILOT_DEBOUNCE_TIMEOUT);
-        _ = editor.update(cx, |editor, cx| {
+        _ = editor.update(cx, |editor, window, cx| {
             assert!(editor.has_active_inline_completion());
             assert_eq!(
                 editor.display_text(cx),
@@ -990,10 +992,12 @@ mod tests {
             multibuffer
         });
         let editor = cx.add_window(|cx| Editor::for_multibuffer(multibuffer, None, true, cx));
-        editor.update(cx, |editor, cx| editor.focus(cx)).unwrap();
+        editor
+            .update(cx, |editor, window, cx| editor.focus(cx))
+            .unwrap();
         let copilot_provider = cx.new_model(|_| CopilotCompletionProvider::new(copilot));
         editor
-            .update(cx, |editor, cx| {
+            .update(cx, |editor, window, cx| {
                 editor.set_inline_completion_provider(Some(copilot_provider), cx)
             })
             .unwrap();
@@ -1014,7 +1018,7 @@ mod tests {
                 },
             );
 
-        _ = editor.update(cx, |editor, cx| {
+        _ = editor.update(cx, |editor, window, cx| {
             editor.change_selections(None, cx, |selections| {
                 selections.select_ranges([Point::new(0, 0)..Point::new(0, 0)])
             });
@@ -1024,7 +1028,7 @@ mod tests {
         executor.advance_clock(COPILOT_DEBOUNCE_TIMEOUT);
         assert!(copilot_requests.try_next().is_err());
 
-        _ = editor.update(cx, |editor, cx| {
+        _ = editor.update(cx, |editor, window, cx| {
             editor.change_selections(None, cx, |s| {
                 s.select_ranges([Point::new(5, 0)..Point::new(5, 0)])
             });
