@@ -2995,7 +2995,7 @@ impl EditorElement {
             return;
         };
 
-        let menu_size = menu.layout_as_root(AvailableSpace::min_size(), cx);
+        let menu_size = menu.layout_as_root(AvailableSpace::min_size(), window, cx);
         let menu_position = gpui::Point {
             x: if target_position.x + menu_size.width > cx.viewport_size().width {
                 // Snap the right edge of the list to the right edge of the window if its horizontal bounds
@@ -6582,8 +6582,8 @@ impl Element for EditorElement {
                     }
 
                     self.paint_scrollbars(layout, cx);
-                    self.paint_inline_completion_popover(layout, cx);
-                    self.paint_mouse_context_menu(layout, cx);
+                    self.paint_inline_completion_popover(layout, window, cx);
+                    self.paint_mouse_context_menu(layout, window, cx);
                 });
             })
         })

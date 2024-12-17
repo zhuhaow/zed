@@ -865,7 +865,7 @@ impl AppContext {
                 if count.load(SeqCst) == 0 {
                     for window_handle in self.windows() {
                         window_handle
-                            .update(self, |_, cx| {
+                            .update(self, |_, window, cx| {
                                 if cx.window.focus == Some(handle_id) {
                                     cx.blur();
                                 }

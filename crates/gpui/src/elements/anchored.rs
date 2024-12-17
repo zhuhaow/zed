@@ -3,7 +3,7 @@ use taffy::style::{Display, Position};
 
 use crate::{
     point, AnyElement, Axis, Bounds, Corner, Edges, Element, GlobalElementId, IntoElement,
-    LayoutId, ParentElement, Pixels, Point, Size, Style, WindowContext,
+    LayoutId, ParentElement, Pixels, Point, Size, Style, Window, WindowContext,
 };
 
 /// The state that the anchored element element uses to track its children.
