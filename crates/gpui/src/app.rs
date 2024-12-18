@@ -1494,10 +1494,15 @@ impl Context for AppContext {
         read(entity, self)
     }
 
-    fn update_window<T, F>(&mut self, handle: AnyWindowHandle, update: F) -> Self::WindowResult<T>
+    fn update_window<T, F>(
+        &mut self,
+        handle: impl Into<AnyWindowHandle>,
+        update: F,
+    ) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
+        let handle = handle.into();
         self.update(|cx| {
             let mut window = cx
                 .windows

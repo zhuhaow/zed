@@ -76,7 +76,11 @@ impl Context for TestAppContext {
         app.read_model(handle, read)
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Self::WindowResult<T>
+    fn update_window<T, F>(
+        &mut self,
+        window: impl Into<AnyWindowHandle>,
+        f: F,
+    ) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
@@ -910,7 +914,11 @@ impl Context for VisualTestContext {
         self.cx.read_model(handle, read)
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Self::WindowResult<T>
+    fn update_window<T, F>(
+        &mut self,
+        window: impl Into<AnyWindowHandle>,
+        f: F,
+    ) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {

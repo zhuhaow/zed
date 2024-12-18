@@ -177,6 +177,7 @@ impl<D: PickerDelegate> Picker<D> {
         let head = Head::editor(
             delegate.placeholder_text(cx),
             Self::on_input_editor_event,
+            window,
             cx,
         );
 
@@ -198,10 +199,11 @@ impl<D: PickerDelegate> Picker<D> {
     /// A picker, which displays its matches using `gpui::list`, matches can have different heights.
     /// The picker allows the user to perform search items by text.
     /// If `PickerDelegate::render_match` only returns items with the same height, use `Picker::uniform_list` as its implementation is optimized for that.
-    pub fn list(delegate: D, cx: &mut ViewContext<Self>) -> Self {
+    pub fn list(delegate: D, window: &Window, cx: &mut ViewContext<Self>) -> Self {
         let head = Head::editor(
             delegate.placeholder_text(cx),
             Self::on_input_editor_event,
+            window,
             cx,
         );
 

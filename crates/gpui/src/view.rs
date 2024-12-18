@@ -80,14 +80,14 @@ impl<V: 'static> View<V> {
     /// Updates the view's state with the given function, which is passed a mutable reference and a context.
     pub fn update_in_window<C, R>(
         &self,
-        window: AnyWindowHandle,
+        window: impl Into<AnyWindowHandle>,
         cx: &mut C,
         f: impl FnOnce(&mut V, &mut Window, &mut ViewContext<'_, V>) -> R,
     ) -> C::WindowResult<R>
     where
         C: VisualContext,
     {
-        cx.update_window(window, |_, window, cx| {
+        cx.update_window(window.into(), |_, window, cx| {
             cx.update_view(self, |view, cx| f(view, window, cx))
         })
     }

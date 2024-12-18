@@ -108,7 +108,7 @@ impl Render for InlineCompletionButton {
                                         .ok();
                                 }
                             }))
-                            .tooltip(|cx| Tooltip::text("GitHub Copilot", cx)),
+                            .tooltip(|window, cx| Tooltip::text("GitHub Copilot", cx)),
                     );
                 }
                 let this = cx.view().clone();
@@ -126,7 +126,7 @@ impl Render for InlineCompletionButton {
                         .anchor(Corner::BottomRight)
                         .trigger(
                             IconButton::new("copilot-icon", icon)
-                                .tooltip(|cx| Tooltip::text("GitHub Copilot", cx)),
+                                .tooltip(|window, cx| Tooltip::text("GitHub Copilot", cx)),
                         ),
                 )
             }
@@ -194,7 +194,7 @@ impl Render for InlineCompletionButton {
                         .anchor(Corner::BottomRight)
                         .trigger(
                             IconButton::new("supermaven-icon", icon)
-                                .tooltip(move |cx| Tooltip::text(tooltip_text.clone(), cx)),
+                                .tooltip(move |window, cx| Tooltip::text(tooltip_text.clone(), cx)),
                         ),
                 );
             }
@@ -206,7 +206,7 @@ impl Render for InlineCompletionButton {
 
                 div().child(
                     IconButton::new("zeta", IconName::ZedPredict)
-                        .tooltip(|cx| {
+                        .tooltip(|window, cx| {
                             Tooltip::with_meta(
                                 "Zed Predict",
                                 Some(&RateCompletions),
@@ -216,7 +216,7 @@ impl Render for InlineCompletionButton {
                         })
                         .on_click(cx.listener(|this, _, window, cx| {
                             if let Some(workspace) = this.workspace.upgrade() {
-                                workspace.update(cx, |workspace, window, cx| {
+                                workspace.update(cx, |workspace, cx| {
                                     RateCompletionModal::toggle(workspace, cx)
                                 });
                             }

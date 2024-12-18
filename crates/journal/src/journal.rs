@@ -60,7 +60,7 @@ pub fn init(_: Arc<AppState>, cx: &mut AppContext) {
 
     cx.observe_new_views(
         |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
-            workspace.register_action(|workspace, _: &NewJournalEntry, cx| {
+            workspace.register_action(|workspace, _: &NewJournalEntry, window, cx| {
                 new_journal_entry(workspace, cx);
             });
         },

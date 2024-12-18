@@ -118,7 +118,7 @@ impl ModalView for FeedbackModal {
 impl FeedbackModal {
     pub fn register(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) {
         let _handle = cx.view().downgrade();
-        workspace.register_action(move |workspace, _: &GiveFeedback, cx| {
+        workspace.register_action(move |workspace, _: &GiveFeedback, window, cx| {
             workspace
                 .with_local_workspace(cx, |workspace, cx| {
                     let markdown = workspace

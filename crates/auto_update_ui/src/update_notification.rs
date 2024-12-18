@@ -38,7 +38,7 @@ impl Render for UpdateNotification {
                             .child(Icon::new(IconName::Close))
                             .cursor_pointer()
                             .on_click(cx.listener(|this, _, window, cx| {
-                                this.dismiss(&menu::window, Cancel, cx)
+                                this.dismiss(&menu::window, Cancel, window, cx)
                             })),
                     ),
             )

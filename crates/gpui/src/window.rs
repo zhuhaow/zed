@@ -3898,15 +3898,20 @@ impl Context for WindowContext<'_> {
         read(entity, &*self.app)
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, update: F) -> Self::WindowResult<T>
+    fn update_window<T, F>(
+        &mut self,
+        window: impl Into<AnyWindowHandle>,
+        update: F,
+    ) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
-        if window == self.window.handle {
+        let handle = window.into();
+        if handle == self.window.handle {
             let root_view = self.window.root_view.clone().unwrap();
             Ok(update(root_view, todo!(), self))
         } else {
-            window.update(self.app, update)
+            handle.update(self.app, update)
         }
     }
 
@@ -4604,7 +4609,11 @@ impl<V> Context for ViewContext<'_, V> {
         self.window_cx.read_model(handle, read)
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, update: F) -> Self::WindowResult<T>
+    fn update_window<T, F>(
+        &mut self,
+        window: impl Into<AnyWindowHandle>,
+        update: F,
+    ) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {

@@ -1185,7 +1185,7 @@ impl Workspace {
                     .await;
             }
             let window = if let Some(window) = requesting_window {
-                cx.update_window(window.into(), |_, window, cx| {
+                cx.update_window(window, |_, window, cx| {
                     cx.replace_root_view(|cx| {
                         Workspace::new(
                             Some(workspace_id),
@@ -5745,7 +5745,7 @@ pub fn open_ssh_project(
                 .unwrap_or_else(|| anyhow!("no paths given")));
         }
 
-        cx.update_window(window.into(), |_, _, cx| {
+        cx.update_window(window, |_, _, cx| {
             cx.replace_root_view(|cx| {
                 let mut workspace =
                     Workspace::new(Some(workspace_id), project, app_state.clone(), cx);

@@ -107,7 +107,7 @@ impl SearchOptions {
         &self,
         active: bool,
         focus_handle: FocusHandle,
-        action: impl Fn(&gpui::ClickEvent, &mut WindowContext) + 'static,
+        action: impl Fn(&gpui::ClickEvent, &mut Window, &mut WindowContext) + 'static,
     ) -> impl IntoElement {
         IconButton::new(self.label(), self.icon())
             .on_click(action)

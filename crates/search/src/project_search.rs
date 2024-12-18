@@ -108,7 +108,7 @@ pub fn init(cx: &mut AppContext) {
         });
 
         // Both on present and dismissed search, we need to unconditionally handle those actions to focus from the editor.
-        workspace.register_action(move |workspace, action: &DeploySearch, cx| {
+        workspace.register_action(move |workspace, action: &DeploySearch, window, cx| {
             if workspace.has_active_modal(cx) {
                 cx.propagate();
                 return;
@@ -116,7 +116,7 @@ pub fn init(cx: &mut AppContext) {
             ProjectSearchView::deploy_search(workspace, action, cx);
             cx.notify();
         });
-        workspace.register_action(move |workspace, action: &NewSearch, cx| {
+        workspace.register_action(move |workspace, action: &NewSearch, window, cx| {
             if workspace.has_active_modal(cx) {
                 cx.propagate();
                 return;
@@ -1745,7 +1745,7 @@ impl Render for ProjectSearchBar {
                     .disabled(search.active_match_index.is_none())
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(search) = this.active_project_search.as_ref() {
-                            search.update(cx, |this, window, cx| {
+                            search.update(cx, |this, cx| {
                                 this.select_match(Direction::Prev, cx);
                             })
                         }
@@ -2012,7 +2012,7 @@ fn register_workspace_action<A: Action>(
     workspace: &mut Workspace,
     callback: fn(&mut ProjectSearchBar, &A, &mut Window, &mut ViewContext<ProjectSearchBar>),
 ) {
-    workspace.register_action(move |workspace, action: &A, cx| {
+    workspace.register_action(move |workspace, action: &A, window, cx| {
         if workspace.has_active_modal(cx) {
             cx.propagate();
             return;
@@ -2021,7 +2021,7 @@ fn register_workspace_action<A: Action>(
         workspace.active_pane().update(cx, |pane, cx| {
             pane.toolbar().update(cx, move |workspace, cx| {
                 if let Some(search_bar) = workspace.item_of_type::<ProjectSearchBar>() {
-                    search_bar.update(cx, move |search_bar, cx| {
+                    search_bar.update(cx, move |search_bar, window, cx| {
                         if search_bar.active_project_search.is_some() {
                             callback(search_bar, action, window, cx);
                             cx.notify();
@@ -2039,7 +2039,7 @@ fn register_workspace_action_for_present_search<A: Action>(
     workspace: &mut Workspace,
     callback: fn(&mut Workspace, &A, &mut ViewContext<Workspace>),
 ) {
-    workspace.register_action(move |workspace, action: &A, cx| {
+    workspace.register_action(move |workspace, action: &A, window, cx| {
         if workspace.has_active_modal(cx) {
             cx.propagate();
             return;
@@ -2114,7 +2114,7 @@ pub mod tests {
         });
 
         perform_search(search_view, "TWO", cx);
-        search_view.update(cx, |search_view, cx| {
+        search_view.update(cx, |search_view, window, cx| {
             assert_eq!(
                 search_view
                     .results_editor
@@ -2153,7 +2153,7 @@ pub mod tests {
         }).unwrap();
 
         search_view
-            .update(cx, |search_view, cx| {
+            .update(cx, |search_view, window, cx| {
                 assert_eq!(search_view.active_match_index, Some(1));
                 assert_eq!(
                     search_view
@@ -2166,7 +2166,7 @@ pub mod tests {
             .unwrap();
 
         search_view
-            .update(cx, |search_view, cx| {
+            .update(cx, |search_view, window, cx| {
                 assert_eq!(search_view.active_match_index, Some(2));
                 assert_eq!(
                     search_view
@@ -2179,7 +2179,7 @@ pub mod tests {
             .unwrap();
 
         search_view
-            .update(cx, |search_view, cx| {
+            .update(cx, |search_view, window, cx| {
                 assert_eq!(search_view.active_match_index, Some(0));
                 assert_eq!(
                     search_view
@@ -2192,7 +2192,7 @@ pub mod tests {
             .unwrap();
 
         search_view
-            .update(cx, |search_view, cx| {
+            .update(cx, |search_view, window, cx| {
                 assert_eq!(search_view.active_match_index, Some(2));
                 assert_eq!(
                     search_view
@@ -2205,7 +2205,7 @@ pub mod tests {
             .unwrap();
 
         search_view
-            .update(cx, |search_view, cx| {
+            .update(cx, |search_view, window, cx| {
                 assert_eq!(search_view.active_match_index, Some(1));
                 assert_eq!(
                     search_view
@@ -3218,7 +3218,7 @@ pub mod tests {
         let workspace = window.root(cx).unwrap();
 
         let panes: Vec<_> = window
-            .update(cx, |this, _| this.panes().to_owned())
+            .update(cx, |this, window, _| this.panes().to_owned())
             .unwrap();
 
         let search_bar_1 = window.build_view(cx, |_| ProjectSearchBar::new());
@@ -3434,7 +3434,7 @@ pub mod tests {
         });
         let window = cx.add_window(|cx| Workspace::test_new(project, cx));
         let panes: Vec<_> = window
-            .update(cx, |this, _| this.panes().to_owned())
+            .update(cx, |this, window, _| this.panes().to_owned())
             .unwrap();
         assert_eq!(panes.len(), 1);
         let first_pane = panes.first().cloned().unwrap();
@@ -3540,7 +3540,7 @@ pub mod tests {
 
         // Focus the second pane's non-search item
         window
-            .update(cx, |_workspace, cx| {
+            .update(cx, |_workspace, window, cx| {
                 second_pane.update(cx, |pane, cx| pane.activate_next_item(true, cx));
             })
             .unwrap();
@@ -3551,7 +3551,7 @@ pub mod tests {
         // The project search view should now be focused in the second pane
         // And the number of items should be unchanged.
         window
-            .update(cx, |_workspace, cx| {
+            .update(cx, |_workspace, window, cx| {
                 second_pane.update(cx, |pane, _cx| {
                     assert!(pane
                         .active_item()
@@ -3608,7 +3608,7 @@ pub mod tests {
         // First search
         perform_search(search_view, "A", cx);
         search_view
-            .update(cx, |search_view, cx| {
+            .update(cx, |search_view, window, cx| {
                 search_view.results_editor.update(cx, |results_editor, cx| {
                     // Results are correct and scrolled to the top
                     assert_eq!(
@@ -3626,7 +3626,7 @@ pub mod tests {
         // Second search
         perform_search(search_view, "B", cx);
         search_view
-            .update(cx, |search_view, cx| {
+            .update(cx, |search_view, window, cx| {
                 search_view.results_editor.update(cx, |results_editor, cx| {
                     // Results are correct...
                     assert_eq!(
@@ -3677,7 +3677,7 @@ pub mod tests {
         });
 
         let panes: Vec<_> = window
-            .update(&mut cx, |this, _| this.panes().to_owned())
+            .update(&mut cx, |this, window, _| this.panes().to_owned())
             .unwrap();
         assert_eq!(panes.len(), 1);
         let pane = panes.first().cloned().unwrap();
@@ -3737,7 +3737,7 @@ pub mod tests {
         cx: &mut TestAppContext,
     ) {
         search_view
-            .update(cx, |search_view, cx| {
+            .update(cx, |search_view, window, cx| {
                 search_view
                     .query_editor
                     .update(cx, |query_editor, cx| query_editor.set_text(text, cx));

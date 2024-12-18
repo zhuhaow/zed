@@ -36,7 +36,7 @@ pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(|workspace: &mut Workspace, cx| {
         feedback_modal::FeedbackModal::register(workspace, cx);
         workspace
-            .register_action(|_, _: &CopySystemSpecsIntoClipboard, cx| {
+            .register_action(|_, _: &CopySystemSpecsIntoClipboard, window, cx| {
                 let specs = SystemSpecs::new(cx);
 
                 cx.spawn(|_, mut cx| async move {
@@ -56,10 +56,10 @@ pub fn init(cx: &mut AppContext) {
                 })
                 .detach();
             })
-            .register_action(|_, _: &RequestFeature, cx| {
+            .register_action(|_, _: &RequestFeature, window, cx| {
                 cx.open_url(request_feature_url());
             })
-            .register_action(move |_, _: &FileBugReport, cx| {
+            .register_action(move |_, _: &FileBugReport, window, cx| {
                 let specs = SystemSpecs::new(cx);
                 cx.spawn(|_, mut cx| async move {
                     let specs = specs.await;
@@ -70,7 +70,7 @@ pub fn init(cx: &mut AppContext) {
                 })
                 .detach();
             })
-            .register_action(move |_, _: &OpenZedRepo, cx| {
+            .register_action(move |_, _: &OpenZedRepo, window, cx| {
                 cx.open_url(zed_repo_url());
             });
     })

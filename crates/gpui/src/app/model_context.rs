@@ -262,7 +262,7 @@ impl<'a, T> Context for ModelContext<'a, T> {
         self.app.read_model(handle, read)
     }
 
-    fn update_window<R, F>(&mut self, window: AnyWindowHandle, update: F) -> Result<R>
+    fn update_window<R, F>(&mut self, window: impl Into<AnyWindowHandle>, update: F) -> Result<R>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> R,
     {

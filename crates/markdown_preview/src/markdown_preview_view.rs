@@ -54,7 +54,7 @@ struct EditorState {
 
 impl MarkdownPreviewView {
     pub fn register(workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>) {
-        workspace.register_action(move |workspace, _: &OpenPreview, cx| {
+        workspace.register_action(move |workspace, _: &OpenPreview, window, cx| {
             if let Some(editor) = Self::resolve_active_item_as_markdown_editor(workspace, cx) {
                 let view = Self::create_markdown_view(workspace, editor, cx);
                 workspace.active_pane().update(cx, |pane, cx| {
@@ -68,7 +68,7 @@ impl MarkdownPreviewView {
             }
         });
 
-        workspace.register_action(move |workspace, _: &OpenPreviewToTheSide, cx| {
+        workspace.register_action(move |workspace, _: &OpenPreviewToTheSide, window, cx| {
             if let Some(editor) = Self::resolve_active_item_as_markdown_editor(workspace, cx) {
                 let view = Self::create_markdown_view(workspace, editor.clone(), cx);
                 let pane = workspace
@@ -190,21 +190,23 @@ impl MarkdownPreviewView {
                                 .id(ix)
                                 .when(should_apply_padding, |this| this.pb_3())
                                 .group("markdown-block")
-                                .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
-                                    if event.down.click_count == 2 {
-                                        if let Some(source_range) = this
-                                            .contents
-                                            .as_ref()
-                                            .and_then(|c| c.children.get(ix))
-                                            .and_then(|block| block.source_range())
-                                        {
-                                            this.move_cursor_to_block(
-                                                cx,
-                                                source_range.start..source_range.start,
-                                            );
+                                .on_click(cx.listener(
+                                    move |this, event: &ClickEvent, window, cx| {
+                                        if event.down.click_count == 2 {
+                                            if let Some(source_range) = this
+                                                .contents
+                                                .as_ref()
+                                                .and_then(|c| c.children.get(ix))
+                                                .and_then(|block| block.source_range())
+                                            {
+                                                this.move_cursor_to_block(
+                                                    cx,
+                                                    source_range.start..source_range.start,
+                                                );
+                                            }
                                         }
-                                    }
-                                }))
+                                    },
+                                ))
                                 .map(move |container| {
                                     let indicator = div()
                                         .h_full()

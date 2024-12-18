@@ -217,7 +217,7 @@ pub fn init(cx: &mut AppContext) {
         }
 
         let log_store = log_store.clone();
-        workspace.register_action(move |workspace, _: &OpenLanguageServerLogs, cx| {
+        workspace.register_action(move |workspace, _: &OpenLanguageServerLogs, window, cx| {
             let project = workspace.project().read(cx);
             if project.is_local() || project.is_via_ssh() {
                 workspace.split_item(

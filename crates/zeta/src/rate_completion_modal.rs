@@ -28,7 +28,7 @@ actions!(
 
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(move |workspace: &mut Workspace, _cx| {
-        workspace.register_action(|workspace, _: &RateCompletions, cx| {
+        workspace.register_action(|workspace, _: &RateCompletions, window, cx| {
             RateCompletionModal::toggle(workspace, cx);
         });
     })
@@ -508,7 +508,7 @@ impl RateCompletionModal {
                                         .icon_position(IconPosition::Start)
                                         .disabled(rated || feedback_empty)
                                         .when(feedback_empty, |this| {
-                                            this.tooltip(|cx| {
+                                            this.tooltip(|window, cx| {
                                                 Tooltip::text("Explain what's bad about it before reporting it", cx)
                                             })
                                         })
