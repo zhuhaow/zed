@@ -32,12 +32,13 @@ pub fn init(cx: &mut AppContext) {
     BaseKeymap::register(cx);
 
     cx.observe_new_views(|workspace: &mut Workspace, _cx| {
-        workspace.register_action(|workspace, _: &Welcome, cx| {
+        workspace.register_action(|workspace, _: &Welcome, window, cx| {
             let welcome_page = WelcomePage::new(workspace, cx);
             workspace.add_item_to_active_pane(Box::new(welcome_page), None, true, cx)
         });
-        workspace
-            .register_action(|_workspace, _: &ResetHints, cx| MultibufferHint::set_count(0, cx));
+        workspace.register_action(|_workspace, _: &ResetHints, window, cx| {
+            MultibufferHint::set_count(0, cx)
+        });
     })
     .detach();
 
@@ -48,17 +49,22 @@ pub fn show_welcome_view(
     app_state: Arc<AppState>,
     cx: &mut AppContext,
 ) -> Task<anyhow::Result<()>> {
-    open_new(Default::default(), app_state, cx, |workspace, cx| {
-        workspace.toggle_dock(DockPosition::Left, cx);
-        let welcome_page = WelcomePage::new(workspace, cx);
-        workspace.add_item_to_center(Box::new(welcome_page.clone()), cx);
-        cx.focus_view(&welcome_page);
-        cx.notify();
+    open_new(
+        Default::default(),
+        app_state,
+        cx,
+        |workspace, window, cx| {
+            workspace.toggle_dock(DockPosition::Left, cx);
+            let welcome_page = WelcomePage::new(workspace, cx);
+            workspace.add_item_to_center(Box::new(welcome_page.clone()), cx);
+            cx.focus_view(&welcome_page);
+            cx.notify();
 
-        db::write_and_log(cx, || {
-            KEY_VALUE_STORE.write_kvp(FIRST_OPEN.to_string(), "false".to_string())
-        });
-    })
+            db::write_and_log(cx, || {
+                KEY_VALUE_STORE.write_kvp(FIRST_OPEN.to_string(), "false".to_string())
+            });
+        },
+    )
 }
 
 pub struct WelcomePage {
@@ -154,6 +160,7 @@ impl Render for WelcomePage {
                                                         base_keymap_picker::toggle(
                                                             workspace,
                                                             &Default::default(),
+                                                            window,
                                                             cx,
                                                         )
                                                     })
@@ -291,7 +298,7 @@ impl Render for WelcomePage {
                                         IconButton::new("vim-mode", IconName::Info)
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
-                                            .tooltip(|cx| Tooltip::text("You can also toggle Vim Mode via the command palette or Editor Controls menu.", cx)),
+                                            .tooltip(|window, cx| Tooltip::text("You can also toggle Vim Mode via the command palette or Editor Controls menu.", cx)),
                                     )
                             )
                             .child(CheckboxWithLabel::new(

@@ -38,7 +38,7 @@ const CHAT_PANEL_KEY: &str = "ChatPanel";
 
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(|workspace: &mut Workspace, _| {
-        workspace.register_action(|workspace, _: &ToggleFocus, cx| {
+        workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
             workspace.toggle_panel_focus::<ChatPanel>(cx);
         });
     })
@@ -104,12 +104,14 @@ impl ChatPanel {
                     }
                 });
 
-            message_list.set_scroll_handler(cx.listener(|this, event: &ListScrollEvent, window, cx| {
-                if event.visible_range.start < MESSAGE_LOADING_THRESHOLD {
-                    this.load_more_messages(cx);
-                }
-                this.is_scrolled_to_bottom = !event.is_scrolled;
-            }));
+            message_list.set_scroll_handler(cx.listener(
+                |this, event: &ListScrollEvent, window, cx| {
+                    if event.visible_range.start < MESSAGE_LOADING_THRESHOLD {
+                        this.load_more_messages(cx);
+                    }
+                    this.is_scrolled_to_bottom = !event.is_scrolled;
+                },
+            ));
 
             let local_offset = chrono::Local::now().offset().local_minus_utc();
             let mut this = Self {
@@ -369,7 +371,7 @@ impl ChatPanel {
                     ),
                 )
                 .cursor(CursorStyle::PointingHand)
-                .tooltip(|cx| Tooltip::text("Go to message", cx))
+                .tooltip(|window, cx| Tooltip::text("Go to message", cx))
                 .on_click(cx.listener(move |chat_panel, _, window, cx| {
                     if let Some(channel_id) = current_channel_id {
                         chat_panel
@@ -615,7 +617,7 @@ impl ChatPanel {
                                         })
                                     })),
                             )
-                            .tooltip(|cx| Tooltip::text("Reply", cx)),
+                            .tooltip(|window, cx| Tooltip::text("Reply", cx)),
                     ),
                 )
             })
@@ -660,7 +662,7 @@ impl ChatPanel {
                                             })
                                         })),
                                 )
-                                .tooltip(|cx| Tooltip::text("Edit", cx)),
+                                .tooltip(|window, cx| Tooltip::text("Edit", cx)),
                         ),
                     )
                 })
@@ -688,7 +690,7 @@ impl ChatPanel {
                                     }),
                             )
                             .id("more")
-                            .tooltip(|cx| Tooltip::text("More", cx)),
+                            .tooltip(|window, cx| Tooltip::text("More", cx)),
                     ),
                 )
             })
@@ -785,7 +787,7 @@ impl ChatPanel {
         rich_text
     }
 
-    fn send(&mut self, _: &Confirm, cx: &mut ViewContext<Self>) {
+    fn send(&mut self, _: &Confirm, window: &mut Window, cx: &mut ViewContext<Self>) {
         if let Some((chat, _)) = self.active_chat.as_ref() {
             let message = self
                 .message_editor
@@ -973,7 +975,7 @@ impl Render for ChatPanel {
                                             &collab_panel::ToggleFocus,
                                             cx,
                                         ))
-                                        .on_click(|_, cx| {
+                                        .on_click(|_, window, cx| {
                                             cx.dispatch_action(
                                                 collab_panel::ToggleFocus.boxed_clone(),
                                             )
@@ -999,7 +1001,7 @@ impl Render for ChatPanel {
                         .child(
                             IconButton::new("cancel-edit-message", IconName::Close)
                                 .shape(ui::IconButtonShape::Square)
-                                .tooltip(|cx| Tooltip::text("Cancel edit message", cx))
+                                .tooltip(|window, cx| Tooltip::text("Cancel edit message", cx))
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     this.cancel_edit_message(cx);
                                 })),
@@ -1061,7 +1063,7 @@ impl Render for ChatPanel {
                             .child(
                                 IconButton::new("close-reply-preview", IconName::Close)
                                     .shape(ui::IconButtonShape::Square)
-                                    .tooltip(|cx| Tooltip::text("Close reply", cx))
+                                    .tooltip(|window, cx| Tooltip::text("Close reply", cx))
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.close_reply_preview(cx);
                                     })),

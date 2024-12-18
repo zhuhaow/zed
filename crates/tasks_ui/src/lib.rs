@@ -18,7 +18,7 @@ pub fn init(cx: &mut AppContext) {
         |workspace: &mut Workspace, _: &mut ViewContext<Workspace>| {
             workspace
                 .register_action(spawn_task_or_modal)
-                .register_action(move |workspace, action: &modal::Rerun, cx| {
+                .register_action(move |workspace, action: &modal::Rerun, window, cx| {
                     if let Some((task_source_kind, mut last_scheduled_task)) = workspace
                         .project()
                         .read(cx)
@@ -79,7 +79,7 @@ pub fn init(cx: &mut AppContext) {
                             );
                         }
                     } else {
-                        toggle_modal(workspace, None, cx).detach();
+                        toggle_modal(workspace, None, window, cx).detach();
                     };
                 });
         },
@@ -98,13 +98,16 @@ fn spawn_task_or_modal(workspace: &mut Workspace, action: &Spawn, cx: &mut ViewC
             });
             spawn_task_with_name(task_name.clone(), overrides, cx).detach_and_log_err(cx)
         }
-        Spawn::ViaModal { reveal_target } => toggle_modal(workspace, *reveal_target, cx).detach(),
+        Spawn::ViaModal { reveal_target } => {
+            toggle_modal(workspace, *reveal_target, window, cx).detach()
+        }
     }
 }
 
 fn toggle_modal(
     workspace: &mut Workspace,
     reveal_target: Option<RevealTarget>,
+    window: &Window,
     cx: &mut ViewContext<'_, Workspace>,
 ) -> AsyncTask<()> {
     let task_store = workspace.project().read(cx).task_store().clone();
@@ -112,12 +115,13 @@ fn toggle_modal(
     let can_open_modal = workspace.project().update(cx, |project, cx| {
         project.is_local() || project.ssh_connection_string(cx).is_some() || project.is_via_ssh()
     });
+    let window_handle = window.handle();
     if can_open_modal {
         let context_task = task_context(workspace, cx);
         cx.spawn(|workspace, mut cx| async move {
             let task_context = context_task.await;
             workspace
-                .update(&mut cx, |workspace, cx| {
+                .update_in_window(window_handle, &mut cx, |workspace, window, cx| {
                     workspace.toggle_modal(cx, |cx| {
                         TasksModal::new(
                             task_store.clone(),
@@ -126,6 +130,7 @@ fn toggle_modal(
                                 reveal_target: Some(target),
                             }),
                             workspace_handle,
+                            window,
                             cx,
                         )
                     })

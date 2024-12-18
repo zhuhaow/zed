@@ -37,8 +37,12 @@ impl Render for ExtensionVersionSelector {
 }
 
 impl ExtensionVersionSelector {
-    pub fn new(delegate: ExtensionVersionSelectorDelegate, cx: &mut ViewContext<Self>) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+    pub fn new(
+        delegate: ExtensionVersionSelectorDelegate,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Self {
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         Self { picker }
     }
 }

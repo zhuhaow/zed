@@ -40,7 +40,7 @@ actions!(zed, [InstallDevExtension]);
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(move |workspace: &mut Workspace, cx| {
         workspace
-            .register_action(move |workspace, _: &zed_actions::Extensions, cx| {
+            .register_action(move |workspace, _: &zed_actions::Extensions, window, cx| {
                 let existing = workspace
                     .active_pane()
                     .read(cx)
@@ -54,7 +54,7 @@ pub fn init(cx: &mut AppContext) {
                     workspace.add_item_to_active_pane(Box::new(extensions_page), None, true, cx)
                 }
             })
-            .register_action(move |workspace, _: &InstallDevExtension, cx| {
+            .register_action(move |workspace, _: &InstallDevExtension, window, cx| {
                 let store = ExtensionStore::global(cx);
                 let prompt = workspace.prompt_for_open_path(
                     gpui::PathPromptOptions {
@@ -487,7 +487,7 @@ impl ExtensionsPage {
                                 cx.open_url(&repository_url);
                             }
                         }))
-                        .tooltip(move |cx| Tooltip::text(repository_url.clone(), cx))
+                        .tooltip(move |window, cx| Tooltip::text(repository_url.clone(), cx))
                     })),
             )
     }
@@ -595,7 +595,9 @@ impl ExtensionsPage {
                                         cx.open_url(&repository_url);
                                     }
                                 }))
-                                .tooltip(move |cx| Tooltip::text(repository_url.clone(), cx)),
+                                .tooltip(move |window, cx| {
+                                    Tooltip::text(repository_url.clone(), cx)
+                                }),
                             )
                             .child(
                                 PopoverMenu::new(SharedString::from(format!(
@@ -674,7 +676,7 @@ impl ExtensionsPage {
                         extension_versions,
                     );
 
-                    ExtensionVersionSelector::new(delegate, cx)
+                    ExtensionVersionSelector::new(delegate, window, cx)
                 });
             })?;
 
@@ -1065,7 +1067,7 @@ impl Render for ExtensionsPage {
                                 Button::new("install-dev-extension", "Install Dev Extension")
                                     .style(ButtonStyle::Filled)
                                     .size(ButtonSize::Large)
-                                    .on_click(|_event, cx| {
+                                    .on_click(|_event, window, cx| {
                                         cx.dispatch_action(Box::new(InstallDevExtension))
                                     }),
                             ),
@@ -1087,7 +1089,7 @@ impl Render for ExtensionsPage {
                                                 this.filter = ExtensionFilter::All;
                                                 this.filter_extension_entries(cx);
                                             }))
-                                            .tooltip(move |cx| {
+                                            .tooltip(move |window, cx| {
                                                 Tooltip::text("Show all extensions", cx)
                                             })
                                             .first(),
@@ -1101,7 +1103,7 @@ impl Render for ExtensionsPage {
                                                 this.filter = ExtensionFilter::Installed;
                                                 this.filter_extension_entries(cx);
                                             }))
-                                            .tooltip(move |cx| {
+                                            .tooltip(move |window, cx| {
                                                 Tooltip::text("Show installed extensions", cx)
                                             })
                                             .middle(),
@@ -1117,7 +1119,7 @@ impl Render for ExtensionsPage {
                                                 this.filter = ExtensionFilter::NotInstalled;
                                                 this.filter_extension_entries(cx);
                                             }))
-                                            .tooltip(move |cx| {
+                                            .tooltip(move |window, cx| {
                                                 Tooltip::text("Show not installed extensions", cx)
                                             })
                                             .last(),

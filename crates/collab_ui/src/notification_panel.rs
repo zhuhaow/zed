@@ -288,7 +288,7 @@ impl NotificationPanel {
                                                 .rounded_md()
                                         })
                                         .child(Label::new(relative_timestamp).color(Color::Muted))
-                                        .tooltip(move |cx| {
+                                        .tooltip(move |window, cx| {
                                             Tooltip::text(absolute_timestamp.clone(), cx)
                                         }),
                                 )
@@ -308,7 +308,7 @@ impl NotificationPanel {
                                             .child(Button::new("decline", "Decline").on_click({
                                                 let notification = notification.clone();
                                                 let view = cx.view().clone();
-                                                move |_, cx| {
+                                                move |_, window, cx| {
                                                     view.update(cx, |this, cx| {
                                                         this.respond_to_notification(
                                                             notification.clone(),
@@ -321,7 +321,7 @@ impl NotificationPanel {
                                             .child(Button::new("accept", "Accept").on_click({
                                                 let notification = notification.clone();
                                                 let view = cx.view().clone();
-                                                move |_, cx| {
+                                                move |_, window, cx| {
                                                     view.update(cx, |this, cx| {
                                                         this.respond_to_notification(
                                                             notification.clone(),
@@ -611,7 +611,7 @@ impl Render for NotificationPanel {
                                     .full_width()
                                     .on_click({
                                         let client = self.client.clone();
-                                        move |_, cx| {
+                                        move |_, window, cx| {
                                             let client = client.clone();
                                             cx.spawn(move |cx| async move {
                                                 client

@@ -18,14 +18,16 @@ use workspace::{
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
         |workspace: &mut Workspace, _: &mut ViewContext<Workspace>| {
-            workspace.register_action(|workspace, _: &workspace::ToggleProjectSymbols, cx| {
-                let project = workspace.project().clone();
-                let handle = cx.view().downgrade();
-                workspace.toggle_modal(cx, move |cx| {
-                    let delegate = ProjectSymbolsDelegate::new(handle, project);
-                    Picker::uniform_list(delegate, cx).width(rems(34.))
-                })
-            });
+            workspace.register_action(
+                |workspace, _: &workspace::ToggleProjectSymbols, window, cx| {
+                    let project = workspace.project().clone();
+                    let handle = cx.view().downgrade();
+                    workspace.toggle_modal(cx, move |cx| {
+                        let delegate = ProjectSymbolsDelegate::new(handle, project);
+                        Picker::uniform_list(delegate, window, cx).width(rems(34.))
+                    })
+                },
+            );
         },
     )
     .detach();
@@ -338,7 +340,8 @@ mod tests {
         // Create the project symbols view.
         let symbols = cx.new_view(|cx| {
             Picker::uniform_list(
-                ProjectSymbolsDelegate::new(workspace.downgrade(), project.clone()),
+                ProjectSymbolsDelegate::window,
+                new(workspace.downgrade(), project.clone()),
                 cx,
             )
         });

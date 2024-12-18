@@ -83,13 +83,13 @@ impl TabSwitcher {
         workspace.toggle_modal(cx, |cx| {
             let delegate =
                 TabSwitcherDelegate::new(project, action, cx.view().downgrade(), weak_pane, cx);
-            TabSwitcher::new(delegate, cx)
+            TabSwitcher::new(delegate, window, cx)
         });
     }
 
-    fn new(delegate: TabSwitcherDelegate, cx: &mut ViewContext<Self>) -> Self {
+    fn new(delegate: TabSwitcherDelegate, window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
         Self {
-            picker: cx.new_view(|cx| Picker::nonsearchable_uniform_list(delegate, cx)),
+            picker: cx.new_view(|cx| Picker::nonsearchable_uniform_list(delegate, window, cx)),
             init_modifiers: cx.modifiers().modified().then_some(cx.modifiers()),
         }
     }
@@ -112,7 +112,12 @@ impl TabSwitcher {
         }
     }
 
-    fn handle_close_selected_item(&mut self, _: &CloseSelectedItem, cx: &mut ViewContext<Self>) {
+    fn handle_close_selected_item(
+        &mut self,
+        _: &CloseSelectedItem,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.picker.update(cx, |picker, cx| {
             picker
                 .delegate
@@ -130,7 +135,7 @@ impl FocusableView for TabSwitcher {
 }
 
 impl Render for TabSwitcher {
-    fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) -> impl IntoElement {
         v_flex()
             .key_context("TabSwitcher")
             .w(rems(PANEL_WIDTH_REMS))
@@ -399,7 +404,7 @@ impl PickerDelegate for TabSwitcherDelegate {
                 IconButton::new("close_tab", IconName::Close)
                     .icon_size(IconSize::Small)
                     .icon_color(indicator_color)
-                    .tooltip(|cx| Tooltip::text("Close", cx)),
+                    .tooltip(|window, cx| Tooltip::text("Close", cx)),
             )
             .into_any_element();
 

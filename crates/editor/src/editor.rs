@@ -12825,7 +12825,7 @@ impl Editor {
 
     pub fn register_action<A: Action>(
         &mut self,
-        listener: impl Fn(&A, &mut WindowContext) + 'static,
+        listener: impl Fn(&A, &mut Window, &mut WindowContext) + 'static,
     ) -> Subscription {
         let id = self.next_editor_action_id.post_inc();
         let listener = Arc::new(listener);
@@ -12837,7 +12837,7 @@ impl Editor {
                 cx.on_action(TypeId::of::<A>(), move |action, phase, window, cx| {
                     let action = action.downcast_ref().unwrap();
                     if phase == DispatchPhase::Bubble {
-                        listener(action, cx)
+                        listener(action, window, cx)
                     }
                 })
             }),

@@ -1179,7 +1179,7 @@ fn editor_with_deleted_text(
             .register_action::<RevertSelectedHunks>({
                 let hunk = hunk.clone();
                 let parent_editor = parent_editor.clone();
-                move |_, cx| {
+                move |_, window, cx| {
                     parent_editor
                         .update(cx, |editor, cx| editor.revert_hunk(hunk.clone(), cx))
                         .ok();
@@ -1189,7 +1189,7 @@ fn editor_with_deleted_text(
         editor
             .register_action::<ToggleHunkDiff>({
                 let hunk = hunk.clone();
-                move |_, cx| {
+                move |_, window, cx| {
                     parent_editor
                         .update(cx, |editor, cx| {
                             editor.toggle_hovered_hunk(&hunk, cx);

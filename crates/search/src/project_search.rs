@@ -2021,7 +2021,7 @@ fn register_workspace_action<A: Action>(
         workspace.active_pane().update(cx, |pane, cx| {
             pane.toolbar().update(cx, move |workspace, cx| {
                 if let Some(search_bar) = workspace.item_of_type::<ProjectSearchBar>() {
-                    search_bar.update(cx, move |search_bar, window, cx| {
+                    search_bar.update(cx, move |search_bar, cx| {
                         if search_bar.active_project_search.is_some() {
                             callback(search_bar, action, window, cx);
                             cx.notify();

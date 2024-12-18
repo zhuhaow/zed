@@ -87,7 +87,7 @@ impl<V: 'static> View<V> {
     where
         C: VisualContext,
     {
-        cx.update_window(window.into(), |_, window, cx| {
+        cx.update_window(window, |_, window, cx| {
             cx.update_view(self, |view, cx| f(view, window, cx))
         })
     }

@@ -126,11 +126,13 @@ impl TasksModal {
         task_context: TaskContext,
         task_overrides: Option<TaskOverrides>,
         workspace: WeakView<Workspace>,
+        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let picker = cx.new_view(|cx| {
             Picker::uniform_list(
                 TasksModalDelegate::new(task_store, task_context, task_overrides, workspace),
+                window,
                 cx,
             )
         });
@@ -377,7 +379,7 @@ impl PickerDelegate for TasksModalDelegate {
                 .end_slot::<AnyElement>(history_run_icon)
                 .spacing(ListItemSpacing::Sparse)
                 .when_some(tooltip_label, |list_item, item_label| {
-                    list_item.tooltip(move |_| item_label.clone())
+                    list_item.tooltip(move |window, _| item_label.clone())
                 })
                 .map(|item| {
                     let item = if matches!(source_kind, TaskSourceKind::UserInput)
@@ -402,7 +404,7 @@ impl PickerDelegate for TasksModalDelegate {
                                         .checked_sub(1);
                                     picker.refresh(cx);
                                 }))
-                                .tooltip(|cx| {
+                                .tooltip(|window, cx| {
                                     Tooltip::text("Delete Previously Scheduled Task", cx)
                                 }),
                         );
@@ -489,7 +491,7 @@ impl PickerDelegate for TasksModalDelegate {
                             Button::new("edit-current-task", label)
                                 .label_size(LabelSize::Small)
                                 .when_some(keybind, |this, keybind| this.key_binding(keybind))
-                                .on_click(move |_, cx| {
+                                .on_click(move |_, window, cx| {
                                     cx.dispatch_action(action.boxed_clone());
                                 })
                                 .into_any_element()
@@ -513,7 +515,9 @@ impl PickerDelegate for TasksModalDelegate {
                             Button::new("spawn-onehshot", spawn_oneshot_label)
                                 .label_size(LabelSize::Small)
                                 .key_binding(keybind)
-                                .on_click(move |_, cx| cx.dispatch_action(action.boxed_clone()))
+                                .on_click(move |_, window, cx| {
+                                    cx.dispatch_action(action.boxed_clone())
+                                })
                         }))
                     } else if current_modifiers.secondary() {
                         this.children(KeyBinding::for_action(&menu::SecondaryConfirm, cx).map(
@@ -526,7 +530,7 @@ impl PickerDelegate for TasksModalDelegate {
                                 Button::new("spawn", label)
                                     .label_size(LabelSize::Small)
                                     .key_binding(keybind)
-                                    .on_click(move |_, cx| {
+                                    .on_click(move |_, window, cx| {
                                         cx.dispatch_action(menu::SecondaryConfirm.boxed_clone())
                                     })
                             },
@@ -539,7 +543,7 @@ impl PickerDelegate for TasksModalDelegate {
                             Button::new("spawn", run_entry_label)
                                 .label_size(LabelSize::Small)
                                 .key_binding(keybind)
-                                .on_click(|_, cx| {
+                                .on_click(|_, window, cx| {
                                     cx.dispatch_action(menu::Confirm.boxed_clone());
                                 })
                         }))

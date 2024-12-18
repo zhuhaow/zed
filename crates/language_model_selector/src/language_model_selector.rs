@@ -55,7 +55,7 @@ impl LanguageModelSelector {
         };
 
         let picker =
-            cx.new_view(|cx| Picker::uniform_list(delegate, cx).max_height(Some(rems(20.).into())));
+            cx.new_view(|cx| Picker::uniform_list(delegate, window, cx).max_height(Some(rems(20.).into())));
 
         LanguageModelSelector { picker }
     }
@@ -335,7 +335,7 @@ impl PickerDelegate for LanguageModelPickerDelegate {
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
                             .icon_position(IconPosition::Start)
-                            .on_click(|_, cx| {
+                            .on_click(|_, window, cx| {
                                 cx.dispatch_action(Box::new(zed_actions::OpenAccountSettings))
                             }),
                         // Free user
@@ -347,7 +347,7 @@ impl PickerDelegate for LanguageModelPickerDelegate {
                                 "Try Pro"
                             },
                         )
-                        .on_click(|_, cx| cx.open_url(TRY_ZED_PRO_URL)),
+                        .on_click(|_, window, cx| cx.open_url(TRY_ZED_PRO_URL)),
                     })
                 })
                 .child(
@@ -356,7 +356,7 @@ impl PickerDelegate for LanguageModelPickerDelegate {
                         .icon_size(IconSize::Small)
                         .icon_color(Color::Muted)
                         .icon_position(IconPosition::Start)
-                        .on_click(|_, cx| {
+                        .on_click(|_, window, cx| {
                             cx.dispatch_action(ShowConfiguration.boxed_clone());
                         }),
                 )

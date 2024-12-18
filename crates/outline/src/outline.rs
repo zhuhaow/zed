@@ -26,7 +26,12 @@ pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(OutlineView::register).detach();
 }
 
-pub fn toggle(editor: View<Editor>, _: &ToggleOutline, cx: &mut WindowContext) {
+pub fn toggle(
+    editor: View<Editor>,
+    _: &ToggleOutline,
+    window: &mut Window,
+    cx: &mut WindowContext,
+) {
     let outline = editor
         .read(cx)
         .buffer()
@@ -36,7 +41,7 @@ pub fn toggle(editor: View<Editor>, _: &ToggleOutline, cx: &mut WindowContext) {
 
     if let Some((workspace, outline)) = editor.read(cx).workspace().zip(outline) {
         workspace.update(cx, |workspace, cx| {
-            workspace.toggle_modal(cx, |cx| OutlineView::new(outline, editor, cx));
+            workspace.toggle_modal(cx, |cx| OutlineView::new(outline, editor, window, cx));
         })
     }
 }
@@ -71,9 +76,9 @@ impl OutlineView {
         if editor.mode() == EditorMode::Full {
             let handle = cx.view().downgrade();
             editor
-                .register_action(move |action, cx| {
+                .register_action(move |action, window, cx| {
                     if let Some(editor) = handle.upgrade() {
-                        toggle(editor, action, cx);
+                        toggle(editor, action, window, cx);
                     }
                 })
                 .detach();
@@ -83,11 +88,13 @@ impl OutlineView {
     fn new(
         outline: Outline<Anchor>,
         editor: View<Editor>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> OutlineView {
         let delegate = OutlineViewDelegate::new(cx.view().downgrade(), outline, editor, cx);
-        let picker =
-            cx.new_view(|cx| Picker::uniform_list(delegate, cx).max_height(Some(vh(0.75, cx))));
+        let picker = cx.new_view(|cx| {
+            Picker::uniform_list(delegate, window, cx).max_height(Some(vh(0.75, cx)))
+        });
         OutlineView { picker }
     }
 }

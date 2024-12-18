@@ -148,15 +148,15 @@ impl FileFinder {
                             cx,
                         );
 
-                        FileFinder::new(delegate, cx)
+                        FileFinder::new(delegate, window, cx)
                     });
                 })
                 .ok();
         })
     }
 
-    fn new(delegate: FileFinderDelegate, cx: &mut ViewContext<Self>) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+    fn new(delegate: FileFinderDelegate, window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         let picker_focus_handle = picker.focus_handle(cx);
         picker.update(cx, |picker, _| {
             picker.delegate.focus_handle = picker_focus_handle.clone();
@@ -184,12 +184,22 @@ impl FileFinder {
         }
     }
 
-    fn handle_select_prev(&mut self, _: &SelectPrev, cx: &mut ViewContext<Self>) {
+    fn handle_select_prev(
+        &mut self,
+        _: &SelectPrev,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.init_modifiers = Some(cx.modifiers());
         cx.dispatch_action(Box::new(menu::SelectPrev));
     }
 
-    fn handle_toggle_menu(&mut self, _: &ToggleMenu, cx: &mut ViewContext<Self>) {
+    fn handle_toggle_menu(
+        &mut self,
+        _: &ToggleMenu,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.picker.update(cx, |picker, cx| {
             let menu_handle = &picker.delegate.popover_menu_handle;
             if menu_handle.is_deployed() {
@@ -200,19 +210,39 @@ impl FileFinder {
         });
     }
 
-    fn go_to_file_split_left(&mut self, _: &pane::SplitLeft, cx: &mut ViewContext<Self>) {
+    fn go_to_file_split_left(
+        &mut self,
+        _: &pane::SplitLeft,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.go_to_file_split_inner(SplitDirection::Left, cx)
     }
 
-    fn go_to_file_split_right(&mut self, _: &pane::SplitRight, cx: &mut ViewContext<Self>) {
+    fn go_to_file_split_right(
+        &mut self,
+        _: &pane::SplitRight,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.go_to_file_split_inner(SplitDirection::Right, cx)
     }
 
-    fn go_to_file_split_up(&mut self, _: &pane::SplitUp, cx: &mut ViewContext<Self>) {
+    fn go_to_file_split_up(
+        &mut self,
+        _: &pane::SplitUp,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.go_to_file_split_inner(SplitDirection::Up, cx)
     }
 
-    fn go_to_file_split_down(&mut self, _: &pane::SplitDown, cx: &mut ViewContext<Self>) {
+    fn go_to_file_split_down(
+        &mut self,
+        _: &pane::SplitDown,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.go_to_file_split_inner(SplitDirection::Down, cx)
     }
 
@@ -1256,7 +1286,7 @@ impl PickerDelegate for FileFinderDelegate {
                 .child(
                     Button::new("open-selection", "Open")
                         .key_binding(KeyBinding::for_action(&menu::Confirm, cx))
-                        .on_click(|_, cx| cx.dispatch_action(menu::Confirm.boxed_clone())),
+                        .on_click(|_, window, cx| cx.dispatch_action(menu::Confirm.boxed_clone())),
                 )
                 .child(
                     PopoverMenu::new("menu-popover")

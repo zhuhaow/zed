@@ -232,7 +232,7 @@ impl NewPathPrompt {
                 should_dismiss: true,
             };
 
-            Picker::uniform_list(delegate, cx).width(rems(34.))
+            Picker::uniform_list(delegate, window, cx).width(rems(34.))
         });
     }
 }

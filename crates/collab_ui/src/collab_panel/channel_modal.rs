@@ -37,6 +37,7 @@ impl ChannelModal {
         channel_store: Model<ChannelStore>,
         channel_id: ChannelId,
         mode: Mode,
+        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         cx.observe(&channel_store, |_, _, cx| cx.notify()).detach();
@@ -57,6 +58,7 @@ impl ChannelModal {
                     has_all_members: false,
                     mode,
                 },
+                window,
                 cx,
             )
             .modal(false)
@@ -69,7 +71,7 @@ impl ChannelModal {
         }
     }
 
-    fn toggle_mode(&mut self, _: &ToggleMode, cx: &mut ViewContext<Self>) {
+    fn toggle_mode(&mut self, _: &ToggleMode, window: &mut Window, cx: &mut ViewContext<Self>) {
         let mode = match self.picker.read(cx).delegate.mode {
             Mode::ManageMembers => Mode::InviteMembers,
             Mode::InviteMembers => Mode::ManageMembers,
@@ -89,7 +91,12 @@ impl ChannelModal {
         cx.notify()
     }
 
-    fn set_channel_visibility(&mut self, selection: &ToggleState, cx: &mut ViewContext<Self>) {
+    fn set_channel_visibility(
+        &mut self,
+        selection: &ToggleState,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.channel_store.update(cx, |channel_store, cx| {
             channel_store
                 .set_channel_visibility(
@@ -105,7 +112,7 @@ impl ChannelModal {
         });
     }
 
-    fn dismiss(&mut self, _: &menu::Cancel, cx: &mut ViewContext<Self>) {
+    fn dismiss(&mut self, _: &menu::Cancel, window: &mut Window, cx: &mut ViewContext<Self>) {
         cx.emit(DismissEvent);
     }
 }

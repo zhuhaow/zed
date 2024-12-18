@@ -25,7 +25,12 @@ pub fn init(cx: &mut AppContext) {
     .detach();
 }
 
-pub fn toggle(workspace: &mut Workspace, toggle: &Toggle, cx: &mut ViewContext<Workspace>) {
+pub fn toggle(
+    workspace: &mut Workspace,
+    toggle: &Toggle,
+    window: &mut Window,
+    cx: &mut ViewContext<Workspace>,
+) {
     let fs = workspace.app_state().fs.clone();
     let telemetry = workspace.client().telemetry().clone();
     workspace.toggle_modal(cx, |cx| {
@@ -36,7 +41,7 @@ pub fn toggle(workspace: &mut Workspace, toggle: &Toggle, cx: &mut ViewContext<W
             toggle.themes_filter.as_ref(),
             cx,
         );
-        ThemeSelector::new(delegate, cx)
+        ThemeSelector::new(delegate, window, cx)
     });
 }
 
@@ -61,8 +66,12 @@ impl Render for ThemeSelector {
 }
 
 impl ThemeSelector {
-    pub fn new(delegate: ThemeSelectorDelegate, cx: &mut ViewContext<Self>) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+    pub fn new(
+        delegate: ThemeSelectorDelegate,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Self {
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         Self { picker }
     }
 }

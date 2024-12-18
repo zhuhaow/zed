@@ -149,7 +149,7 @@ impl Render for MultibufferHint {
                                     .child(Label::new("Read more…"))
                                     .child(Icon::new(IconName::ArrowUpRight).size(IconSize::Small)),
                             )
-                            .on_click(move |_event, cx| {
+                            .on_click(move |_event, window, cx| {
                                 cx.open_url("https://zed.dev/docs/multibuffers")
                             }),
                     ),
@@ -165,7 +165,7 @@ impl Render for MultibufferHint {
                             ToolbarItemLocation::Hidden,
                         ))
                     }))
-                    .tooltip(move |cx| Tooltip::text("Dismiss this hint", cx)),
+                    .tooltip(move |window, cx| Tooltip::text("Dismiss this hint", cx)),
             )
             .into_any_element()
     }

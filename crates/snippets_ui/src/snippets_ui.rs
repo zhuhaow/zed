@@ -35,7 +35,12 @@ fn configure_snippets(
     });
 }
 
-fn open_folder(workspace: &mut Workspace, _: &OpenFolder, cx: &mut ViewContext<Workspace>) {
+fn open_folder(
+    workspace: &mut Workspace,
+    _: &OpenFolder,
+    window: &mut Window,
+    cx: &mut ViewContext<Workspace>,
+) {
     fs::create_dir_all(config_dir().join("snippets")).notify_err(workspace, cx);
     cx.open_with_system(config_dir().join("snippets").borrow());
 }
@@ -53,7 +58,7 @@ impl ScopeSelector {
         let delegate =
             ScopeSelectorDelegate::new(workspace, cx.view().downgrade(), language_registry);
 
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
 
         Self { picker }
     }

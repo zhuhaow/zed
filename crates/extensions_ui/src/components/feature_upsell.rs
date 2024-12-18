@@ -69,7 +69,7 @@ impl RenderOnce for FeatureUpsell {
                             .on_click({
                                 let telemetry = self.telemetry.clone();
                                 let docs_url = docs_url.clone();
-                                move |_event, cx| {
+                                move |_event, window, cx| {
                                     telemetry.report_app_event(format!(
                                         "feature upsell: viewed docs ({docs_url})"
                                     ));

@@ -151,12 +151,12 @@ impl Render for ActiveToolchain {
                     .label_size(LabelSize::Small)
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
-                            workspace.update(cx, |workspace, window, cx| {
+                            workspace.update(cx, |workspace, cx| {
                                 ToolchainSelector::toggle(workspace, cx)
                             });
                         }
                     }))
-                    .tooltip(move |cx| Tooltip::text(format!("Select {}", &term), cx)),
+                    .tooltip(move |window, cx| Tooltip::text(format!("Select {}", &term), cx)),
             )
         })
     }

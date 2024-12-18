@@ -56,7 +56,8 @@ fn trim_consecutive_whitespaces(input: &str) -> String {
 
 impl CommandPalette {
     fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
-        workspace.register_action(|workspace, _: &Toggle, cx| Self::toggle(workspace, "", cx));
+        workspace
+            .register_action(|workspace, _: &Toggle, window, cx| Self::toggle(workspace, "", cx));
     }
 
     pub fn toggle(workspace: &mut Workspace, query: &str, cx: &mut ViewContext<Workspace>) {
@@ -90,7 +91,7 @@ impl CommandPalette {
             CommandPaletteDelegate::new(cx.view().downgrade(), commands, previous_focus_handle);
 
         let picker = cx.new_view(|cx| {
-            let picker = Picker::uniform_list(delegate, cx);
+            let picker = Picker::uniform_list(delegate, window, cx);
             picker.set_query(query, cx);
             picker
         });

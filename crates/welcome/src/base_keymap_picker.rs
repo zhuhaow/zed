@@ -25,6 +25,7 @@ pub fn init(cx: &mut AppContext) {
 pub fn toggle(
     workspace: &mut Workspace,
     _: &ToggleBaseKeymapSelector,
+    window: &mut Window,
     cx: &mut ViewContext<Workspace>,
 ) {
     let fs = workspace.app_state().fs.clone();
@@ -55,7 +56,7 @@ impl BaseKeymapSelector {
         delegate: BaseKeymapSelectorDelegate,
         cx: &mut ViewContext<BaseKeymapSelector>,
     ) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         Self { picker }
     }
 }
