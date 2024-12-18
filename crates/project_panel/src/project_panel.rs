@@ -221,7 +221,7 @@ pub fn init(assets: impl AssetSource, cx: &mut AppContext) {
     file_icons::init(assets, cx);
 
     cx.observe_new_views(|workspace: &mut Workspace, _| {
-        workspace.register_action(|workspace, _: &ToggleFocus, cx| {
+        workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
             workspace.toggle_panel_focus::<ProjectPanel>(cx);
         });
     })
@@ -280,7 +280,7 @@ impl ProjectPanel {
         let project_panel = cx.new_view(|cx: &mut ViewContext<Self>| {
             let focus_handle = cx.focus_handle();
             cx.on_focus(&focus_handle, Self::focus_in).detach();
-            cx.on_focus_out(&focus_handle, |this, _, cx| {
+            cx.on_focus_out(&focus_handle, |this, _, window, cx| {
                 this.focus_out(cx);
                 this.hide_scrollbar(cx);
             })
@@ -590,7 +590,7 @@ impl ProjectPanel {
         );
     }
 
-    fn focus_in(&mut self, cx: &mut ViewContext<Self>) {
+    fn focus_in(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         if !self.focus_handle.contains_focused(cx) {
             cx.emit(Event::Focus);
         }
@@ -3281,16 +3281,19 @@ impl ProjectPanel {
                     },
                 ))
             })
-            .on_drag(dragged_selection, move |selection, click_offset, cx| {
-                cx.new_view(|_| DraggedProjectEntryView {
-                    details: details.clone(),
-                    width,
-                    click_offset,
-                    selection: selection.active_selection,
-                    selections: selection.marked_selections.clone(),
-                })
-            })
-            .drag_over::<DraggedSelection>(move |style, _, _| style.bg(item_colors.drag_over))
+            .on_drag(
+                dragged_selection,
+                move |selection, click_offset, window, cx| {
+                    cx.new_view(|_| DraggedProjectEntryView {
+                        details: details.clone(),
+                        width,
+                        click_offset,
+                        selection: selection.active_selection,
+                        selections: selection.marked_selections.clone(),
+                    })
+                },
+            )
+            .drag_over::<DraggedSelection>(move |style, _, _, _| style.bg(item_colors.drag_over))
             .on_drop(
                 cx.listener(move |this, selections: &DraggedSelection, window, cx| {
                     this.hover_scroll_task.take();
@@ -3378,7 +3381,7 @@ impl ProjectPanel {
                             div()
                                 .id("symlink_icon")
                                 .pr_3()
-                                .tooltip(move |cx| {
+                                .tooltip(move |window, cx| {
                                     Tooltip::with_meta(path.to_string(), None, "Symbolic Link", cx)
                                 })
                                 .child(
@@ -3548,10 +3551,10 @@ impl ProjectPanel {
                     cx.notify();
                     cx.stop_propagation()
                 }))
-                .on_hover(|_, cx| {
+                .on_hover(|_, window, cx| {
                     cx.stop_propagation();
                 })
-                .on_any_mouse_down(|_, cx| {
+                .on_any_mouse_down(|_, window, cx| {
                     cx.stop_propagation();
                 })
                 .on_mouse_up(
@@ -3610,10 +3613,10 @@ impl ProjectPanel {
                     cx.notify();
                     cx.stop_propagation()
                 }))
-                .on_hover(|_, cx| {
+                .on_hover(|_, window, cx| {
                     cx.stop_propagation();
                 })
-                .on_any_mouse_down(|_, cx| {
+                .on_any_mouse_down(|_, window, cx| {
                     cx.stop_propagation();
                 })
                 .on_mouse_up(
@@ -3892,8 +3895,8 @@ impl Render for ProjectPanel {
             h_flex()
                 .id("project-panel")
                 .group("project-panel")
-                .on_drag_move(cx.listener(handle_drag_move_scroll::<ExternalPaths>))
-                .on_drag_move(cx.listener(handle_drag_move_scroll::<DraggedSelection>))
+                .on_drag_move(cx.listener2(handle_drag_move_scroll::<ExternalPaths>))
+                .on_drag_move(cx.listener2(handle_drag_move_scroll::<DraggedSelection>))
                 .size_full()
                 .relative()
                 .on_hover(cx.listener(|this, hovered, window, cx| {
@@ -3911,40 +3914,40 @@ impl Render for ProjectPanel {
                     this.marked_entries.clear();
                 }))
                 .key_context(self.dispatch_context(cx))
-                .on_action(cx.listener(Self::select_next))
-                .on_action(cx.listener(Self::select_prev))
-                .on_action(cx.listener(Self::select_first))
-                .on_action(cx.listener(Self::select_last))
-                .on_action(cx.listener(Self::select_parent))
-                .on_action(cx.listener(Self::select_next_git_entry))
-                .on_action(cx.listener(Self::select_prev_git_entry))
-                .on_action(cx.listener(Self::select_next_diagnostic))
-                .on_action(cx.listener(Self::select_prev_diagnostic))
-                .on_action(cx.listener(Self::select_next_directory))
-                .on_action(cx.listener(Self::select_prev_directory))
-                .on_action(cx.listener(Self::expand_selected_entry))
-                .on_action(cx.listener(Self::collapse_selected_entry))
-                .on_action(cx.listener(Self::collapse_all_entries))
-                .on_action(cx.listener(Self::open))
-                .on_action(cx.listener(Self::open_permanent))
-                .on_action(cx.listener(Self::confirm))
-                .on_action(cx.listener(Self::cancel))
-                .on_action(cx.listener(Self::copy_path))
-                .on_action(cx.listener(Self::copy_relative_path))
-                .on_action(cx.listener(Self::new_search_in_directory))
-                .on_action(cx.listener(Self::unfold_directory))
-                .on_action(cx.listener(Self::fold_directory))
-                .on_action(cx.listener(Self::remove_from_project))
+                .on_action(cx.listener2(Self::select_next))
+                .on_action(cx.listener2(Self::select_prev))
+                .on_action(cx.listener2(Self::select_first))
+                .on_action(cx.listener2(Self::select_last))
+                .on_action(cx.listener2(Self::select_parent))
+                .on_action(cx.listener2(Self::select_next_git_entry))
+                .on_action(cx.listener2(Self::select_prev_git_entry))
+                .on_action(cx.listener2(Self::select_next_diagnostic))
+                .on_action(cx.listener2(Self::select_prev_diagnostic))
+                .on_action(cx.listener2(Self::select_next_directory))
+                .on_action(cx.listener2(Self::select_prev_directory))
+                .on_action(cx.listener2(Self::expand_selected_entry))
+                .on_action(cx.listener2(Self::collapse_selected_entry))
+                .on_action(cx.listener2(Self::collapse_all_entries))
+                .on_action(cx.listener2(Self::open))
+                .on_action(cx.listener2(Self::open_permanent))
+                .on_action(cx.listener2(Self::confirm))
+                .on_action(cx.listener2(Self::cancel))
+                .on_action(cx.listener2(Self::copy_path))
+                .on_action(cx.listener2(Self::copy_relative_path))
+                .on_action(cx.listener2(Self::new_search_in_directory))
+                .on_action(cx.listener2(Self::unfold_directory))
+                .on_action(cx.listener2(Self::fold_directory))
+                .on_action(cx.listener2(Self::remove_from_project))
                 .when(!project.is_read_only(cx), |el| {
-                    el.on_action(cx.listener(Self::new_file))
-                        .on_action(cx.listener(Self::new_directory))
-                        .on_action(cx.listener(Self::rename))
-                        .on_action(cx.listener(Self::delete))
-                        .on_action(cx.listener(Self::trash))
-                        .on_action(cx.listener(Self::cut))
-                        .on_action(cx.listener(Self::copy))
-                        .on_action(cx.listener(Self::paste))
-                        .on_action(cx.listener(Self::duplicate))
+                    el.on_action(cx.listener2(Self::new_file))
+                        .on_action(cx.listener2(Self::new_directory))
+                        .on_action(cx.listener2(Self::rename))
+                        .on_action(cx.listener2(Self::delete))
+                        .on_action(cx.listener2(Self::trash))
+                        .on_action(cx.listener2(Self::cut))
+                        .on_action(cx.listener2(Self::copy))
+                        .on_action(cx.listener2(Self::paste))
+                        .on_action(cx.listener2(Self::duplicate))
                         .on_click(cx.listener(|this, event: &gpui::ClickEvent, window, cx| {
                             if event.up.click_count > 1 {
                                 if let Some(entry_id) = this.last_worktree_root_id {
@@ -3969,12 +3972,12 @@ impl Render for ProjectPanel {
                         }))
                 })
                 .when(project.is_local(), |el| {
-                    el.on_action(cx.listener(Self::reveal_in_finder))
-                        .on_action(cx.listener(Self::open_system))
-                        .on_action(cx.listener(Self::open_in_terminal))
+                    el.on_action(cx.listener2(Self::reveal_in_finder))
+                        .on_action(cx.listener2(Self::open_system))
+                        .on_action(cx.listener2(Self::open_in_terminal))
                 })
                 .when(project.is_via_ssh(), |el| {
-                    el.on_action(cx.listener(Self::open_in_terminal))
+                    el.on_action(cx.listener2(Self::open_in_terminal))
                 })
                 .on_mouse_down(
                     MouseButton::Right,
@@ -4125,14 +4128,12 @@ impl Render for ProjectPanel {
                         .key_binding(KeyBinding::for_action(&workspace::Open, cx))
                         .on_click(cx.listener(|this, _, window, cx| {
                             this.workspace
-                                .update(cx, |_, window, cx| {
-                                    cx.dispatch_action(Box::new(workspace::Open))
-                                })
+                                .update(cx, |_, cx| cx.dispatch_action(Box::new(workspace::Open)))
                                 .log_err();
                         })),
                 )
                 .when(is_local, |div| {
-                    div.drag_over::<ExternalPaths>(|style, _, cx| {
+                    div.drag_over::<ExternalPaths>(|style, _, window, cx| {
                         style.bg(cx.theme().colors().drop_target_background)
                     })
                     .on_drop(cx.listener(
@@ -4341,7 +4342,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root1".as_ref(), "/root2".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
         assert_eq!(
             visible_entries_as_strings(&panel, 0..50, cx),
             &[
@@ -4406,7 +4409,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/src".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "src/test", cx);
         select_path(&panel, "src/test/first.rs", cx);
@@ -4492,7 +4497,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root1".as_ref(), "/root2".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
         assert_eq!(
             visible_entries_as_strings(&panel, 0..50, cx),
             &[
@@ -4606,7 +4613,9 @@ mod tests {
                 cx,
             );
         });
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
         assert_eq!(
             visible_entries_as_strings(&panel, 0..10, cx),
             &[
@@ -5258,7 +5267,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root1".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         panel.update(cx, |panel, cx| {
             panel.select_next(&Default::default(), cx);
@@ -5349,7 +5360,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root1".as_ref(), "/root2".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         select_path(&panel, "root1/three.txt", cx);
         panel.update(cx, |panel, cx| {
@@ -5445,7 +5458,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root1".as_ref(), "/root2".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         select_path(&panel, "root1/three.txt", cx);
         panel.update(cx, |panel, cx| {
@@ -5562,7 +5577,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         select_path(&panel, "root/a", cx);
         panel.update(cx, |panel, cx| {
@@ -5655,7 +5672,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/test".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "test/dir1", cx);
 
@@ -5733,7 +5752,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/test".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "test/dir1", cx);
 
@@ -5810,7 +5831,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/src".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "src/test", cx);
         select_path(&panel, "src/test/first.rs", cx);
@@ -6078,7 +6101,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/project_root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         panel.update(cx, |panel, cx| panel.open(&Open, cx));
         cx.executor().run_until_parked();
@@ -6169,7 +6194,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/project_root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         panel.update(cx, |panel, cx| panel.open(&Open, cx));
         cx.executor().run_until_parked();
@@ -6220,7 +6247,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/project_root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         panel.update(cx, |panel, cx| {
             panel.collapse_all_entries(&CollapseAllEntries, cx)
@@ -6257,7 +6286,9 @@ mod tests {
         let project = Project::test(fs, ["/root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         // Make a new buffer with no backing file
         workspace
@@ -6337,7 +6368,9 @@ mod tests {
             cx.update(|cx| project.read(cx).worktrees(cx).next().unwrap().read(cx).id());
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
         cx.update(|cx| {
             panel.update(cx, |this, cx| {
                 this.select_next(&Default::default(), cx);
@@ -6533,7 +6566,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/project_root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         assert_eq!(
             visible_entries_as_strings(&panel, 0..20, cx),
@@ -6769,7 +6804,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/project_root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         assert_eq!(
             visible_entries_as_strings(&panel, 0..20, cx),
@@ -7212,7 +7249,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "root/dir1", cx);
         toggle_expand_dir(&panel, "root/dir2", cx);
@@ -7338,7 +7377,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "root/dir1", cx);
         toggle_expand_dir(&panel, "root/dir1/subdir1", cx);
@@ -7450,7 +7491,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "root/dir1", cx);
         toggle_expand_dir(&panel, "root/dir1/subdir1", cx);
@@ -7522,7 +7565,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "root/dir1", cx);
         toggle_expand_dir(&panel, "root/dir1/subdir1", cx);
@@ -7596,7 +7641,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root1".as_ref(), "/root2".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         // Expand all directories for testing
         toggle_expand_dir(&panel, "root1/dir1", cx);
@@ -7730,7 +7777,9 @@ mod tests {
         let project = Project::test(fs.clone(), ["/root_b".as_ref(), "/root_c".as_ref()], cx).await;
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
-        let panel = workspace.update(cx, ProjectPanel::new).unwrap();
+        let panel = workspace
+            .update(cx, |workspace, _, cx| ProjectPanel::new(workspace, cx))
+            .unwrap();
 
         toggle_expand_dir(&panel, "root_b/dir1", cx);
         toggle_expand_dir(&panel, "root_c/dir2", cx);
@@ -8030,7 +8079,7 @@ mod tests {
             "Should have no prompts after deletion operation closes the file"
         );
         workspace
-            .read_with(cx, |workspace, cx| {
+            .read_with(cx, |workspace, _, cx| {
                 let open_project_paths = workspace
                     .panes()
                     .iter()
@@ -8040,8 +8089,7 @@ mod tests {
                     open_project_paths.is_empty(),
                     "Deleted file's buffer should be closed, but got open files: {open_project_paths:?}"
                 );
-            })
-            .unwrap();
+            });
     }
 
     struct TestProjectItemView {

@@ -62,7 +62,10 @@ impl CellControl {
 }
 
 impl Clickable for CellControl {
-    fn on_click(self, handler: impl Fn(&gpui::ClickEvent, &mut WindowContext) + 'static) -> Self {
+    fn on_click(
+        self,
+        handler: impl Fn(&gpui::ClickEvent, &mut Window, &mut WindowContext) + 'static,
+    ) -> Self {
         let button = self.button.on_click(handler);
         Self { button }
     }

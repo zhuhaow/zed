@@ -55,7 +55,7 @@ impl LanguageModelSelector {
         };
 
         let picker =
-            cx.new_view(|cx| Picker::uniform_list(delegate, window, cx).max_height(Some(rems(20.).into())));
+            cx.new_view(|cx| Picker::uniform_list(delegate, cx).max_height(Some(rems(20.).into())));
 
         LanguageModelSelector { picker }
     }

@@ -4,8 +4,8 @@ use crate::{
     LayoutId, Model, PaintIndex, Pixels, PrepaintStateIndex, Render, Style, StyleRefinement,
     TextStyle, ViewContext, VisualContext, WeakModel, WindowContext,
 };
-use crate::{AnyWindowHandle, Empty, Window};
-use anyhow::{Context, Result};
+use crate::{AnyWindowHandle, Context, Empty, Window, WindowHandle};
+use anyhow::{Context as _, Result};
 use refineable::Refineable;
 use std::mem;
 use std::{
@@ -85,7 +85,7 @@ impl<V: 'static> View<V> {
         f: impl FnOnce(&mut V, &mut Window, &mut ViewContext<'_, V>) -> R,
     ) -> C::WindowResult<R>
     where
-        C: VisualContext,
+        C: Context,
     {
         cx.update_window(window, |_, window, cx| {
             cx.update_view(self, |view, cx| f(view, window, cx))
@@ -209,6 +209,26 @@ impl<V: 'static> WeakView<V> {
     {
         let view = self.upgrade().context("error upgrading view")?;
         Ok(view.update(cx, f)).flatten()
+    }
+
+    /// Updates this view's state if it hasn't been released.
+    /// Returns an error if this view has been released.
+    pub fn update_in_window<C, R>(
+        &self,
+        window_handle: impl Into<AnyWindowHandle>,
+        cx: &mut C,
+        f: impl FnOnce(&mut V, &mut Window, &mut ViewContext<'_, V>) -> R,
+    ) -> Result<R>
+    where
+        C: VisualContext,
+        Result<C::WindowResult<R>>: Flatten<R>,
+    {
+        let view = self.upgrade().context("error upgrading view")?;
+
+        Ok(cx.update_window(window_handle, |_, window, cx| {
+            view.update(cx, |view, cx| f(view, window, cx))
+        }))
+        .flatten()
     }
 
     /// Assert that the view referenced by this handle has been released.

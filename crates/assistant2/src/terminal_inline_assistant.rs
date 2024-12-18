@@ -481,31 +481,41 @@ impl Render for PromptEditor {
         let mut buttons = Vec::new();
 
         buttons.extend(match status {
-            CodegenStatus::Idle => vec![
-                IconButton::new("cancel", IconName::Close)
-                    .icon_color(Color::Muted)
-                    .shape(IconButtonShape::Square)
-                    .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)))
-                    .into_any_element(),
-                IconButton::new("start", IconName::SparkleAlt)
-                    .icon_color(Color::Muted)
-                    .shape(IconButtonShape::Square)
-                    .tooltip(|cx| Tooltip::for_action("Generate", &menu::Confirm, cx))
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::StartRequested)))
-                    .into_any_element(),
-            ],
+            CodegenStatus::Idle => {
+                vec![
+                    IconButton::new("cancel", IconName::Close)
+                        .icon_color(Color::Muted)
+                        .shape(IconButtonShape::Square)
+                        .tooltip(|window, cx| {
+                            Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
+                        })
+                        .on_click(cx.listener(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::CancelRequested)
+                        }))
+                        .into_any_element(),
+                    IconButton::new("start", IconName::SparkleAlt)
+                        .icon_color(Color::Muted)
+                        .shape(IconButtonShape::Square)
+                        .tooltip(|window, cx| Tooltip::for_action("Generate", &menu::Confirm, cx))
+                        .on_click(cx.listener(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::StartRequested)
+                        }))
+                        .into_any_element(),
+                ]
+            }
             CodegenStatus::Pending => vec![
                 IconButton::new("cancel", IconName::Close)
                     .icon_color(Color::Muted)
                     .shape(IconButtonShape::Square)
-                    .tooltip(|cx| Tooltip::text("Cancel Assist", cx))
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)))
+                    .tooltip(|window, cx| Tooltip::text("Cancel Assist", cx))
+                    .on_click(
+                        cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)),
+                    )
                     .into_any_element(),
                 IconButton::new("stop", IconName::Stop)
                     .icon_color(Color::Error)
                     .shape(IconButtonShape::Square)
-                    .tooltip(|cx| {
+                    .tooltip(|window, cx| {
                         Tooltip::with_meta(
                             "Interrupt Generation",
                             Some(&menu::Cancel),
@@ -513,15 +523,19 @@ impl Render for PromptEditor {
                             cx,
                         )
                     })
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::StopRequested)))
+                    .on_click(
+                        cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::StopRequested)),
+                    )
                     .into_any_element(),
             ],
             CodegenStatus::Error(_) | CodegenStatus::Done => {
                 let cancel = IconButton::new("cancel", IconName::Close)
                     .icon_color(Color::Muted)
                     .shape(IconButtonShape::Square)
-                    .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)))
+                    .tooltip(|window, cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
+                    .on_click(
+                        cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)),
+                    )
                     .into_any_element();
 
                 let has_error = matches!(status, CodegenStatus::Error(_));
@@ -531,7 +545,7 @@ impl Render for PromptEditor {
                         IconButton::new("restart", IconName::RotateCw)
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
-                            .tooltip(|cx| {
+                            .tooltip(|window, cx| {
                                 Tooltip::with_meta(
                                     "Restart Generation",
                                     Some(&menu::Confirm),
@@ -550,7 +564,7 @@ impl Render for PromptEditor {
                         IconButton::new("accept", IconName::Check)
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
-                            .tooltip(|cx| {
+                            .tooltip(|window, cx| {
                                 Tooltip::for_action("Accept Generated Command", &menu::Confirm, cx)
                             })
                             .on_click(cx.listener(|_, _, window, cx| {
@@ -560,7 +574,7 @@ impl Render for PromptEditor {
                         IconButton::new("confirm", IconName::Play)
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
-                            .tooltip(|cx| {
+                            .tooltip(|window, cx| {
                                 Tooltip::for_action(
                                     "Execute Generated Command",
                                     &menu::SecondaryConfirm,
@@ -585,12 +599,12 @@ impl Render for PromptEditor {
                 h_flex()
                     .key_context("PromptEditor")
                     .bg(cx.theme().colors().editor_background)
-                    .on_action(cx.listener(Self::toggle_context_picker))
-                    .on_action(cx.listener(Self::confirm))
-                    .on_action(cx.listener(Self::secondary_confirm))
-                    .on_action(cx.listener(Self::cancel))
-                    .on_action(cx.listener(Self::move_up))
-                    .on_action(cx.listener(Self::move_down))
+                    .on_action(cx.listener2(Self::toggle_context_picker))
+                    .on_action(cx.listener2(Self::confirm))
+                    .on_action(cx.listener2(Self::secondary_confirm))
+                    .on_action(cx.listener2(Self::cancel))
+                    .on_action(cx.listener2(Self::move_up))
+                    .on_action(cx.listener2(Self::move_down))
                     .child(
                         h_flex()
                             .w_12()
@@ -602,7 +616,7 @@ impl Render for PromptEditor {
                                     .shape(IconButtonShape::Square)
                                     .icon_size(IconSize::Small)
                                     .icon_color(Color::Muted)
-                                    .tooltip(move |cx| {
+                                    .tooltip(move |window, cx| {
                                         Tooltip::with_meta(
                                             format!(
                                                 "Using {}",
@@ -623,7 +637,7 @@ impl Render for PromptEditor {
                                     Some(
                                         div()
                                             .id("error")
-                                            .tooltip(move |cx| {
+                                            .tooltip(move |window, cx| {
                                                 Tooltip::text(error_message.clone(), cx)
                                             })
                                             .child(

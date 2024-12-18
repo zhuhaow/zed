@@ -14,7 +14,7 @@ pub struct ModeIndicator {
 impl ModeIndicator {
     /// Construct a new mode indicator in this window.
     pub fn new(cx: &mut ViewContext<Self>) -> Self {
-        cx.observe_pending_input(|this, cx| {
+        cx.observe_pending_input(|this, window, cx| {
             this.update_pending_keys(cx);
             cx.notify();
         })

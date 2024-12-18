@@ -27,7 +27,7 @@ use crate::{NewThread, OpenHistory, ToggleFocus};
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
         |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
-            workspace.register_action(|workspace, _: &ToggleFocus, cx| {
+            workspace.register_action2(|workspace, _: &ToggleFocus, cx| {
                 workspace.toggle_panel_focus::<AssistantPanel>(cx);
             });
         },
@@ -296,7 +296,7 @@ impl AssistantPanel {
                             .style(ButtonStyle::Subtle)
                             .tooltip({
                                 let focus_handle = focus_handle.clone();
-                                move |cx| {
+                                move |window, cx| {
                                     Tooltip::for_action_in(
                                         "New Thread",
                                         &NewThread,
@@ -305,7 +305,7 @@ impl AssistantPanel {
                                     )
                                 }
                             })
-                            .on_click(move |_event, cx| {
+                            .on_click(move |_event, window, cx| {
                                 cx.dispatch_action(NewThread.boxed_clone());
                             }),
                     )
@@ -315,7 +315,7 @@ impl AssistantPanel {
                             .style(ButtonStyle::Subtle)
                             .tooltip({
                                 let focus_handle = focus_handle.clone();
-                                move |cx| {
+                                move |window, cx| {
                                     Tooltip::for_action_in(
                                         "Open History",
                                         &OpenHistory,
@@ -324,7 +324,7 @@ impl AssistantPanel {
                                     )
                                 }
                             })
-                            .on_click(move |_event, cx| {
+                            .on_click(move |_event, window, cx| {
                                 cx.dispatch_action(OpenHistory.boxed_clone());
                             }),
                     )
@@ -332,8 +332,8 @@ impl AssistantPanel {
                         IconButton::new("configure-assistant", IconName::Settings)
                             .icon_size(IconSize::Small)
                             .style(ButtonStyle::Subtle)
-                            .tooltip(move |cx| Tooltip::text("Configure Assistant", cx))
-                            .on_click(move |_event, _cx| {
+                            .tooltip(move |window, cx| Tooltip::text("Configure Assistant", cx))
+                            .on_click(move |_event, _window, _cx| {
                                 println!("Configure Assistant");
                             }),
                     ),
@@ -392,7 +392,7 @@ impl AssistantPanel {
                                     &self.focus_handle(cx),
                                     cx,
                                 ))
-                                .on_click(move |_event, cx| {
+                                .on_click(move |_event, window, cx| {
                                     cx.dispatch_action(OpenHistory.boxed_clone());
                                 }),
                         ),

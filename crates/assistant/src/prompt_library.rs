@@ -241,7 +241,7 @@ impl PickerDelegate for PromptPickerDelegate {
                     .toggle_state(true)
                     .icon_color(Color::Accent)
                     .shape(IconButtonShape::Square)
-                    .tooltip(move |cx| Tooltip::text("Remove from Default Prompt", cx))
+                    .tooltip(move |window, cx| Tooltip::text("Remove from Default Prompt", cx))
                     .on_click(cx.listener(move |_, _, window, cx| {
                         cx.emit(PromptPickerEvent::ToggledDefault { prompt_id })
                     }))
@@ -253,7 +253,7 @@ impl PickerDelegate for PromptPickerDelegate {
                         div()
                             .id("built-in-prompt")
                             .child(Icon::new(IconName::FileLock).color(Color::Muted))
-                            .tooltip(move |cx| {
+                            .tooltip(move |window, cx| {
                                 Tooltip::with_meta(
                                     "Built-in prompt",
                                     None,
@@ -266,7 +266,7 @@ impl PickerDelegate for PromptPickerDelegate {
                         IconButton::new("delete-prompt", IconName::Trash)
                             .icon_color(Color::Muted)
                             .shape(IconButtonShape::Square)
-                            .tooltip(move |cx| Tooltip::text("Delete Prompt", cx))
+                            .tooltip(move |window, cx| Tooltip::text("Delete Prompt", cx))
                             .on_click(cx.listener(move |_, _, window, cx| {
                                 cx.emit(PromptPickerEvent::Deleted { prompt_id })
                             }))
@@ -278,7 +278,7 @@ impl PickerDelegate for PromptPickerDelegate {
                             .selected_icon(IconName::SparkleFilled)
                             .icon_color(if default { Color::Accent } else { Color::Muted })
                             .shape(IconButtonShape::Square)
-                            .tooltip(move |cx| {
+                            .tooltip(move |window, cx| {
                                 Tooltip::text(
                                     if default {
                                         "Remove from Default Prompt"
@@ -822,7 +822,7 @@ impl PromptLibrary {
     fn render_prompt_list(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         v_flex()
             .id("prompt-list")
-            .capture_action(cx.listener(Self::focus_active_prompt))
+            .capture_action(cx.listener2(Self::focus_active_prompt))
             .bg(cx.theme().colors().panel_background)
             .h_full()
             .px_1()
@@ -839,8 +839,10 @@ impl PromptLibrary {
                         IconButton::new("new-prompt", IconName::Plus)
                             .style(ButtonStyle::Transparent)
                             .shape(IconButtonShape::Square)
-                            .tooltip(move |cx| Tooltip::for_action("New Prompt", &NewPrompt, cx))
-                            .on_click(|_, cx| {
+                            .tooltip(move |window, cx| {
+                                Tooltip::for_action("New Prompt", &NewPrompt, cx)
+                            })
+                            .on_click(|_, window, cx| {
                                 cx.dispatch_action(Box::new(NewPrompt));
                             }),
                     ),
@@ -887,7 +889,7 @@ impl PromptLibrary {
                                     h_flex().gap_1().child(
                                         div()
                                             .max_w_80()
-                                            .on_action(cx.listener(Self::move_down_from_title))
+                                            .on_action(cx.listener2(Self::move_down_from_title))
                                             .border_1()
                                             .border_color(transparent_black())
                                             .rounded_md()
@@ -957,7 +959,7 @@ impl PromptLibrary {
 
                                                         h_flex()
                                                             .id("token_count")
-                                                            .tooltip(move |cx| {
+                                                            .tooltip(move |window, cx| {
                                                                 let token_count =
                                                                     token_count.clone();
 
@@ -995,7 +997,7 @@ impl PromptLibrary {
                                                             Icon::new(IconName::FileLock)
                                                                 .color(Color::Muted),
                                                         )
-                                                        .tooltip(move |cx| {
+                                                        .tooltip(move |window, cx| {
                                                             Tooltip::with_meta(
                                                                 "Built-in prompt",
                                                                 None,
@@ -1013,14 +1015,14 @@ impl PromptLibrary {
                                                     .style(ButtonStyle::Transparent)
                                                     .shape(IconButtonShape::Square)
                                                     .size(ButtonSize::Large)
-                                                    .tooltip(move |cx| {
+                                                    .tooltip(move |window, cx| {
                                                         Tooltip::for_action(
                                                             "Delete Prompt",
                                                             &DeletePrompt,
                                                             cx,
                                                         )
                                                     })
-                                                    .on_click(|_, cx| {
+                                                    .on_click(|_, window, cx| {
                                                         cx.dispatch_action(Box::new(DeletePrompt));
                                                     })
                                                     .into_any_element()
@@ -1034,14 +1036,14 @@ impl PromptLibrary {
                                                     .style(ButtonStyle::Transparent)
                                                     .shape(IconButtonShape::Square)
                                                     .size(ButtonSize::Large)
-                                                    .tooltip(move |cx| {
+                                                    .tooltip(move |window, cx| {
                                                         Tooltip::for_action(
                                                             "Duplicate Prompt",
                                                             &DuplicatePrompt,
                                                             cx,
                                                         )
                                                     })
-                                                    .on_click(|_, cx| {
+                                                    .on_click(|_, window, cx| {
                                                         cx.dispatch_action(Box::new(
                                                             DuplicatePrompt,
                                                         ));
@@ -1062,7 +1064,7 @@ impl PromptLibrary {
                                                     })
                                                     .shape(IconButtonShape::Square)
                                                     .size(ButtonSize::Large)
-                                                    .tooltip(move |cx| {
+                                                    .tooltip(move |window, cx| {
                                                         Tooltip::text(
                                                             if prompt_metadata.default {
                                                                 "Remove from Default Prompt"
@@ -1072,7 +1074,7 @@ impl PromptLibrary {
                                                             cx,
                                                         )
                                                     })
-                                                    .on_click(|_, cx| {
+                                                    .on_click(|_, window, cx| {
                                                         cx.dispatch_action(Box::new(
                                                             ToggleDefaultPrompt,
                                                         ));
@@ -1083,9 +1085,9 @@ impl PromptLibrary {
                         )
                         .child(
                             div()
-                                .on_action(cx.listener(Self::focus_picker))
-                                .on_action(cx.listener(Self::inline_assist))
-                                .on_action(cx.listener(Self::move_up_from_body))
+                                .on_action(cx.listener2(Self::focus_picker))
+                                .on_action(cx.listener2(Self::inline_assist))
+                                .on_action(cx.listener2(Self::move_up_from_body))
                                 .flex_grow()
                                 .h_full()
                                 .child(prompt_editor.body_editor.clone()),
@@ -1153,7 +1155,7 @@ impl Render for PromptLibrary {
                                                     .key_binding(KeyBinding::for_action(
                                                         &NewPrompt, cx,
                                                     ))
-                                                    .on_click(|_, cx| {
+                                                    .on_click(|_, window, cx| {
                                                         cx.dispatch_action(NewPrompt.boxed_clone())
                                                     }),
                                             ),

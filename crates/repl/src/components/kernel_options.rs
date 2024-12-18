@@ -218,7 +218,7 @@ impl PickerDelegate for KernelPickerDelegate {
                         .icon_size(IconSize::XSmall)
                         .icon_color(Color::Muted)
                         .icon_position(IconPosition::End)
-                        .on_click(move |_, cx| cx.open_url(KERNEL_DOCS_URL)),
+                        .on_click(move |_, window, cx| cx.open_url(KERNEL_DOCS_URL)),
                 )
                 .into_any(),
         )

@@ -86,7 +86,7 @@ impl KeyContextView {
                 })
                 .collect();
         });
-        let sub2 = cx.observe_pending_input(|this, cx| {
+        let sub2 = cx.observe_pending_input(|this, window, cx| {
             this.pending_keystrokes = cx
                 .pending_input_keystrokes()
                 .map(|k| k.iter().cloned().collect());

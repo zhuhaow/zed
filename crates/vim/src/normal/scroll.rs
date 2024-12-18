@@ -195,11 +195,9 @@ mod test {
         });
 
         let window = cx.window;
-        let margin = cx
-            .update_window(window, |_, _, cx| {
-                cx.viewport_size().height - line_height * visible_line_count
-            })
-            .unwrap();
+        let margin = cx.update_window(window, |_, _, cx| {
+            cx.viewport_size().height - line_height * visible_line_count
+        });
         cx.simulate_window_resize(
             cx.window,
             size(px(1000.), margin + 8. * line_height - px(1.0)),

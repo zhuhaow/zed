@@ -65,7 +65,6 @@ impl ToolchainSelector {
                             worktree_id,
                             worktree_root_path,
                             language_name,
-                            window,
                             cx,
                         )
                     });
@@ -84,7 +83,6 @@ impl ToolchainSelector {
         worktree_id: WorktreeId,
         worktree_root: Arc<Path>,
         language_name: LanguageName,
-        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let view = cx.view().downgrade();
@@ -99,7 +97,7 @@ impl ToolchainSelector {
                 language_name,
                 cx,
             );
-            Picker::uniform_list(delegate, window, cx)
+            Picker::uniform_list(delegate, cx)
         });
         Self { picker }
     }

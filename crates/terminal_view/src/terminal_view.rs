@@ -131,6 +131,7 @@ impl TerminalView {
     pub fn deploy(
         workspace: &mut Workspace,
         _: &NewCenterTerminal,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         let working_directory = default_working_directory(workspace, cx);
@@ -149,10 +150,10 @@ impl TerminalView {
         let terminal_subscriptions = subscribe_for_terminal_events(&terminal, workspace, cx);
 
         let focus_handle = cx.focus_handle();
-        let focus_in = cx.on_focus_in(&focus_handle, |terminal_view, cx| {
+        let focus_in = cx.on_focus_in(&focus_handle, |terminal_view, window, cx| {
             terminal_view.focus_in(cx);
         });
-        let focus_out = cx.on_focus_out(&focus_handle, |terminal_view, _event, cx| {
+        let focus_out = cx.on_focus_out(&focus_handle, |terminal_view, _event, window, cx| {
             terminal_view.focus_out(cx);
         });
         let cursor_shape = TerminalSettings::get_global(cx)
@@ -946,21 +947,21 @@ impl Render for TerminalView {
             .relative()
             .track_focus(&self.focus_handle(cx))
             .key_context(self.dispatch_context(cx))
-            .on_action(cx.listener(TerminalView::send_text))
-            .on_action(cx.listener(TerminalView::send_keystroke))
-            .on_action(cx.listener(TerminalView::copy))
-            .on_action(cx.listener(TerminalView::paste))
-            .on_action(cx.listener(TerminalView::clear))
-            .on_action(cx.listener(TerminalView::scroll_line_up))
-            .on_action(cx.listener(TerminalView::scroll_line_down))
-            .on_action(cx.listener(TerminalView::scroll_page_up))
-            .on_action(cx.listener(TerminalView::scroll_page_down))
-            .on_action(cx.listener(TerminalView::scroll_to_top))
-            .on_action(cx.listener(TerminalView::scroll_to_bottom))
-            .on_action(cx.listener(TerminalView::toggle_vi_mode))
-            .on_action(cx.listener(TerminalView::show_character_palette))
-            .on_action(cx.listener(TerminalView::select_all))
-            .on_key_down(cx.listener(Self::key_down))
+            .on_action(cx.listener2(TerminalView::send_text))
+            .on_action(cx.listener2(TerminalView::send_keystroke))
+            .on_action(cx.listener2(TerminalView::copy))
+            .on_action(cx.listener2(TerminalView::paste))
+            .on_action(cx.listener2(TerminalView::clear))
+            .on_action(cx.listener2(TerminalView::scroll_line_up))
+            .on_action(cx.listener2(TerminalView::scroll_line_down))
+            .on_action(cx.listener2(TerminalView::scroll_page_up))
+            .on_action(cx.listener2(TerminalView::scroll_page_down))
+            .on_action(cx.listener2(TerminalView::scroll_to_top))
+            .on_action(cx.listener2(TerminalView::scroll_to_bottom))
+            .on_action(cx.listener2(TerminalView::toggle_vi_mode))
+            .on_action(cx.listener2(TerminalView::show_character_palette))
+            .on_action(cx.listener2(TerminalView::select_all))
+            .on_key_down(cx.listener2(Self::key_down))
             .on_mouse_down(
                 MouseButton::Right,
                 cx.listener(|this, event: &MouseDownEvent, window, cx| {
@@ -1011,8 +1012,8 @@ impl Item for TerminalView {
                 .size(ButtonSize::Compact)
                 .icon_color(Color::Default)
                 .shape(ui::IconButtonShape::Square)
-                .tooltip(|cx| Tooltip::text("Rerun task", cx))
-                .on_click(move |_, cx| {
+                .tooltip(|window, cx| Tooltip::text("Rerun task", cx))
+                .on_click(move |_, window, cx| {
                     cx.dispatch_action(Box::new(zed_actions::Rerun {
                         task_id: Some(task_id.0.clone()),
                         allow_concurrent_runs: Some(true),
@@ -1526,8 +1527,7 @@ mod tests {
         let project = Project::test(params.fs.clone(), [], cx).await;
         let workspace = cx
             .add_window(|cx| Workspace::test_new(project.clone(), cx))
-            .root_view(cx)
-            .unwrap();
+            .root_view(cx);
 
         (project, workspace)
     }

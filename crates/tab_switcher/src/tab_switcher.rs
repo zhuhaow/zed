@@ -45,7 +45,7 @@ pub fn init(cx: &mut AppContext) {
 
 impl TabSwitcher {
     fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
-        workspace.register_action(|workspace, action: &Toggle, cx| {
+        workspace.register_action(|workspace, action: &Toggle, window, cx| {
             let Some(tab_switcher) = workspace.active_modal::<Self>(cx) else {
                 Self::open(action, workspace, cx);
                 return;
@@ -83,13 +83,13 @@ impl TabSwitcher {
         workspace.toggle_modal(cx, |cx| {
             let delegate =
                 TabSwitcherDelegate::new(project, action, cx.view().downgrade(), weak_pane, cx);
-            TabSwitcher::new(delegate, window, cx)
+            TabSwitcher::new(delegate, cx)
         });
     }
 
-    fn new(delegate: TabSwitcherDelegate, window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
+    fn new(delegate: TabSwitcherDelegate, cx: &mut ViewContext<Self>) -> Self {
         Self {
-            picker: cx.new_view(|cx| Picker::nonsearchable_uniform_list(delegate, window, cx)),
+            picker: cx.new_view(|cx| Picker::nonsearchable_uniform_list(delegate, cx)),
             init_modifiers: cx.modifiers().modified().then_some(cx.modifiers()),
         }
     }
@@ -97,6 +97,7 @@ impl TabSwitcher {
     fn handle_modifiers_changed(
         &mut self,
         event: &ModifiersChangedEvent,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         let Some(init_modifiers) = self.init_modifiers else {
@@ -135,7 +136,7 @@ impl FocusableView for TabSwitcher {
 }
 
 impl Render for TabSwitcher {
-    fn render(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) -> impl IntoElement {
+    fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         v_flex()
             .key_context("TabSwitcher")
             .w(rems(PANEL_WIDTH_REMS))

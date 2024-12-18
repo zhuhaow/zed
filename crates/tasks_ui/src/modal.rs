@@ -126,13 +126,11 @@ impl TasksModal {
         task_context: TaskContext,
         task_overrides: Option<TaskOverrides>,
         workspace: WeakView<Workspace>,
-        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let picker = cx.new_view(|cx| {
             Picker::uniform_list(
                 TasksModalDelegate::new(task_store, task_context, task_overrides, workspace),
-                window,
                 cx,
             )
         });

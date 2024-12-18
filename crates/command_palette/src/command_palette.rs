@@ -91,7 +91,7 @@ impl CommandPalette {
             CommandPaletteDelegate::new(cx.view().downgrade(), commands, previous_focus_handle);
 
         let picker = cx.new_view(|cx| {
-            let picker = Picker::uniform_list(delegate, window, cx);
+            let picker = Picker::uniform_list(delegate, cx);
             picker.set_query(query, cx);
             picker
         });

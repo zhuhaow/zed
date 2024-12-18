@@ -56,7 +56,7 @@ struct StateInner {
     overdraw: Pixels,
     reset: bool,
     #[allow(clippy::type_complexity)]
-    scroll_handler: Option<Box<dyn FnMut(&ListScrollEvent, &mut WindowContext)>>,
+    scroll_handler: Option<Box<dyn FnMut(&ListScrollEvent, &mut Window, &mut WindowContext)>>,
 }
 
 /// Whether the list is scrolling from top to bottom or bottom to top.
@@ -272,7 +272,7 @@ impl ListState {
     /// Set a handler that will be called when the list is scrolled.
     pub fn set_scroll_handler(
         &self,
-        handler: impl FnMut(&ListScrollEvent, &mut WindowContext) + 'static,
+        handler: impl FnMut(&ListScrollEvent, &mut Window, &mut WindowContext) + 'static,
     ) {
         self.0.borrow_mut().scroll_handler = Some(Box::new(handler))
     }
@@ -371,6 +371,7 @@ impl StateInner {
         scroll_top: &ListOffset,
         height: Pixels,
         delta: Point<Pixels>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) {
         // Drop scroll events after a reset, since we can't calculate
@@ -407,6 +408,7 @@ impl StateInner {
                     count: self.items.summary().count,
                     is_scrolled: self.logical_scroll_top.is_some(),
                 },
+                window,
                 cx,
             );
         }
@@ -858,6 +860,7 @@ impl Element for List {
                     &scroll_top,
                     height,
                     event.delta.pixel_delta(px(20.)),
+                    window,
                     cx,
                 )
             }

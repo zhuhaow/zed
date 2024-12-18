@@ -249,11 +249,9 @@ impl NeovimBackedTestContext {
         });
 
         let window = self.window;
-        let margin = self
-            .update_window(window, |_, _, cx| {
-                cx.viewport_size().height - line_height * visible_line_count
-            })
-            .unwrap();
+        let margin = self.update_window(window, |_, _, cx| {
+            cx.viewport_size().height - line_height * visible_line_count
+        });
 
         self.simulate_window_resize(
             self.window,

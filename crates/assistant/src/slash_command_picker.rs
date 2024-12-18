@@ -179,7 +179,7 @@ impl PickerDelegate for SlashCommandDelegate {
                     .toggle_state(selected)
                     .tooltip({
                         let description = info.description.clone();
-                        move |cx| cx.new_view(|_| Tooltip::new(description.clone())).into()
+                        move |window, cx| cx.new_view(|_| Tooltip::new(description.clone())).into()
                     })
                     .child(
                         v_flex()

@@ -756,7 +756,7 @@ impl ProjectSearchView {
         );
 
         let focus_handle = cx.focus_handle();
-        subscriptions.push(cx.on_focus_in(&focus_handle, |this, cx| {
+        subscriptions.push(cx.on_focus_in(&focus_handle, |this, window, cx| {
             if this.focus_handle.is_focused(cx) {
                 if this.has_matches() {
                     this.results_editor.focus_handle(cx).focus(cx);

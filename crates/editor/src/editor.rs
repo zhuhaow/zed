@@ -305,9 +305,9 @@ pub fn init(cx: &mut AppContext) {
 
     cx.observe_new_views(
         |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
-            workspace.register_action(Editor::new_file);
-            workspace.register_action(Editor::new_file_vertical);
-            workspace.register_action(Editor::new_file_horizontal);
+            workspace.register_action2(Editor::new_file);
+            workspace.register_action2(Editor::new_file_vertical);
+            workspace.register_action2(Editor::new_file_horizontal);
         },
     )
     .detach();
@@ -319,9 +319,7 @@ pub fn init(cx: &mut AppContext) {
                 Default::default(),
                 app_state,
                 cx,
-                |workspace, window, cx| {
-                    Editor::new_file(workspace, &Default::default(), window, cx)
-                },
+                |workspace, window, cx| Editor::new_file(workspace, &Default::default(), cx),
             )
             .detach();
         }
@@ -333,9 +331,7 @@ pub fn init(cx: &mut AppContext) {
                 Default::default(),
                 app_state,
                 cx,
-                |workspace, window, cx| {
-                    Editor::new_file(workspace, &Default::default(), window, cx)
-                },
+                |workspace, window, cx| Editor::new_file(workspace, &Default::default(), cx),
             )
             .detach();
         }
@@ -1457,7 +1453,6 @@ impl Editor {
     pub fn new_file(
         workspace: &mut Workspace,
         _: &workspace::NewFile,
-        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         Self::new_in_workspace(workspace, cx).detach_and_prompt_err(
@@ -1494,7 +1489,7 @@ impl Editor {
     fn new_file_vertical(
         workspace: &mut Workspace,
         _: &workspace::NewFileSplitVertical,
-        window: &mut Window,
+
         cx: &mut ViewContext<Workspace>,
     ) {
         Self::new_file_in_direction(workspace, SplitDirection::vertical(cx), cx)
@@ -1503,7 +1498,7 @@ impl Editor {
     fn new_file_horizontal(
         workspace: &mut Workspace,
         _: &workspace::NewFileSplitHorizontal,
-        window: &mut Window,
+
         cx: &mut ViewContext<Workspace>,
     ) {
         Self::new_file_in_direction(workspace, SplitDirection::horizontal(cx), cx)
@@ -12766,7 +12761,7 @@ impl Editor {
         self.focus_handle.is_focused(cx)
     }
 
-    fn handle_focus(&mut self, cx: &mut ViewContext<Self>) {
+    fn handle_focus(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         cx.emit(EditorEvent::Focused);
 
         if let Some(descendant) = self
@@ -12796,11 +12791,16 @@ impl Editor {
         }
     }
 
-    fn handle_focus_in(&mut self, cx: &mut ViewContext<Self>) {
+    fn handle_focus_in(&mut self, _window: &mut Window, cx: &mut ViewContext<Self>) {
         cx.emit(EditorEvent::FocusedIn)
     }
 
-    fn handle_focus_out(&mut self, event: FocusOutEvent, _cx: &mut ViewContext<Self>) {
+    fn handle_focus_out(
+        &mut self,
+        event: FocusOutEvent,
+        _window: &mut Window,
+        _cx: &mut ViewContext<Self>,
+    ) {
         if event.blurred != self.focus_handle {
             self.last_focused_descendant = Some(event.blurred);
         }

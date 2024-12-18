@@ -151,7 +151,7 @@ impl Render for DisconnectedOverlay {
         div()
             .track_focus(&self.focus_handle(cx))
             .elevation_3(cx)
-            .on_action(cx.listener(Self::cancel))
+            .on_action(cx.listener2(Self::cancel))
             .occlude()
             .w(rems(24.))
             .max_h(rems(40.))
@@ -182,7 +182,7 @@ impl Render for DisconnectedOverlay {
                                             .layer(ElevationIndex::ModalSurface)
                                             .icon(IconName::ArrowCircle)
                                             .icon_position(IconPosition::Start)
-                                            .on_click(cx.listener(Self::handle_reconnect)),
+                                            .on_click(cx.listener2(Self::handle_reconnect)),
                                     )
                                 }),
                         ),

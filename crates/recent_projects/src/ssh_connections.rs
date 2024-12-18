@@ -371,8 +371,8 @@ impl Render for SshConnectionModal {
             .border_color(theme.colors().border)
             .key_context("SshConnectionModal")
             .track_focus(&self.focus_handle(cx))
-            .on_action(cx.listener(Self::dismiss))
-            .on_action(cx.listener(Self::confirm))
+            .on_action(cx.listener2(Self::dismiss))
+            .on_action(cx.listener2(Self::confirm))
             .child(
                 SshConnectionHeader {
                     paths: self.paths.clone(),

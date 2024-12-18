@@ -556,7 +556,7 @@ impl Pane {
                 .map_or(false, |item| item.focus_handle(cx).contains_focused(cx))
     }
 
-    fn focus_in(&mut self, cx: &mut ViewContext<Self>) {
+    fn focus_in(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         if !self.was_focused {
             self.was_focused = true;
             cx.emit(Event::Focus);
@@ -595,7 +595,12 @@ impl Pane {
             || self.split_item_context_menu_handle.is_focused(cx)
     }
 
-    fn focus_out(&mut self, _event: FocusOutEvent, cx: &mut ViewContext<Self>) {
+    fn focus_out(
+        &mut self,
+        _event: FocusOutEvent,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.was_focused = false;
         self.toolbar.update(cx, |toolbar, cx| {
             toolbar.focus_changed(false, cx);

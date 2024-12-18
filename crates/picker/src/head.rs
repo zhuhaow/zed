@@ -16,9 +16,8 @@ pub(crate) enum Head {
 impl Head {
     pub fn editor<V: 'static>(
         placeholder_text: Arc<str>,
-        mut edit_handler: impl FnMut(&mut V, View<Editor>, &EditorEvent, &mut Window, &mut ViewContext<'_, V>)
+        mut edit_handler: impl FnMut(&mut V, View<Editor>, &EditorEvent, &mut ViewContext<'_, V>)
             + 'static,
-        window: &Window,
         cx: &mut ViewContext<V>,
     ) -> Self {
         let editor = cx.new_view(|cx| {
@@ -27,23 +26,22 @@ impl Head {
             editor
         });
 
-        let window_handle = window.handle();
-
         cx.subscribe(&editor, move |view, editor, event, cx| {
-            window_handle.update(cx, |_, window, cx| {
-                edit_handler(view, editor, event, window, todo!());
-            });
+            edit_handler(view, editor, event, todo!());
         })
         .detach();
         Self::Editor(editor)
     }
 
     pub fn empty<V: 'static>(
-        blur_handler: impl FnMut(&mut V, &mut Window, &mut ViewContext<'_, V>) + 'static,
+        mut blur_handler: impl 'static + FnMut(&mut V, &mut ViewContext<'_, V>),
         cx: &mut ViewContext<V>,
     ) -> Self {
         let head = cx.new_view(EmptyHead::new);
-        cx.on_blur(&head.focus_handle(cx), blur_handler).detach();
+        cx.on_blur(&head.focus_handle(cx), move |view, _window, cx| {
+            blur_handler(view, cx)
+        })
+        .detach();
         Self::Empty(head)
     }
 }

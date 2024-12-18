@@ -100,7 +100,7 @@ pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
         |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
             workspace
-                .register_action(|workspace, _: &ToggleFocus, cx| {
+                .register_action2(|workspace, _: &ToggleFocus, cx| {
                     let settings = AssistantSettings::get_global(cx);
                     if !settings.enabled {
                         return;
@@ -108,13 +108,13 @@ pub fn init(cx: &mut AppContext) {
 
                     workspace.toggle_panel_focus::<AssistantPanel>(cx);
                 })
-                .register_action(ContextEditor::quote_selection)
-                .register_action(ContextEditor::insert_selection)
-                .register_action(ContextEditor::copy_code)
-                .register_action(ContextEditor::insert_dragged_files)
-                .register_action(AssistantPanel::show_configuration)
-                .register_action(AssistantPanel::create_new_context)
-                .register_action(AssistantPanel::restart_context_servers);
+                .register_action2(ContextEditor::quote_selection)
+                .register_action2(ContextEditor::insert_selection)
+                .register_action2(ContextEditor::copy_code)
+                .register_action2(ContextEditor::insert_dragged_files)
+                .register_action2(AssistantPanel::show_configuration)
+                .register_action2(AssistantPanel::create_new_context)
+                .register_action2(AssistantPanel::restart_context_servers);
         },
     )
     .detach();
@@ -432,7 +432,7 @@ impl AssistantPanel {
                     }))
                     .tooltip({
                         let focus_handle = focus_handle.clone();
-                        move |cx| {
+                        move |window, cx| {
                             Tooltip::for_action_in(
                                 "Open History",
                                 &DeployHistory,
@@ -454,7 +454,7 @@ impl AssistantPanel {
                             .on_click(cx.listener(|_, _, window, cx| {
                                 cx.dispatch_action(NewContext.boxed_clone())
                             }))
-                            .tooltip(move |cx| {
+                            .tooltip(move |window, cx| {
                                 Tooltip::for_action_in("New Chat", &NewContext, &focus_handle, cx)
                             }),
                     )
@@ -463,7 +463,9 @@ impl AssistantPanel {
                             .trigger(
                                 IconButton::new("menu", IconName::EllipsisVertical)
                                     .icon_size(IconSize::Small)
-                                    .tooltip(|cx| Tooltip::text("Toggle Assistant Menu", cx)),
+                                    .tooltip(|window, cx| {
+                                        Tooltip::text("Toggle Assistant Menu", cx)
+                                    }),
                             )
                             .menu(move |cx| {
                                 let zoom_label = if _pane.read(cx).is_zoomed() {
@@ -1356,9 +1358,9 @@ impl Render for AssistantPanel {
             .on_action(cx.listener(|this, _: &ShowConfiguration, window, cx| {
                 this.show_configuration_tab(cx)
             }))
-            .on_action(cx.listener(AssistantPanel::deploy_history))
-            .on_action(cx.listener(AssistantPanel::deploy_prompt_library))
-            .on_action(cx.listener(AssistantPanel::toggle_model_selector))
+            .on_action(cx.listener2(AssistantPanel::deploy_history))
+            .on_action(cx.listener2(AssistantPanel::deploy_prompt_library))
+            .on_action(cx.listener2(AssistantPanel::toggle_model_selector))
             .child(registrar.size_full().child(self.pane.clone()))
             .into_any_element()
     }
@@ -2724,7 +2726,7 @@ impl ContextEditor {
                                             .child(label)
                                             .children(spinner),
                                     )
-                                    .tooltip(|cx| {
+                                    .tooltip(|window, cx| {
                                         Tooltip::with_meta(
                                             "Toggle message role",
                                             None,
@@ -2734,7 +2736,7 @@ impl ContextEditor {
                                     })
                                     .on_click({
                                         let context = context.clone();
-                                        move |_, cx| {
+                                        move |_, window, cx| {
                                             context.update(cx, |context, cx| {
                                                 context.cycle_message_roles(
                                                     HashSet::from_iter(Some(message_id)),
@@ -2764,7 +2766,7 @@ impl ContextEditor {
                                                     .size(IconSize::XSmall)
                                                     .color(Color::Hint),
                                             )
-                                            .tooltip(|cx| {
+                                            .tooltip(|window, cx| {
                                                 Tooltip::with_meta(
                                                     "Context Cached",
                                                     None,
@@ -2796,11 +2798,13 @@ impl ContextEditor {
                                         .icon_color(Color::Error)
                                         .icon_size(IconSize::XSmall)
                                         .icon_position(IconPosition::Start)
-                                        .tooltip(move |cx| Tooltip::text("View Details", cx))
+                                        .tooltip(move |window, cx| {
+                                            Tooltip::text("View Details", cx)
+                                        })
                                         .on_click({
                                             let context = context.clone();
                                             let error = error.clone();
-                                            move |_, cx| {
+                                            move |_, window, cx| {
                                                 context.update(cx, |_, cx| {
                                                     cx.emit(ContextEvent::ShowAssistError(
                                                         error.clone(),
@@ -3489,7 +3493,7 @@ impl ContextEditor {
                 })
                 .cursor(CursorStyle::PointingHand)
                 .on_click(cx.listener(move |this, _, window, cx| {
-                    this.editor.update(cx, |editor, window, cx| {
+                    this.editor.update(cx, |editor, cx| {
                         editor.change_selections(None, cx, |selections| {
                             selections.select_ranges(vec![anchor..anchor]);
                         });
@@ -3630,7 +3634,7 @@ impl ContextEditor {
                             .style(ButtonStyle::Filled)
                             .on_click({
                                 let focus_handle = self.focus_handle(cx).clone();
-                                move |_event, cx| {
+                                move |_event, window, cx| {
                                     focus_handle.dispatch_action(&ShowConfiguration, cx);
                                 }
                             }),
@@ -3680,7 +3684,7 @@ impl ContextEditor {
             .disabled(disabled)
             .style(style)
             .when_some(tooltip, |button, tooltip| {
-                button.tooltip(move |_| tooltip.clone())
+                button.tooltip(move |_, _| tooltip.clone())
             })
             .layer(ElevationIndex::ModalSurface)
             .child(Label::new(
@@ -3694,7 +3698,7 @@ impl ContextEditor {
                 KeyBinding::for_action_in(&Assist, &focus_handle, cx)
                     .map(|binding| binding.into_any_element()),
             )
-            .on_click(move |_event, cx| {
+            .on_click(move |_event, window, cx| {
                 focus_handle.dispatch_action(&Assist, cx);
             })
     }
@@ -3737,7 +3741,7 @@ impl ContextEditor {
             .disabled(disabled)
             .style(style)
             .when_some(tooltip, |button, tooltip| {
-                button.tooltip(move |_| tooltip.clone())
+                button.tooltip(move |_, _| tooltip.clone())
             })
             .layer(ElevationIndex::ModalSurface)
             .child(Label::new("Suggest Edits"))
@@ -3745,7 +3749,7 @@ impl ContextEditor {
                 KeyBinding::for_action_in(&Edit, &focus_handle, cx)
                     .map(|binding| binding.into_any_element()),
             )
-            .on_click(move |_event, cx| {
+            .on_click(move |_event, window, cx| {
                 focus_handle.dispatch_action(&Edit, cx);
             })
     }
@@ -3759,7 +3763,7 @@ impl ContextEditor {
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted)
                 .icon_position(IconPosition::Start)
-                .tooltip(|cx| Tooltip::text("Type / to insert via keyboard", cx)),
+                .tooltip(|window, cx| Tooltip::text("Type / to insert via keyboard", cx)),
         )
     }
 
@@ -4093,7 +4097,7 @@ fn render_fold_icon_button(
             .layer(ElevationIndex::ElevatedSurface)
             .child(Icon::new(icon))
             .child(Label::new(label.clone()).single_line())
-            .on_click(move |_, cx| {
+            .on_click(move |_, window, cx| {
                 editor
                     .update(cx, |editor, cx| {
                         let buffer_start = fold_range
@@ -4135,16 +4139,16 @@ impl Render for ContextEditor {
 
         v_flex()
             .key_context("ContextEditor")
-            .capture_action(cx.listener(ContextEditor::cancel))
-            .capture_action(cx.listener(ContextEditor::save))
-            .capture_action(cx.listener(ContextEditor::copy))
-            .capture_action(cx.listener(ContextEditor::cut))
-            .capture_action(cx.listener(ContextEditor::paste))
-            .capture_action(cx.listener(ContextEditor::cycle_message_role))
-            .capture_action(cx.listener(ContextEditor::confirm_command))
-            .on_action(cx.listener(ContextEditor::edit))
-            .on_action(cx.listener(ContextEditor::assist))
-            .on_action(cx.listener(ContextEditor::split))
+            .capture_action(cx.listener2(ContextEditor::cancel))
+            .capture_action(cx.listener2(ContextEditor::save))
+            .capture_action(cx.listener2(ContextEditor::copy))
+            .capture_action(cx.listener2(ContextEditor::cut))
+            .capture_action(cx.listener2(ContextEditor::paste))
+            .capture_action(cx.listener2(ContextEditor::cycle_message_role))
+            .capture_action(cx.listener2(ContextEditor::confirm_command))
+            .on_action(cx.listener2(ContextEditor::edit))
+            .on_action(cx.listener2(ContextEditor::assist))
+            .on_action(cx.listener2(ContextEditor::split))
             .size_full()
             .children(self.render_notice(cx))
             .child(
@@ -4547,7 +4551,7 @@ impl Render for ContextEditorToolbarItem {
                 div().visible_on_hover("chat-title-group").child(
                     IconButton::new("regenerate-context", IconName::RefreshTitle)
                         .shape(ui::IconButtonShape::Square)
-                        .tooltip(|cx| Tooltip::text("Regenerate Title", cx))
+                        .tooltip(|window, cx| Tooltip::text("Regenerate Title", cx))
                         .on_click(cx.listener(move |_, _, window, cx| {
                             cx.emit(ContextEditorToolbarItemEvent::RegenerateSummary)
                         })),
@@ -4614,7 +4618,7 @@ impl Render for ContextEditorToolbarItem {
                                         .size(IconSize::XSmall),
                                 ),
                         )
-                        .tooltip(move |cx| {
+                        .tooltip(move |window, cx| {
                             Tooltip::for_action("Change Model", &ToggleModelSelector, cx)
                         }),
                 )
@@ -4954,7 +4958,7 @@ fn render_slash_command_output_toggle(
         !is_folded,
     )
     .toggle_state(is_folded)
-    .on_click(move |_e, cx| fold(!is_folded, cx))
+    .on_click(move |_event, window, cx| fold(!is_folded, cx))
     .into_any_element()
 }
 
@@ -4969,7 +4973,7 @@ fn fold_toggle(
     move |row, is_folded, fold, _cx| {
         Disclosure::new((name, row.0 as u64), !is_folded)
             .toggle_state(is_folded)
-            .on_click(move |_e, cx| fold(!is_folded, cx))
+            .on_click(move |_event, window, cx| fold(!is_folded, cx))
             .into_any_element()
     }
 }
@@ -4984,7 +4988,7 @@ fn quote_selection_fold_placeholder(title: String, editor: WeakView<Editor>) -> 
                     .layer(ElevationIndex::ElevatedSurface)
                     .child(Icon::new(IconName::TextSnippet))
                     .child(Label::new(title.clone()).single_line())
-                    .on_click(move |_, cx| {
+                    .on_click(move |_, window, cx| {
                         editor
                             .update(cx, |editor, cx| {
                                 let buffer_start = fold_range
@@ -5011,7 +5015,7 @@ fn render_quote_selection_output_toggle(
 ) -> AnyElement {
     Disclosure::new(("quote-selection-indicator", row.0 as u64), !is_folded)
         .toggle_state(is_folded)
-        .on_click(move |_e, cx| fold(!is_folded, cx))
+        .on_click(move |_event, window, cx| fold(!is_folded, cx))
         .into_any_element()
 }
 
@@ -5024,7 +5028,7 @@ fn render_pending_slash_command_gutter_decoration(
         ("slash-command-gutter-decoration", row.0),
         ui::IconName::TriangleRight,
     )
-    .on_click(move |_e, cx| confirm_command(cx))
+    .on_click(move |_event, window, cx| confirm_command(cx))
     .icon_size(ui::IconSize::Small)
     .size(ui::ButtonSize::None);
 
@@ -5075,7 +5079,7 @@ fn render_docs_slash_command_trailer(
                 ))
                 .tooltip({
                     let package = package.clone();
-                    move |cx| Tooltip::text(format!("Indexing {package}…"), cx)
+                    move |window, cx| Tooltip::text(format!("Indexing {package}…"), cx)
                 })
                 .into_any_element(),
         );
@@ -5090,7 +5094,9 @@ fn render_docs_slash_command_trailer(
                         .size(IconSize::Small)
                         .color(Color::Warning),
                 )
-                .tooltip(move |cx| Tooltip::text(format!("Failed to index: {latest_error}"), cx))
+                .tooltip(move |window, cx| {
+                    Tooltip::text(format!("Failed to index: {latest_error}"), cx)
+                })
                 .into_any_element(),
         )
     }

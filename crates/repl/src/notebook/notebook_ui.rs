@@ -301,10 +301,10 @@ impl NotebookEditor {
                         Self::button_group(cx)
                             .child(
                                 Self::render_notebook_control("run-all-cells", IconName::Play, cx)
-                                    .tooltip(move |cx| {
+                                    .tooltip(move |window, cx| {
                                         Tooltip::for_action("Execute all cells", &RunAll, cx)
                                     })
-                                    .on_click(|_, cx| {
+                                    .on_click(|_, window, cx| {
                                         cx.dispatch_action(Box::new(RunAll));
                                     }),
                             )
@@ -315,10 +315,10 @@ impl NotebookEditor {
                                     cx,
                                 )
                                 .disabled(!has_outputs)
-                                .tooltip(move |cx| {
+                                .tooltip(move |window, cx| {
                                     Tooltip::for_action("Clear all outputs", &ClearOutputs, cx)
                                 })
-                                .on_click(|_, cx| {
+                                .on_click(|_, window, cx| {
                                     cx.dispatch_action(Box::new(ClearOutputs));
                                 }),
                             ),
@@ -331,10 +331,10 @@ impl NotebookEditor {
                                     IconName::ArrowUp,
                                     cx,
                                 )
-                                .tooltip(move |cx| {
+                                .tooltip(move |window, cx| {
                                     Tooltip::for_action("Move cell up", &MoveCellUp, cx)
                                 })
-                                .on_click(|_, cx| {
+                                .on_click(|_, window, cx| {
                                     cx.dispatch_action(Box::new(MoveCellUp));
                                 }),
                             )
@@ -344,10 +344,10 @@ impl NotebookEditor {
                                     IconName::ArrowDown,
                                     cx,
                                 )
-                                .tooltip(move |cx| {
+                                .tooltip(move |window, cx| {
                                     Tooltip::for_action("Move cell down", &MoveCellDown, cx)
                                 })
-                                .on_click(|_, cx| {
+                                .on_click(|_, window, cx| {
                                     cx.dispatch_action(Box::new(MoveCellDown));
                                 }),
                             ),
@@ -360,19 +360,19 @@ impl NotebookEditor {
                                     IconName::Plus,
                                     cx,
                                 )
-                                .tooltip(move |cx| {
+                                .tooltip(move |window, cx| {
                                     Tooltip::for_action("Add markdown block", &AddMarkdownBlock, cx)
                                 })
-                                .on_click(|_, cx| {
+                                .on_click(|_, window, cx| {
                                     cx.dispatch_action(Box::new(AddMarkdownBlock));
                                 }),
                             )
                             .child(
                                 Self::render_notebook_control("new-code-cell", IconName::Code, cx)
-                                    .tooltip(move |cx| {
+                                    .tooltip(move |window, cx| {
                                         Tooltip::for_action("Add code block", &AddCodeBlock, cx)
                                     })
-                                    .on_click(|_, cx| {
+                                    .on_click(|_, window, cx| {
                                         cx.dispatch_action(Box::new(AddCodeBlock));
                                     }),
                             ),
@@ -456,10 +456,10 @@ impl Render for NotebookEditor {
                 cx.listener(|this, &AddMarkdownBlock, window, cx| this.add_markdown_block(cx)),
             )
             .on_action(cx.listener(|this, &AddCodeBlock, window, cx| this.add_code_block(cx)))
-            .on_action(cx.listener(Self::select_next))
-            .on_action(cx.listener(Self::select_previous))
-            .on_action(cx.listener(Self::select_first))
-            .on_action(cx.listener(Self::select_last))
+            .on_action(cx.listener2(Self::select_next))
+            .on_action(cx.listener2(Self::select_previous))
+            .on_action(cx.listener2(Self::select_first))
+            .on_action(cx.listener2(Self::select_last))
             .flex()
             .items_start()
             .size_full()

@@ -58,7 +58,7 @@ impl Render for ContextStrip {
                         IconButton::new("add-context", IconName::Plus)
                             .icon_size(IconSize::Small)
                             .style(ui::ButtonStyle::Filled)
-                            .tooltip(move |cx| {
+                            .tooltip(move |window, cx| {
                                 Tooltip::for_action_in(
                                     "Add Context",
                                     &ToggleContextPicker,
@@ -91,7 +91,7 @@ impl Render for ContextStrip {
                 parent.child(
                     IconButton::new("remove-all-context", IconName::Eraser)
                         .icon_size(IconSize::Small)
-                        .tooltip(move |cx| Tooltip::text("Remove All Context", cx))
+                        .tooltip(move |window, cx| Tooltip::text("Remove All Context", cx))
                         .on_click({
                             let context_store = self.context_store.clone();
                             cx.listener(move |_this, _event, window, cx| {

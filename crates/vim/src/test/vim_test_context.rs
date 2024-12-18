@@ -92,7 +92,6 @@ impl VimTestContext {
     {
         let window = self.window;
         self.update_window(window, move |_, _, cx| view.update(cx, update))
-            .unwrap()
     }
 
     pub fn workspace<F, T>(&mut self, update: F) -> T

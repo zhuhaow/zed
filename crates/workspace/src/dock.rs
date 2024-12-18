@@ -217,7 +217,7 @@ impl Dock {
         let focus_handle = cx.focus_handle();
         let workspace = cx.view().clone();
         let dock = cx.new_view(|cx: &mut ViewContext<Self>| {
-            let focus_subscription = cx.on_focus(&focus_handle, |dock, cx| {
+            let focus_subscription = cx.on_focus(&focus_handle, |dock, window, cx| {
                 if let Some(active_entry) = dock.panel_entries.get(dock.active_panel_index) {
                     active_entry.panel.focus_handle(cx).focus(cx)
                 }
@@ -242,7 +242,7 @@ impl Dock {
 
         cx.on_focus_in(&focus_handle, {
             let dock = dock.downgrade();
-            move |workspace, cx| {
+            move |workspace, window, cx| {
                 let Some(dock) = dock.upgrade() else {
                     return;
                 };

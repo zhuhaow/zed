@@ -49,12 +49,12 @@ impl Render for ActiveBufferLanguage {
                     .label_size(LabelSize::Small)
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
-                            workspace.update(cx, |workspace, window, cx| {
+                            workspace.update(cx, |workspace, cx| {
                                 LanguageSelector::toggle(workspace, cx)
                             });
                         }
                     }))
-                    .tooltip(|cx| Tooltip::for_action("Select Language", &Toggle, cx)),
+                    .tooltip(|window, cx| Tooltip::for_action("Select Language", &Toggle, cx)),
             )
         })
     }

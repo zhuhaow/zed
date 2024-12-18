@@ -104,7 +104,7 @@ pub fn init(cx: &mut AppContext) {
         .detach();
 
     cx.observe_new_views(|workspace: &mut Workspace, _| {
-        workspace.register_action(|workspace, _: &ToggleVimMode, cx| {
+        workspace.register_action(|workspace, _: &ToggleVimMode, window, cx| {
             let fs = workspace.app_state().fs.clone();
             let currently_enabled = Vim::enabled(cx);
             update_settings_file::<VimModeSetting>(fs, cx, move |setting, _| {
@@ -112,7 +112,7 @@ pub fn init(cx: &mut AppContext) {
             })
         });
 
-        workspace.register_action(|_, _: &OpenDefaultKeymap, cx| {
+        workspace.register_action(|_, _: &OpenDefaultKeymap, window, cx| {
             cx.emit(workspace::Event::OpenBundledFile {
                 text: settings::vim_keymap(),
                 title: "Default Vim Bindings",
@@ -120,11 +120,11 @@ pub fn init(cx: &mut AppContext) {
             });
         });
 
-        workspace.register_action(|workspace, _: &ResetPaneSizes, cx| {
+        workspace.register_action(|workspace, _: &ResetPaneSizes, window, cx| {
             workspace.reset_pane_sizes(cx);
         });
 
-        workspace.register_action(|workspace, _: &MaximizePane, cx| {
+        workspace.register_action(|workspace, _: &MaximizePane, window, cx| {
             let pane = workspace.active_pane();
             let Some(size) = workspace.bounding_box_for_pane(&pane) else {
                 return;
@@ -141,7 +141,7 @@ pub fn init(cx: &mut AppContext) {
             workspace.resize_pane(Axis::Vertical, desired_size - size.size.height, cx)
         });
 
-        workspace.register_action(|workspace, action: &ResizePane, cx| {
+        workspace.register_action(|workspace, action: &ResizePane, window, cx| {
             let count = Vim::take_count(cx).unwrap_or(1) as f32;
             let theme = ThemeSettings::get_global(cx);
             let Ok(font_id) = cx.text_system().font_id(&theme.buffer_font) else {
@@ -165,7 +165,7 @@ pub fn init(cx: &mut AppContext) {
             workspace.resize_pane(axis, amount * count, cx);
         });
 
-        workspace.register_action(|workspace, _: &SearchSubmit, cx| {
+        workspace.register_action(|workspace, _: &SearchSubmit, window, cx| {
             let vim = workspace
                 .focused_pane(cx)
                 .read(cx)
@@ -377,7 +377,7 @@ impl Vim {
         cx: &mut ViewContext<Vim>,
         f: impl Fn(&mut Vim, &A, &mut ViewContext<Vim>) + 'static,
     ) {
-        let subscription = editor.register_action(cx.listener(f));
+        let subscription = editor.register_action(cx.listener2(f));
         cx.on_release(|_, _, _| drop(subscription)).detach();
     }
 

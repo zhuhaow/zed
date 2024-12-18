@@ -665,7 +665,7 @@ impl LspLogView {
         let (editor, editor_subscriptions) = Self::editor_for_logs(String::new(), cx);
 
         let focus_handle = cx.focus_handle();
-        let focus_subscription = cx.on_focus(&focus_handle, |log_view, cx| {
+        let focus_subscription = cx.on_focus(&focus_handle, |log_view, window, cx| {
             cx.focus_view(&log_view.editor);
         });
 

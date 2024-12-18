@@ -71,7 +71,7 @@ impl ThemeSelector {
         window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
         Self { picker }
     }
 }

@@ -53,7 +53,7 @@ pub fn init(cx: &mut AppContext) {
         |workspace: &mut Workspace, _: &mut ViewContext<Workspace>| {
             workspace.register_action(TerminalPanel::new_terminal);
             workspace.register_action(TerminalPanel::open_terminal);
-            workspace.register_action(|workspace, _: &ToggleFocus, cx| {
+            workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
                 if is_enabled_in_workspace(workspace, cx) {
                     workspace.toggle_panel_focus::<TerminalPanel>(cx);
                 }
@@ -140,7 +140,7 @@ impl TerminalPanel {
                             .trigger(
                                 IconButton::new("plus", IconName::Plus)
                                     .icon_size(IconSize::Small)
-                                    .tooltip(|cx| Tooltip::text("New…", cx)),
+                                    .tooltip(|window, cx| Tooltip::text("New…", cx)),
                             )
                             .anchor(Corner::TopRight)
                             .with_handle(pane.new_item_context_menu_handle.clone())
@@ -170,7 +170,7 @@ impl TerminalPanel {
                             .trigger(
                                 IconButton::new("terminal-pane-split", IconName::Split)
                                     .icon_size(IconSize::Small)
-                                    .tooltip(|cx| Tooltip::text("Split Pane", cx)),
+                                    .tooltip(|window, cx| Tooltip::text("Split Pane", cx)),
                             )
                             .anchor(Corner::TopRight)
                             .with_handle(pane.split_item_context_menu_handle.clone())
@@ -198,7 +198,7 @@ impl TerminalPanel {
                             .toggle_state(zoomed)
                             .selected_icon(IconName::Minimize)
                             .on_click(cx.listener(|pane, _, window, cx| {
-                                pane.toggle_zoom(&workspace::ToggleZoom, cx);
+                                pane.toggle_zoom(&workspace::ToggleZoom, window, cx);
                             }))
                             .tooltip(move |window, cx| {
                                 Tooltip::for_action(
@@ -410,6 +410,7 @@ impl TerminalPanel {
     pub fn open_terminal(
         workspace: &mut Workspace,
         action: &workspace::OpenTerminal,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         let Some(terminal_panel) = workspace.panel::<Self>(cx) else {
@@ -613,6 +614,7 @@ impl TerminalPanel {
     fn new_terminal(
         workspace: &mut Workspace,
         _: &workspace::NewTerminal,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         let Some(terminal_panel) = workspace.panel::<Self>(cx) else {
@@ -1402,7 +1404,7 @@ impl Render for InlineAssistTabBarButton {
             .on_click(cx.listener(|_, _, window, cx| {
                 cx.dispatch_action(InlineAssist::default().boxed_clone());
             }))
-            .tooltip(move |cx| {
+            .tooltip(move |window, cx| {
                 Tooltip::for_action_in("Inline Assist", &InlineAssist::default(), &focus_handle, cx)
             })
     }

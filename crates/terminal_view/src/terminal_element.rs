@@ -413,8 +413,8 @@ impl TerminalElement {
         origin: Point<Pixels>,
         focus_handle: FocusHandle,
         f: impl Fn(&mut Terminal, Point<Pixels>, &E, &mut ModelContext<Terminal>),
-    ) -> impl Fn(&E, &mut WindowContext) {
-        move |event, cx| {
+    ) -> impl Fn(&E, &mut Window, &mut WindowContext) {
+        move |event, window, cx| {
             cx.focus(&focus_handle);
             connection.update(cx, |terminal, cx| {
                 f(terminal, origin, event, cx);
@@ -437,7 +437,7 @@ impl TerminalElement {
         self.interactivity.on_mouse_down(MouseButton::Left, {
             let terminal = terminal.clone();
             let focus = focus.clone();
-            move |e, cx| {
+            move |e, window, cx| {
                 cx.focus(&focus);
                 terminal.update(cx, |terminal, cx| {
                     terminal.mouse_down(e, origin, cx);
@@ -450,7 +450,7 @@ impl TerminalElement {
             let focus = self.focus.clone();
             let terminal = self.terminal.clone();
             let hitbox = hitbox.clone();
-            move |e: &MouseMoveEvent, phase, cx| {
+            move |e: &MouseMoveEvent, phase, window, cx| {
                 if phase != DispatchPhase::Bubble || !focus.is_focused(cx) {
                     return;
                 }
@@ -501,10 +501,10 @@ impl TerminalElement {
         );
         self.interactivity.on_scroll_wheel({
             let terminal_view = self.terminal_view.downgrade();
-            move |e, cx| {
+            move |event, window, cx| {
                 terminal_view
                     .update(cx, |terminal_view, cx| {
-                        terminal_view.scroll_wheel(e, origin, cx);
+                        terminal_view.scroll_wheel(event, origin, cx);
                         cx.notify();
                     })
                     .ok();
@@ -520,8 +520,8 @@ impl TerminalElement {
                     terminal.clone(),
                     origin,
                     focus.clone(),
-                    move |terminal, origin, e, cx| {
-                        terminal.mouse_down(e, origin, cx);
+                    move |terminal, origin, event, cx| {
+                        terminal.mouse_down(event, origin, cx);
                     },
                 ),
             );
@@ -585,15 +585,15 @@ impl Element for TerminalElement {
         window: &mut Window,
         cx: &mut WindowContext,
     ) -> (LayoutId, Self::RequestLayoutState) {
-        let layout_id = self
-            .interactivity
-            .request_layout(global_id, cx, |mut style, cx| {
-                style.size.width = relative(1.).into();
-                style.size.height = relative(1.).into();
-                // style.overflow = point(Overflow::Hidden, Overflow::Hidden);
+        let layout_id =
+            self.interactivity
+                .request_layout(global_id, window, cx, |mut style, window, cx| {
+                    style.size.width = relative(1.).into();
+                    style.size.height = relative(1.).into();
+                    // style.overflow = point(Overflow::Hidden, Overflow::Hidden);
 
-                cx.request_layout(style, None)
-            });
+                    cx.request_layout(style, None)
+                });
         (layout_id, ())
     }
 
@@ -606,8 +606,13 @@ impl Element for TerminalElement {
         cx: &mut WindowContext,
     ) -> Self::PrepaintState {
         let rem_size = self.rem_size(cx);
-        self.interactivity
-            .prepaint(global_id, bounds, bounds.size, cx, |_, _, hitbox, cx| {
+        self.interactivity.prepaint(
+            global_id,
+            bounds,
+            bounds.size,
+            window,
+            cx,
+            |_, _, hitbox, window, cx| {
                 let hitbox = hitbox.unwrap();
                 let settings = ThemeSettings::get_global(cx).clone();
 
@@ -725,7 +730,7 @@ impl Element for TerminalElement {
                     let mut element = div()
                         .size_full()
                         .id("terminal-element")
-                        .tooltip(move |cx| Tooltip::text(hovered_word.word.clone(), cx))
+                        .tooltip(move |window, cx| Tooltip::text(hovered_word.word.clone(), cx))
                         .into_any_element();
                     element.prepaint_as_root(offset, bounds.size.into(), window, cx);
                     element
@@ -861,7 +866,8 @@ impl Element for TerminalElement {
                     last_hovered_word,
                     block_below_cursor_element,
                 }
-            })
+            },
+        )
     }
 
     fn paint(
@@ -899,13 +905,18 @@ impl Element for TerminalElement {
             let cursor = layout.cursor.take();
             let hyperlink_tooltip = layout.hyperlink_tooltip.take();
             let block_below_cursor_element = layout.block_below_cursor_element.take();
-            self.interactivity
-                .paint(global_id, bounds, Some(&layout.hitbox), cx, |_, cx| {
+            self.interactivity.paint(
+                global_id,
+                bounds,
+                Some(&layout.hitbox),
+                window,
+                cx,
+                |_, window, cx| {
                     cx.handle_input(&self.focus, terminal_input_handler);
 
                     cx.on_key_event({
                         let this = self.terminal.clone();
-                        move |event: &ModifiersChangedEvent, phase, cx| {
+                        move |event: &ModifiersChangedEvent, phase, window, cx| {
                             if phase != DispatchPhase::Bubble {
                                 return;
                             }
@@ -957,7 +968,8 @@ impl Element for TerminalElement {
                     if let Some(mut element) = hyperlink_tooltip {
                         element.paint(window, cx);
                     }
-                });
+                },
+            );
         });
     }
 }

@@ -111,7 +111,7 @@ impl GitPanel {
         let git_panel = cx.new_view(|cx: &mut ViewContext<Self>| {
             let focus_handle = cx.focus_handle();
             cx.on_focus(&focus_handle, Self::focus_in).detach();
-            cx.on_focus_out(&focus_handle, |this, _, cx| {
+            cx.on_focus_out(&focus_handle, |this, _, window, cx| {
                 this.hide_scrollbar(cx);
             })
             .detach();
@@ -181,7 +181,7 @@ impl GitPanel {
         dispatch_context
     }
 
-    fn focus_in(&mut self, cx: &mut ViewContext<Self>) {
+    fn focus_in(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         if !self.focus_handle.contains_focused(cx) {
             cx.emit(Event::Focus);
         }

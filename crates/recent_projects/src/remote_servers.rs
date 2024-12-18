@@ -315,7 +315,7 @@ impl Mode {
 }
 impl RemoteServerProjects {
     pub fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
-        workspace.register_action(|workspace, _: &OpenRemote, cx| {
+        workspace.register_action(|workspace, _: &OpenRemote, window, cx| {
             let handle = cx.view().downgrade();
             workspace.toggle_modal(cx, |cx| Self::new(cx, handle))
         });
@@ -792,7 +792,9 @@ impl RemoteServerProjects {
                                     .icon_size(IconSize::Small)
                                     .shape(IconButtonShape::Square)
                                     .size(ButtonSize::Large)
-                                    .tooltip(|cx| Tooltip::text("Delete Remote Project", cx))
+                                    .tooltip(|window, cx| {
+                                        Tooltip::text("Delete Remote Project", cx)
+                                    })
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.delete_ssh_project(server_ix, &project, cx)
                                     }))
@@ -927,7 +929,7 @@ impl RemoteServerProjects {
                                             .size(ButtonSize::None)
                                             .color(Color::Accent)
                                             .style(ButtonStyle::Transparent)
-                                            .on_click(|_, cx| {
+                                            .on_click(|_, window, cx| {
                                                 cx.open_url(
                                                     "https://zed.dev/docs/remote-development",
                                                 );
@@ -1039,7 +1041,7 @@ impl RemoteServerProjects {
                                 .on_action({
                                     let connection_string = connection_string.clone();
                                     let workspace = self.workspace.clone();
-                                    move |_: &menu::Confirm, cx| {
+                                    move |_: &menu::Confirm, window, cx| {
                                         callback(workspace.clone(), connection_string.clone(), cx);
                                     }
                                 })
@@ -1056,7 +1058,7 @@ impl RemoteServerProjects {
                                         )
                                         .on_click({
                                             let connection_string = connection_string.clone();
-                                            move |_, cx| {
+                                            move |_, window, cx| {
                                                 callback(
                                                     workspace.clone(),
                                                     connection_string.clone(),
@@ -1366,8 +1368,8 @@ impl Render for RemoteServerProjects {
             .elevation_3(cx)
             .w(rems(34.))
             .key_context("RemoteServerModal")
-            .on_action(cx.listener(Self::cancel))
-            .on_action(cx.listener(Self::confirm))
+            .on_action(cx.listener2(Self::cancel))
+            .on_action(cx.listener2(Self::confirm))
             .capture_any_mouse_down(cx.listener(|this, _, window, cx| {
                 this.focus_handle(cx).focus(cx);
             }))

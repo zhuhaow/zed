@@ -84,9 +84,9 @@ impl DispatchPhase {
     }
 }
 
-type AnyObserver = Box<dyn FnMut(&mut WindowContext) -> bool + 'static>;
+type WindowListener = Box<dyn FnMut(&mut Window, &mut WindowContext) -> bool + 'static>;
 
-type AnyWindowFocusListener =
+type WindowFocusListener =
     Box<dyn FnMut(&WindowFocusEvent, &mut Window, &mut WindowContext) -> bool + 'static>;
 
 struct WindowFocusEvent {
@@ -531,16 +531,16 @@ pub struct Window {
     pub(crate) tooltip_bounds: Option<TooltipBounds>,
     next_frame_callbacks: Rc<RefCell<Vec<FrameCallback>>>,
     pub(crate) dirty_views: FxHashSet<EntityId>,
-    focus_listeners: SubscriberSet<(), AnyWindowFocusListener>,
-    focus_lost_listeners: SubscriberSet<(), AnyObserver>,
+    focus_listeners: SubscriberSet<(), WindowFocusListener>,
+    focus_lost_listeners: SubscriberSet<(), WindowListener>,
     default_prevented: bool,
     mouse_position: Point<Pixels>,
     mouse_hit_test: HitTest,
     modifiers: Modifiers,
     scale_factor: f32,
-    bounds_observers: SubscriberSet<(), AnyObserver>,
+    bounds_observers: SubscriberSet<(), WindowListener>,
     appearance: WindowAppearance,
-    appearance_observers: SubscriberSet<(), AnyObserver>,
+    appearance_observers: SubscriberSet<(), WindowListener>,
     active: Rc<Cell<bool>>,
     hovered: Rc<Cell<bool>>,
     pub(crate) dirty: Rc<Cell<bool>>,
@@ -548,12 +548,12 @@ pub struct Window {
     pub(crate) last_input_timestamp: Rc<Cell<Instant>>,
     pub(crate) refreshing: bool,
     pub(crate) draw_phase: DrawPhase,
-    activation_observers: SubscriberSet<(), AnyObserver>,
+    activation_observers: SubscriberSet<(), WindowListener>,
     pub(crate) focus: Option<FocusId>,
     focus_enabled: bool,
     pending_input: Option<PendingInput>,
     pending_modifier: ModifierState,
-    pending_input_observers: SubscriberSet<(), AnyObserver>,
+    pending_input_observers: SubscriberSet<(), WindowListener>,
     prompt: Option<RenderablePromptHandle>,
 }
 
@@ -754,7 +754,7 @@ impl Window {
                         cx.window
                             .activation_observers
                             .clone()
-                            .retain(&(), |callback| callback(cx));
+                            .retain(&(), |callback| callback(window, cx));
                         cx.refresh();
                     })
                     .log_err();
@@ -837,7 +837,7 @@ impl Window {
         })
     }
 
-    fn new_focus_listener(&self, value: AnyWindowFocusListener) -> (Subscription, impl FnOnce()) {
+    fn new_focus_listener(&self, value: WindowFocusListener) -> (Subscription, impl FnOnce()) {
         self.focus_listeners.insert((), value)
     }
 
@@ -1199,7 +1199,7 @@ impl<'a> WindowContext<'a> {
         self.window
             .bounds_observers
             .clone()
-            .retain(&(), |callback| callback(self));
+            .retain(&(), |callback| callback(todo!(), self));
     }
 
     /// Returns the bounds of the current window in the global coordinate space, which could span across multiple displays.
@@ -1218,7 +1218,7 @@ impl<'a> WindowContext<'a> {
         self.window
             .appearance_observers
             .clone()
-            .retain(&(), |callback| callback(self));
+            .retain(&(), |callback| callback(todo!(), self));
     }
 
     /// Returns the appearance of the current window.
@@ -1467,7 +1467,7 @@ impl<'a> WindowContext<'a> {
                 self.window
                     .focus_lost_listeners
                     .clone()
-                    .retain(&(), |listener| listener(self));
+                    .retain(&(), |listener| listener(todo!(), self));
             }
 
             let event = WindowFocusEvent {
@@ -3397,7 +3397,7 @@ impl<'a> WindowContext<'a> {
         self.window
             .pending_input_observers
             .clone()
-            .retain(&(), |callback| callback(self));
+            .retain(&(), |callback| callback(todo!(), self));
     }
 
     fn dispatch_key_down_up_event(
@@ -4280,7 +4280,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         let view = self.view.downgrade();
         let (subscription, activate) = self.window.bounds_observers.insert(
             (),
-            Box::new(move |cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
+            Box::new(move |window, cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
         );
         activate();
         subscription
@@ -4294,7 +4294,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         let view = self.view.downgrade();
         let (subscription, activate) = self.window.activation_observers.insert(
             (),
-            Box::new(move |cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
+            Box::new(move |window, cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
         );
         activate();
         subscription
@@ -4308,7 +4308,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         let view = self.view.downgrade();
         let (subscription, activate) = self.window.appearance_observers.insert(
             (),
-            Box::new(move |cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
+            Box::new(move |window, cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
         );
         activate();
         subscription
@@ -4347,12 +4347,15 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     /// Register a callback to be invoked when the window's pending input changes.
     pub fn observe_pending_input(
         &self,
-        mut callback: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
+        mut callback: impl FnMut(&mut V, &mut Window, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
         let view = self.view.downgrade();
         let (subscription, activate) = self.window.pending_input_observers.insert(
             (),
-            Box::new(move |cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
+            Box::new(move |window, cx| {
+                view.update(cx, |view, cx| callback(view, window, cx))
+                    .is_ok()
+            }),
         );
         activate();
         subscription
@@ -4363,7 +4366,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     pub fn on_focus(
         &mut self,
         handle: &FocusHandle,
-        mut listener: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
+        mut listener: impl FnMut(&mut V, &mut Window, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
         let view = self.view.downgrade();
         let focus_id = handle.id;
@@ -4374,7 +4377,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
                         if event.previous_focus_path.last() != Some(&focus_id)
                             && event.current_focus_path.last() == Some(&focus_id)
                         {
-                            listener(view, cx)
+                            listener(view, window, cx)
                         }
                     })
                     .is_ok()
@@ -4389,7 +4392,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     pub fn on_focus_in(
         &mut self,
         handle: &FocusHandle,
-        mut listener: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
+        mut listener: impl FnMut(&mut V, &mut Window, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
         let view = self.view.downgrade();
         let focus_id = handle.id;
@@ -4398,7 +4401,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
                 .new_focus_listener(Box::new(move |event, window, cx| {
                     view.update(cx, |view, cx| {
                         if event.is_focus_in(focus_id) {
-                            listener(view, cx)
+                            listener(view, window, cx)
                         }
                     })
                     .is_ok()
@@ -4438,12 +4441,15 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     /// Returns a subscription and persists until the subscription is dropped.
     pub fn on_focus_lost(
         &self,
-        mut listener: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
+        mut listener: impl FnMut(&mut V, &mut Window, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
         let view = self.view.downgrade();
         let (subscription, activate) = self.window.focus_lost_listeners.insert(
             (),
-            Box::new(move |cx| view.update(cx, |view, cx| listener(view, cx)).is_ok()),
+            Box::new(move |window, cx| {
+                view.update(cx, |view, cx| listener(view, window, cx))
+                    .is_ok()
+            }),
         );
         activate();
         subscription
@@ -4454,7 +4460,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     pub fn on_focus_out(
         &mut self,
         handle: &FocusHandle,
-        mut listener: impl FnMut(&mut V, FocusOutEvent, &mut ViewContext<V>) + 'static,
+        mut listener: impl FnMut(&mut V, FocusOutEvent, &mut Window, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
         let view = self.view.downgrade();
         let focus_id = handle.id;
@@ -4470,7 +4476,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
                                         handles: Arc::downgrade(&cx.app.focus_handles),
                                     },
                                 };
-                                listener(view, event, cx)
+                                listener(view, event, window, cx)
                             }
                         }
                     })
@@ -4563,6 +4569,21 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         let view = self.view().downgrade();
         move |e: &E, window: &mut Window, cx: &mut WindowContext| {
             view.update(cx, |view, cx| f(view, e, window, cx)).ok();
+        }
+    }
+
+    /// Convenience method for accessing view state in an event callback.
+    ///
+    /// Many GPUI callbacks take the form of `Fn(&E, &mut WindowContext)`,
+    /// but it's often useful to be able to access view state in these
+    /// callbacks. This method provides a convenient way to do so.
+    pub fn listener2<E: ?Sized>(
+        &self,
+        f: impl Fn(&mut V, &E, &mut ViewContext<V>) + 'static,
+    ) -> impl Fn(&E, &mut Window, &mut WindowContext) + 'static {
+        let view = self.view().downgrade();
+        move |e: &E, _window: &mut Window, cx: &mut WindowContext| {
+            view.update(cx, |view, cx| f(view, e, cx)).ok();
         }
     }
 }

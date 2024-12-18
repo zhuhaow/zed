@@ -42,7 +42,7 @@ use serde::{Deserialize, Serialize};
 use settings::{Settings, SettingsStore};
 use smol::channel;
 use theme::{SyntaxTheme, ThemeSettings};
-use ui::{DynamicSpacing, IndentGuideColors, IndentGuideLayout};
+use ui::{prelude::Window, DynamicSpacing, IndentGuideColors, IndentGuideLayout};
 use util::{debug_panic, RangeExt, ResultExt, TryFutureExt};
 use workspace::{
     dock::{DockPosition, Panel, PanelEvent},
@@ -580,7 +580,7 @@ pub fn init(assets: impl AssetSource, cx: &mut AppContext) {
     file_icons::init(assets, cx);
 
     cx.observe_new_views(|workspace: &mut Workspace, _| {
-        workspace.register_action(|workspace, _: &ToggleFocus, cx| {
+        workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
             workspace.toggle_panel_focus::<OutlinePanel>(cx);
         });
     })
@@ -635,9 +635,10 @@ impl OutlinePanel {
 
             let focus_handle = cx.focus_handle();
             let focus_subscription = cx.on_focus(&focus_handle, Self::focus_in);
-            let focus_out_subscription = cx.on_focus_out(&focus_handle, |outline_panel, _, cx| {
-                outline_panel.hide_scrollbar(cx);
-            });
+            let focus_out_subscription =
+                cx.on_focus_out(&focus_handle, |outline_panel, _, window, cx| {
+                    outline_panel.hide_scrollbar(cx);
+                });
             let workspace_subscription = cx.subscribe(
                 &workspace
                     .weak_handle()
@@ -1150,7 +1151,7 @@ impl OutlinePanel {
         }
     }
 
-    fn focus_in(&mut self, cx: &mut ViewContext<Self>) {
+    fn focus_in(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         if !self.focus_handle.contains_focused(cx) {
             cx.emit(Event::Focus);
         }
@@ -3887,10 +3888,10 @@ impl OutlinePanel {
                     cx.notify();
                     cx.stop_propagation()
                 }))
-                .on_hover(|_, cx| {
+                .on_hover(|_, window, cx| {
                     cx.stop_propagation();
                 })
-                .on_any_mouse_down(|_, cx| {
+                .on_any_mouse_down(|_, window, cx| {
                     cx.stop_propagation();
                 })
                 .on_mouse_up(
@@ -3946,10 +3947,10 @@ impl OutlinePanel {
                     cx.notify();
                     cx.stop_propagation()
                 }))
-                .on_hover(|_, cx| {
+                .on_hover(|_, window, cx| {
                     cx.stop_propagation();
                 })
-                .on_any_mouse_down(|_, cx| {
+                .on_any_mouse_down(|_, window, cx| {
                     cx.stop_propagation();
                 })
                 .on_mouse_up(
@@ -4282,7 +4283,7 @@ impl OutlinePanel {
                                 IconName::Pin
                             },
                         )
-                        .tooltip(move |cx| {
+                        .tooltip(move |window, cx| {
                             Tooltip::text(
                                 if pinned {
                                     "Unpin Outline"
@@ -4293,9 +4294,11 @@ impl OutlinePanel {
                             )
                         })
                         .shape(IconButtonShape::Square)
-                        .on_click(cx.listener(|outline_panel, _, window, cx| {
-                            outline_panel.toggle_active_editor_pin(&ToggleActiveEditorPin, cx);
-                        })),
+                        .on_click(cx.listener(
+                            |outline_panel, _, window, cx| {
+                                outline_panel.toggle_active_editor_pin(&ToggleActiveEditorPin, cx);
+                            },
+                        )),
                     ),
                 ),
         )
@@ -4511,29 +4514,29 @@ impl Render for OutlinePanel {
                 }
             }))
             .key_context(self.dispatch_context(cx))
-            .on_action(cx.listener(Self::open))
-            .on_action(cx.listener(Self::cancel))
-            .on_action(cx.listener(Self::select_next))
-            .on_action(cx.listener(Self::select_prev))
-            .on_action(cx.listener(Self::select_first))
-            .on_action(cx.listener(Self::select_last))
-            .on_action(cx.listener(Self::select_parent))
-            .on_action(cx.listener(Self::expand_selected_entry))
-            .on_action(cx.listener(Self::collapse_selected_entry))
-            .on_action(cx.listener(Self::expand_all_entries))
-            .on_action(cx.listener(Self::collapse_all_entries))
-            .on_action(cx.listener(Self::copy_path))
-            .on_action(cx.listener(Self::copy_relative_path))
-            .on_action(cx.listener(Self::toggle_active_editor_pin))
-            .on_action(cx.listener(Self::unfold_directory))
-            .on_action(cx.listener(Self::fold_directory))
-            .on_action(cx.listener(Self::open_excerpts))
-            .on_action(cx.listener(Self::open_excerpts_split))
+            .on_action(cx.listener2(Self::open))
+            .on_action(cx.listener2(Self::cancel))
+            .on_action(cx.listener2(Self::select_next))
+            .on_action(cx.listener2(Self::select_prev))
+            .on_action(cx.listener2(Self::select_first))
+            .on_action(cx.listener2(Self::select_last))
+            .on_action(cx.listener2(Self::select_parent))
+            .on_action(cx.listener2(Self::expand_selected_entry))
+            .on_action(cx.listener2(Self::collapse_selected_entry))
+            .on_action(cx.listener2(Self::expand_all_entries))
+            .on_action(cx.listener2(Self::collapse_all_entries))
+            .on_action(cx.listener2(Self::copy_path))
+            .on_action(cx.listener2(Self::copy_relative_path))
+            .on_action(cx.listener2(Self::toggle_active_editor_pin))
+            .on_action(cx.listener2(Self::unfold_directory))
+            .on_action(cx.listener2(Self::fold_directory))
+            .on_action(cx.listener2(Self::open_excerpts))
+            .on_action(cx.listener2(Self::open_excerpts_split))
             .when(is_local, |el| {
-                el.on_action(cx.listener(Self::reveal_in_finder))
+                el.on_action(cx.listener2(Self::reveal_in_finder))
             })
             .when(is_local || is_via_ssh, |el| {
-                el.on_action(cx.listener(Self::open_in_terminal))
+                el.on_action(cx.listener2(Self::open_in_terminal))
             })
             .on_mouse_down(
                 MouseButton::Right,

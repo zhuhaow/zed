@@ -82,7 +82,7 @@ impl RecentProjects {
     }
 
     fn register(workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>) {
-        workspace.register_action(|workspace, open_recent: &OpenRecent, cx| {
+        workspace.register_action(|workspace, open_recent: &OpenRecent, window, cx| {
             let Some(recent_projects) = workspace.active_modal::<Self>(cx) else {
                 Self::open(workspace, open_recent.create_new_window, cx);
                 return;
@@ -124,7 +124,7 @@ impl Render for RecentProjects {
             .w(rems(self.rem_width))
             .child(self.picker.clone())
             .on_mouse_down_out(cx.listener(|this, _, window, cx| {
-                this.picker.update(cx, |this, window, cx| {
+                this.picker.update(cx, |this, cx| {
                     this.cancel(&Default::default(), cx);
                 })
             }))
@@ -433,7 +433,9 @@ impl PickerDelegate for RecentProjectsDelegate {
 
                                     this.delegate.delete_recent_project(ix, cx)
                                 }))
-                                .tooltip(|cx| Tooltip::text("Delete from Recent Projects...", cx)),
+                                .tooltip(|window, cx| {
+                                    Tooltip::text("Delete from Recent Projects...", cx)
+                                }),
                         )
                         .into_any_element();
 
@@ -443,7 +445,7 @@ impl PickerDelegate for RecentProjectsDelegate {
                         el.end_hover_slot::<AnyElement>(delete_button)
                     }
                 })
-                .tooltip(move |cx| {
+                .tooltip(move |window, cx| {
                     let tooltip_highlighted_location = highlighted_match.clone();
                     cx.new_view(move |_| MatchTooltip {
                         highlighted_location: tooltip_highlighted_location,
@@ -465,12 +467,14 @@ impl PickerDelegate for RecentProjectsDelegate {
                 .child(
                     Button::new("remote", "Open Remote Folder")
                         .key_binding(KeyBinding::for_action(&OpenRemote, cx))
-                        .on_click(|_, cx| cx.dispatch_action(OpenRemote.boxed_clone())),
+                        .on_click(|_, window, cx| cx.dispatch_action(OpenRemote.boxed_clone())),
                 )
                 .child(
                     Button::new("local", "Open Local Folder")
                         .key_binding(KeyBinding::for_action(&workspace::Open, cx))
-                        .on_click(|_, cx| cx.dispatch_action(workspace::Open.boxed_clone())),
+                        .on_click(|_, window, cx| {
+                            cx.dispatch_action(workspace::Open.boxed_clone())
+                        }),
                 )
                 .into_any(),
         )
@@ -623,25 +627,27 @@ mod tests {
 
         let workspace = cx.update(|cx| cx.windows()[0].downcast::<Workspace>().unwrap());
         workspace
-            .update(cx, |workspace, _| assert!(!workspace.is_edited()))
+            .update(
+                cx,
+                |workspace, _window, _cx| assert!(!workspace.is_edited()),
+            )
             .unwrap();
 
-        let editor = workspace
-            .read_with(cx, |workspace, cx| {
-                workspace
-                    .active_item(cx)
-                    .unwrap()
-                    .downcast::<Editor>()
-                    .unwrap()
-            })
-            .unwrap();
+        let editor = workspace.read_with(cx, |workspace, window, cx| {
+            workspace
+                .active_item(cx)
+                .unwrap()
+                .downcast::<Editor>()
+                .unwrap()
+        });
+
         workspace
             .update(cx, |_, window, cx| {
                 editor.update(cx, |editor, cx| editor.insert("EDIT", cx));
             })
             .unwrap();
         workspace
-            .update(cx, |workspace, _| assert!(workspace.is_edited(), "After inserting more text into the editor without saving, we should have a dirty project"))
+            .update(cx, |workspace, _window, _cx| assert!(workspace.is_edited(), "After inserting more text into the editor without saving, we should have a dirty project"))
             .unwrap();
 
         let recent_projects_picker = open_recent_projects(&workspace, cx);
@@ -688,7 +694,7 @@ mod tests {
             "Should have no pending prompt after cancelling"
         );
         workspace
-            .update(cx, |workspace, _| {
+            .update(cx, |workspace, _window, _cx| {
                 assert!(
                     workspace.is_edited(),
                     "Should be in the same dirty project after cancelling"

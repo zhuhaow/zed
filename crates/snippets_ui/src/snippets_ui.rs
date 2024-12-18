@@ -25,6 +25,7 @@ fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
 fn configure_snippets(
     workspace: &mut Workspace,
     _: &ConfigureSnippets,
+    window: &mut Window,
     cx: &mut ViewContext<Workspace>,
 ) {
     let language_registry = workspace.app_state().languages.clone();
@@ -58,7 +59,7 @@ impl ScopeSelector {
         let delegate =
             ScopeSelectorDelegate::new(workspace, cx.view().downgrade(), language_registry);
 
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
 
         Self { picker }
     }

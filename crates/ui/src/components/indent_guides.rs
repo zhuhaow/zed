@@ -42,7 +42,7 @@ pub struct IndentGuides {
             ) -> SmallVec<[RenderedIndentGuide; 12]>,
         >,
     >,
-    on_click: Option<Rc<dyn Fn(&IndentGuideLayout, &mut WindowContext)>>,
+    on_click: Option<Rc<dyn Fn(&IndentGuideLayout, &mut Window, &mut WindowContext)>>,
 }
 
 pub fn indent_guides<V: Render>(
@@ -68,7 +68,7 @@ impl IndentGuides {
     /// Sets the callback that will be called when the user clicks on an indent guide.
     pub fn on_click(
         mut self,
-        on_click: impl Fn(&IndentGuideLayout, &mut WindowContext) + 'static,
+        on_click: impl Fn(&IndentGuideLayout, &mut Window, &mut WindowContext) + 'static,
     ) -> Self {
         self.on_click = Some(Rc::new(on_click));
         self
@@ -200,14 +200,16 @@ mod uniform_list {
     struct IndentGuidesElement {
         colors: IndentGuideColors,
         indent_guides: Rc<SmallVec<[RenderedIndentGuide; 12]>>,
-        on_hovered_indent_guide_click: Option<Rc<dyn Fn(&IndentGuideLayout, &mut WindowContext)>>,
+        on_hovered_indent_guide_click:
+            Option<Rc<dyn Fn(&IndentGuideLayout, &mut Window, &mut WindowContext)>>,
     }
 
     enum IndentGuidesElementPrepaintState {
         Static,
         Interactive {
             hitboxes: Rc<SmallVec<[Hitbox; 12]>>,
-            on_hovered_indent_guide_click: Rc<dyn Fn(&IndentGuideLayout, &mut WindowContext)>,
+            on_hovered_indent_guide_click:
+                Rc<dyn Fn(&IndentGuideLayout, &mut Window, &mut WindowContext)>,
         },
     }
 
@@ -297,7 +299,7 @@ mod uniform_list {
                                 };
 
                                 let active_indent_guide = &indent_guides[active_hitbox_ix].layout;
-                                on_hovered_indent_guide_click(active_indent_guide, cx);
+                                on_hovered_indent_guide_click(active_indent_guide, window, cx);
 
                                 cx.stop_propagation();
                                 cx.prevent_default();

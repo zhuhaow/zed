@@ -276,7 +276,7 @@ pub fn setup_editor_session_actions(editor: &mut Editor, editor_handle: WeakView
     editor
         .register_action({
             let editor_handle = editor_handle.clone();
-            move |_: &ClearOutputs, cx| {
+            move |_: &ClearOutputs, window, cx| {
                 if !JupyterSettings::enabled(cx) {
                     return;
                 }
@@ -289,7 +289,7 @@ pub fn setup_editor_session_actions(editor: &mut Editor, editor_handle: WeakView
     editor
         .register_action({
             let editor_handle = editor_handle.clone();
-            move |_: &Interrupt, cx| {
+            move |_: &Interrupt, window, cx| {
                 if !JupyterSettings::enabled(cx) {
                     return;
                 }
@@ -302,7 +302,7 @@ pub fn setup_editor_session_actions(editor: &mut Editor, editor_handle: WeakView
     editor
         .register_action({
             let editor_handle = editor_handle.clone();
-            move |_: &Shutdown, cx| {
+            move |_: &Shutdown, window, cx| {
                 if !JupyterSettings::enabled(cx) {
                     return;
                 }
@@ -315,7 +315,7 @@ pub fn setup_editor_session_actions(editor: &mut Editor, editor_handle: WeakView
     editor
         .register_action({
             let editor_handle = editor_handle.clone();
-            move |_: &Restart, cx| {
+            move |_: &Restart, window, cx| {
                 if !JupyterSettings::enabled(cx) {
                     return;
                 }

@@ -208,9 +208,9 @@ pub struct NewPathDelegate {
 
 impl NewPathPrompt {
     pub(crate) fn register(workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>) {
-        workspace.set_prompt_for_new_path(Box::new(|workspace, cx| {
+        workspace.set_prompt_for_new_path(Box::new(move |workspace, cx| {
             let (tx, rx) = futures::channel::oneshot::channel();
-            Self::prompt_for_new_path(workspace, tx, cx);
+            Self::prompt_for_new_path(workspace, tx, todo!());
             rx
         }));
     }
@@ -232,7 +232,7 @@ impl NewPathPrompt {
                 should_dismiss: true,
             };
 
-            Picker::uniform_list(delegate, window, cx).width(rems(34.))
+            Picker::uniform_list(delegate, cx).width(rems(34.))
         });
     }
 }

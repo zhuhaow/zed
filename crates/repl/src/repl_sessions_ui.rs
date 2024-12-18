@@ -30,7 +30,7 @@ actions!(
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
         |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
-            workspace.register_action(|workspace, _: &Sessions, cx| {
+            workspace.register_action(|workspace, _: &Sessions, window, cx| {
                 let existing = workspace
                     .active_pane()
                     .read(cx)
@@ -45,7 +45,7 @@ pub fn init(cx: &mut AppContext) {
                 }
             });
 
-            workspace.register_action(|_workspace, _: &RefreshKernelspecs, cx| {
+            workspace.register_action(|_workspace, _: &RefreshKernelspecs, window, cx| {
                 let store = ReplStore::global(cx);
                 store.update(cx, |store, cx| {
                     store.refresh_kernelspecs(cx).detach();
@@ -99,7 +99,7 @@ pub fn init(cx: &mut AppContext) {
             editor
                 .register_action({
                     let editor_handle = editor_handle.clone();
-                    move |_: &Run, cx| {
+                    move |_: &Run, window, cx| {
                         if !JupyterSettings::enabled(cx) {
                             return;
                         }
@@ -112,7 +112,7 @@ pub fn init(cx: &mut AppContext) {
             editor
                 .register_action({
                     let editor_handle = editor_handle.clone();
-                    move |_: &RunInPlace, cx| {
+                    move |_: &RunInPlace, window, cx| {
                         if !JupyterSettings::enabled(cx) {
                             return;
                         }
@@ -137,8 +137,8 @@ impl ReplSessionsPage {
             let focus_handle = cx.focus_handle();
 
             let subscriptions = vec![
-                cx.on_focus_in(&focus_handle, |_this, cx| cx.notify()),
-                cx.on_focus_out(&focus_handle, |_this, _event, cx| cx.notify()),
+                cx.on_focus_in(&focus_handle, |_this, window, cx| cx.notify()),
+                cx.on_focus_out(&focus_handle, |_this, _event, window, cx| cx.notify()),
             ];
 
             Self {
@@ -214,7 +214,7 @@ impl Render for ReplSessionsPage {
                             .size(ButtonSize::Large)
                             .layer(ElevationIndex::ModalSurface)
                             .child(Label::new("Install Kernels"))
-                            .on_click(move |_, cx| {
+                            .on_click(move |_, window, cx| {
                                 cx.open_url(
                                     "https://zed.dev/docs/repl#language-specific-instructions",
                                 )

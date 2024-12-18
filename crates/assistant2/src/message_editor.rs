@@ -180,7 +180,7 @@ impl MessageEditor {
                                 .size(IconSize::XSmall),
                         ),
                 )
-                .tooltip(move |cx| {
+                .tooltip(move |window, cx| {
                     Tooltip::for_action_in("Change Model", &ToggleModelSelector, &focus_handle, cx)
                 }),
         )
@@ -203,9 +203,9 @@ impl Render for MessageEditor {
 
         v_flex()
             .key_context("MessageEditor")
-            .on_action(cx.listener(Self::chat))
-            .on_action(cx.listener(Self::toggle_model_selector))
-            .on_action(cx.listener(Self::toggle_context_picker))
+            .on_action(cx.listener2(Self::chat))
+            .on_action(cx.listener2(Self::toggle_model_selector))
+            .on_action(cx.listener2(Self::toggle_context_picker))
             .size_full()
             .gap_2()
             .p_2()
@@ -240,7 +240,7 @@ impl Render for MessageEditor {
                         "use-tools",
                         Label::new("Tools"),
                         self.use_tools.into(),
-                        cx.listener(|this, selection, _cx| {
+                        cx.listener2(|this, selection, _cx| {
                             this.use_tools = match selection {
                                 ToggleState::Selected => true,
                                 ToggleState::Unselected | ToggleState::Indeterminate => false,
@@ -260,7 +260,7 @@ impl Render for MessageEditor {
                                         KeyBinding::for_action_in(&Chat, &focus_handle, cx)
                                             .map(|binding| binding.into_any_element()),
                                     )
-                                    .on_click(move |_event, cx| {
+                                    .on_click(move |_event, window, cx| {
                                         focus_handle.dispatch_action(&Chat, cx);
                                     }),
                             ),

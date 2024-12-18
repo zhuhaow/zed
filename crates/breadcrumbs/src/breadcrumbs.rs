@@ -92,13 +92,13 @@ impl Render for Breadcrumbs {
                     .style(ButtonStyle::Transparent)
                     .on_click({
                         let editor = editor.clone();
-                        move |_, cx| {
+                        move |_, window, cx| {
                             if let Some(editor) = editor.upgrade() {
-                                outline::toggle(editor, &editor::actions::ToggleOutline, cx)
+                                outline::toggle(editor, &editor::actions::ToggleOutline, window, cx)
                             }
                         }
                     })
-                    .tooltip(move |cx| {
+                    .tooltip(move |window, cx| {
                         if let Some(editor) = editor.upgrade() {
                             let focus_handle = editor.read(cx).focus_handle(cx);
                             Tooltip::for_action_in(

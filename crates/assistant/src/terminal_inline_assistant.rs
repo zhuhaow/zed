@@ -503,14 +503,16 @@ impl Render for PromptEditor {
                     IconButton::new("cancel", IconName::Close)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
+                        .tooltip(|window, cx| {
+                            Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
+                        })
                         .on_click(cx.listener(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         })),
                     IconButton::new("start", IconName::SparkleAlt)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| Tooltip::for_action("Generate", &menu::Confirm, cx))
+                        .tooltip(|window, cx| Tooltip::for_action("Generate", &menu::Confirm, cx))
                         .on_click(cx.listener(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::StartRequested)
                         })),
@@ -521,14 +523,14 @@ impl Render for PromptEditor {
                     IconButton::new("cancel", IconName::Close)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| Tooltip::text("Cancel Assist", cx))
+                        .tooltip(|window, cx| Tooltip::text("Cancel Assist", cx))
                         .on_click(cx.listener(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         })),
                     IconButton::new("stop", IconName::Stop)
                         .icon_color(Color::Error)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| {
+                        .tooltip(|window, cx| {
                             Tooltip::with_meta(
                                 "Interrupt Generation",
                                 Some(&menu::Cancel),
@@ -545,7 +547,7 @@ impl Render for PromptEditor {
                 let cancel = IconButton::new("cancel", IconName::Close)
                     .icon_color(Color::Muted)
                     .shape(IconButtonShape::Square)
-                    .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
+                    .tooltip(|window, cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
                     .on_click(
                         cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)),
                     );
@@ -557,7 +559,7 @@ impl Render for PromptEditor {
                         IconButton::new("restart", IconName::RotateCw)
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
-                            .tooltip(|cx| {
+                            .tooltip(|window, cx| {
                                 Tooltip::with_meta(
                                     "Restart Generation",
                                     Some(&menu::Confirm),
@@ -575,7 +577,7 @@ impl Render for PromptEditor {
                         IconButton::new("accept", IconName::Check)
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
-                            .tooltip(|cx| {
+                            .tooltip(|window, cx| {
                                 Tooltip::for_action("Accept Generated Command", &menu::Confirm, cx)
                             })
                             .on_click(cx.listener(|_, _, window, cx| {
@@ -584,7 +586,7 @@ impl Render for PromptEditor {
                         IconButton::new("confirm", IconName::Play)
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
-                            .tooltip(|cx| {
+                            .tooltip(|window, cx| {
                                 Tooltip::for_action(
                                     "Execute Generated Command",
                                     &menu::SecondaryConfirm,
@@ -606,11 +608,11 @@ impl Render for PromptEditor {
             .py_2()
             .h_full()
             .w_full()
-            .on_action(cx.listener(Self::confirm))
-            .on_action(cx.listener(Self::secondary_confirm))
-            .on_action(cx.listener(Self::cancel))
-            .on_action(cx.listener(Self::move_up))
-            .on_action(cx.listener(Self::move_down))
+            .on_action(cx.listener2(Self::confirm))
+            .on_action(cx.listener2(Self::secondary_confirm))
+            .on_action(cx.listener2(Self::cancel))
+            .on_action(cx.listener2(Self::move_up))
+            .on_action(cx.listener2(Self::move_down))
             .child(
                 h_flex()
                     .w_12()
@@ -622,7 +624,7 @@ impl Render for PromptEditor {
                             .shape(IconButtonShape::Square)
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
-                            .tooltip(move |cx| {
+                            .tooltip(move |window, cx| {
                                 Tooltip::with_meta(
                                     format!(
                                         "Using {}",
@@ -643,7 +645,9 @@ impl Render for PromptEditor {
                             Some(
                                 div()
                                     .id("error")
-                                    .tooltip(move |cx| Tooltip::text(error_message.clone(), cx))
+                                    .tooltip(move |window, cx| {
+                                        Tooltip::text(error_message.clone(), cx)
+                                    })
                                     .child(
                                         Icon::new(IconName::XCircle)
                                             .size(IconSize::Small)
@@ -967,7 +971,7 @@ impl PromptEditor {
             );
         if let Some(workspace) = self.workspace.clone() {
             token_count = token_count
-                .tooltip(|cx| {
+                .tooltip(|window, cx| {
                     Tooltip::with_meta(
                         "Tokens Used by Inline Assistant",
                         None,
@@ -976,8 +980,10 @@ impl PromptEditor {
                     )
                 })
                 .cursor_pointer()
-                .on_mouse_down(gpui::MouseButton::Left, |_, cx| cx.stop_propagation())
-                .on_click(move |_, cx| {
+                .on_mouse_down(gpui::MouseButton::Left, |_, window, cx| {
+                    cx.stop_propagation()
+                })
+                .on_click(move |_, window, cx| {
                     cx.stop_propagation();
                     workspace
                         .update(cx, |workspace, cx| {
@@ -988,7 +994,7 @@ impl PromptEditor {
         } else {
             token_count = token_count
                 .cursor_default()
-                .tooltip(|cx| Tooltip::text("Tokens Used by Inline Assistant", cx));
+                .tooltip(|window, cx| Tooltip::text("Tokens Used by Inline Assistant", cx));
         }
 
         Some(token_count)

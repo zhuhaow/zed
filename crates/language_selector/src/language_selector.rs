@@ -31,7 +31,7 @@ pub struct LanguageSelector {
 
 impl LanguageSelector {
     fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
-        workspace.register_action(move |workspace, _: &Toggle, cx| {
+        workspace.register_action(move |workspace, _: &Toggle, window, cx| {
             Self::toggle(workspace, cx);
         });
     }

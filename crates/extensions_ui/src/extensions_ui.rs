@@ -676,7 +676,7 @@ impl ExtensionsPage {
                         extension_versions,
                     );
 
-                    ExtensionVersionSelector::new(delegate, window, cx)
+                    ExtensionVersionSelector::new(delegate, cx)
                 });
             })?;
 
@@ -751,7 +751,7 @@ impl ExtensionsPage {
                             .when(!is_compatible, |upgrade_button| {
                                 upgrade_button.disabled(true).tooltip({
                                     let version = extension.manifest.version.clone();
-                                    move |cx| {
+                                    move |window, cx| {
                                         Tooltip::text(
                                             format!(
                                                 "v{version} is not compatible with this version of Zed.",
@@ -769,7 +769,7 @@ impl ExtensionsPage {
                                     this.telemetry.report_app_event(
                                         "extensions: install extension".to_string(),
                                     );
-                                    ExtensionStore::global(cx).update(cx, |store, window, cx| {
+                                    ExtensionStore::global(cx).update(cx, |store, cx| {
                                         store
                                             .upgrade_extension(
                                                 extension_id.clone(),

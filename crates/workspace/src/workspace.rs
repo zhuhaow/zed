@@ -890,7 +890,7 @@ impl Workspace {
         })
         .detach();
 
-        cx.on_focus_lost(|this, cx| {
+        cx.on_focus_lost(|this, window, cx| {
             let focus_handle = this.focus_handle(cx);
             cx.focus(&focus_handle);
         })
@@ -3083,7 +3083,7 @@ impl Workspace {
         self.last_active_center_pane = Some(pane.downgrade());
     }
 
-    fn handle_panel_focused(&mut self, cx: &mut ViewContext<Self>) {
+    fn handle_panel_focused(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.update_active_view_for_followers(cx);
     }
 
@@ -4583,6 +4583,22 @@ impl Workspace {
             let callback = callback.clone();
             div.on_action(cx.listener(move |workspace, event, window, cx| {
                 (callback.clone())(workspace, event, window, cx)
+            }))
+        }));
+        self
+    }
+
+    // todo! rename me!
+    pub fn register_action2<A: Action>(
+        &mut self,
+        callback: impl Fn(&mut Self, &A, &mut ViewContext<Self>) + 'static,
+    ) -> &mut Self {
+        let callback = Arc::new(callback);
+
+        self.workspace_actions.push(Box::new(move |div, cx| {
+            let callback = callback.clone();
+            div.on_action(cx.listener(move |workspace, event, _window, cx| {
+                (callback.clone())(workspace, event, cx)
             }))
         }));
         self

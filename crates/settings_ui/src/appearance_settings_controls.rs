@@ -372,7 +372,7 @@ impl RenderOnce for UiFontLigaturesControl {
             "ui-font-ligatures",
             Label::new(self.name()),
             value.into(),
-            |selection, cx| {
+            |selection, window, cx| {
                 Self::write(
                     match selection {
                         ToggleState::Selected => true,

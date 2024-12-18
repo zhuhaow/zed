@@ -37,7 +37,6 @@ impl ChannelModal {
         channel_store: Model<ChannelStore>,
         channel_id: ChannelId,
         mode: Mode,
-        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         cx.observe(&channel_store, |_, _, cx| cx.notify()).detach();
@@ -58,7 +57,6 @@ impl ChannelModal {
                     has_all_members: false,
                     mode,
                 },
-                window,
                 cx,
             )
             .modal(false)

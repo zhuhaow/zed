@@ -1403,7 +1403,9 @@ impl EditorInlineAssists {
                 editor.update(cx, |editor, cx| {
                     let editor_handle = cx.view().downgrade();
                     editor.register_action(
-                        move |_: &editor::actions::Newline, cx: &mut WindowContext| {
+                        move |_: &editor::actions::Newline,
+                              window: &mut Window,
+                              cx: &mut WindowContext| {
                             InlineAssistant::update_global(cx, |this, cx| {
                                 if let Some(editor) = editor_handle.upgrade() {
                                     this.handle_editor_newline(editor, cx)
@@ -1415,7 +1417,9 @@ impl EditorInlineAssists {
                 editor.update(cx, |editor, cx| {
                     let editor_handle = cx.view().downgrade();
                     editor.register_action(
-                        move |_: &editor::actions::Cancel, cx: &mut WindowContext| {
+                        move |_: &editor::actions::Cancel,
+                              window: &mut Window,
+                              cx: &mut WindowContext| {
                             InlineAssistant::update_global(cx, |this, cx| {
                                 if let Some(editor) = editor_handle.upgrade() {
                                     this.handle_editor_cancel(editor, cx)
@@ -1518,7 +1522,9 @@ impl Render for PromptEditor {
                     IconButton::new("cancel", IconName::Close)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
+                        .tooltip(|window, cx| {
+                            Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
+                        })
                         .on_click(cx.listener(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
@@ -1526,7 +1532,7 @@ impl Render for PromptEditor {
                     IconButton::new("start", IconName::SparkleAlt)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| Tooltip::for_action("Transform", &menu::Confirm, cx))
+                        .tooltip(|window, cx| Tooltip::for_action("Transform", &menu::Confirm, cx))
                         .on_click(cx.listener(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::StartRequested)
                         }))
@@ -1538,7 +1544,7 @@ impl Render for PromptEditor {
                     IconButton::new("cancel", IconName::Close)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| Tooltip::text("Cancel Assist", cx))
+                        .tooltip(|window, cx| Tooltip::text("Cancel Assist", cx))
                         .on_click(cx.listener(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
@@ -1546,7 +1552,7 @@ impl Render for PromptEditor {
                     IconButton::new("stop", IconName::Stop)
                         .icon_color(Color::Error)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| {
+                        .tooltip(|window, cx| {
                             Tooltip::with_meta(
                                 "Interrupt Transformation",
                                 Some(&menu::Cancel),
@@ -1567,7 +1573,9 @@ impl Render for PromptEditor {
                     IconButton::new("cancel", IconName::Close)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
-                        .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
+                        .tooltip(|window, cx| {
+                            Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
+                        })
                         .on_click(cx.listener(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
@@ -1576,7 +1584,7 @@ impl Render for PromptEditor {
                         IconButton::new("restart", IconName::RotateCw)
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
-                            .tooltip(|cx| {
+                            .tooltip(|window, cx| {
                                 Tooltip::with_meta(
                                     "Restart Transformation",
                                     Some(&menu::Confirm),
@@ -1592,7 +1600,9 @@ impl Render for PromptEditor {
                         IconButton::new("confirm", IconName::Check)
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
-                            .tooltip(|cx| Tooltip::for_action("Confirm Assist", &menu::Confirm, cx))
+                            .tooltip(|window, cx| {
+                                Tooltip::for_action("Confirm Assist", &menu::Confirm, cx)
+                            })
                             .on_click(cx.listener(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested);
                             }))
@@ -1613,13 +1623,13 @@ impl Render for PromptEditor {
                     .bg(cx.theme().colors().editor_background)
                     .block_mouse_down()
                     .cursor(CursorStyle::Arrow)
-                    .on_action(cx.listener(Self::toggle_context_picker))
-                    .on_action(cx.listener(Self::confirm))
-                    .on_action(cx.listener(Self::cancel))
-                    .on_action(cx.listener(Self::move_up))
-                    .on_action(cx.listener(Self::move_down))
-                    .capture_action(cx.listener(Self::cycle_prev))
-                    .capture_action(cx.listener(Self::cycle_next))
+                    .on_action(cx.listener2(Self::toggle_context_picker))
+                    .on_action(cx.listener2(Self::confirm))
+                    .on_action(cx.listener2(Self::cancel))
+                    .on_action(cx.listener2(Self::move_up))
+                    .on_action(cx.listener2(Self::move_down))
+                    .capture_action(cx.listener2(Self::cycle_prev))
+                    .capture_action(cx.listener2(Self::cycle_next))
                     .child(
                         h_flex()
                             .w(gutter_dimensions.full_width() + (gutter_dimensions.margin / 2.0))
@@ -1631,7 +1641,7 @@ impl Render for PromptEditor {
                                     .shape(IconButtonShape::Square)
                                     .icon_size(IconSize::Small)
                                     .icon_color(Color::Muted)
-                                    .tooltip(move |cx| {
+                                    .tooltip(move |window, cx| {
                                         Tooltip::with_meta(
                                             format!(
                                                 "Using {}",
@@ -1667,7 +1677,7 @@ impl Render for PromptEditor {
                                                 .shape(IconButtonShape::Square)
                                                 .icon_size(IconSize::Small)
                                                 .on_click(
-                                                    cx.listener(Self::toggle_rate_limit_notice),
+                                                    cx.listener2(Self::toggle_rate_limit_notice),
                                                 ),
                                             )
                                             .children(self.show_rate_limit_notice.then(|| {
@@ -1686,7 +1696,7 @@ impl Render for PromptEditor {
                                     el.child(
                                         div()
                                             .id("error")
-                                            .tooltip(move |cx| {
+                                            .tooltip(move |window, cx| {
                                                 Tooltip::text(error_message.clone(), cx)
                                             })
                                             .child(
@@ -2054,7 +2064,7 @@ impl PromptEditor {
                     .shape(IconButtonShape::Square)
                     .tooltip({
                         let focus_handle = self.editor.focus_handle(cx);
-                        move |cx| {
+                        move |window, cx| {
                             cx.new_view(|cx| {
                                 let mut tooltip = Tooltip::new("Previous Alternative").key_binding(
                                     KeyBinding::for_action_in(
@@ -2073,7 +2083,7 @@ impl PromptEditor {
                     })
                     .on_click(cx.listener(|this, _, window, cx| {
                         this.codegen
-                            .update(cx, |codegen, window, cx| codegen.cycle_prev(cx))
+                            .update(cx, |codegen, cx| codegen.cycle_prev(cx))
                     })),
             )
             .child(
@@ -2096,7 +2106,7 @@ impl PromptEditor {
                     .shape(IconButtonShape::Square)
                     .tooltip({
                         let focus_handle = self.editor.focus_handle(cx);
-                        move |cx| {
+                        move |window, cx| {
                             cx.new_view(|cx| {
                                 let mut tooltip = Tooltip::new("Next Alternative").key_binding(
                                     KeyBinding::for_action_in(
@@ -2115,7 +2125,7 @@ impl PromptEditor {
                     })
                     .on_click(cx.listener(|this, _, window, cx| {
                         this.codegen
-                            .update(cx, |codegen, window, cx| codegen.cycle_next(cx))
+                            .update(cx, |codegen, cx| codegen.cycle_next(cx))
                     })),
             )
             .into_any_element()
@@ -2145,7 +2155,7 @@ impl PromptEditor {
                             } else {
                                 ui::ToggleState::Unselected
                             },
-                            |selection, cx| {
+                            |selection, window, cx| {
                                 let is_dismissed = match selection {
                                     ui::ToggleState::Unselected => false,
                                     ui::ToggleState::Indeterminate => return,
@@ -2161,10 +2171,10 @@ impl PromptEditor {
                                 .child(
                                     Button::new("dismiss", "Dismiss")
                                         .style(ButtonStyle::Transparent)
-                                        .on_click(cx.listener(Self::toggle_rate_limit_notice)),
+                                        .on_click(cx.listener2(Self::toggle_rate_limit_notice)),
                                 )
                                 .child(Button::new("more-info", "More Info").on_click(
-                                    |_event, cx| {
+                                    |_event, window, cx| {
                                         cx.dispatch_action(Box::new(
                                             zed_actions::OpenAccountSettings,
                                         ))
@@ -2272,12 +2282,12 @@ impl InlineAssist {
             codegen: codegen.clone(),
             workspace: workspace.clone(),
             _subscriptions: vec![
-                cx.on_focus_in(&prompt_editor_focus_handle, move |cx| {
+                cx.on_focus_in(&prompt_editor_focus_handle, move |window, cx| {
                     InlineAssistant::update_global(cx, |this, cx| {
                         this.handle_prompt_editor_focus_in(assist_id, cx)
                     })
                 }),
-                cx.on_focus_out(&prompt_editor_focus_handle, move |_, cx| {
+                cx.on_focus_out(&prompt_editor_focus_handle, move |_, window, cx| {
                     InlineAssistant::update_global(cx, |this, cx| {
                         this.handle_prompt_editor_focus_out(assist_id, cx)
                     })

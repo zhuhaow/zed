@@ -631,7 +631,7 @@ impl ChatPanel {
                                 .child(
                                     IconButton::new(("edit", message_id), IconName::Pencil)
                                         .on_click(cx.listener(move |this, _, window, cx| {
-                                            this.message_editor.update(cx, |editor, window, cx| {
+                                            this.message_editor.update(cx, |editor, cx| {
                                                 editor.clear_reply_to_message_id();
 
                                                 let message = this

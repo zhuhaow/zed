@@ -72,24 +72,27 @@ pub fn init(cx: &mut AppContext) {
 
 impl FileFinder {
     fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
-        workspace.register_action(|workspace, action: &workspace::ToggleFileFinder, cx| {
-            let Some(file_finder) = workspace.active_modal::<Self>(cx) else {
-                Self::open(workspace, action.separate_history, cx).detach();
-                return;
-            };
+        workspace.register_action(
+            |workspace, action: &workspace::ToggleFileFinder, window, cx| {
+                let Some(file_finder) = workspace.active_modal::<Self>(cx) else {
+                    Self::open(workspace, action.separate_history, window, cx).detach();
+                    return;
+                };
 
-            file_finder.update(cx, |file_finder, cx| {
-                file_finder.init_modifiers = Some(cx.modifiers());
-                file_finder.picker.update(cx, |picker, cx| {
-                    picker.cycle_selection(cx);
+                file_finder.update(cx, |file_finder, cx| {
+                    file_finder.init_modifiers = Some(cx.modifiers());
+                    file_finder.picker.update(cx, |picker, cx| {
+                        picker.cycle_selection(cx);
+                    });
                 });
-            });
-        });
+            },
+        );
     }
 
     fn open(
         workspace: &mut Workspace,
         separate_history: bool,
+        window: &Window,
         cx: &mut ViewContext<Workspace>,
     ) -> Task<()> {
         let project = workspace.project().read(cx);
@@ -130,11 +133,13 @@ impl FileFinder {
                 }
             })
             .collect::<Vec<_>>();
+
+        let window_handle = window.handle();
         cx.spawn(move |workspace, mut cx| async move {
             let history_items = join_all(history_items).await.into_iter().flatten();
 
             workspace
-                .update(&mut cx, |workspace, cx| {
+                .update_in_window(window_handle, &mut cx, |workspace, window, cx| {
                     let project = workspace.project().clone();
                     let weak_workspace = cx.view().downgrade();
                     workspace.toggle_modal(cx, |cx| {
@@ -156,7 +161,7 @@ impl FileFinder {
     }
 
     fn new(delegate: FileFinderDelegate, window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
         let picker_focus_handle = picker.focus_handle(cx);
         picker.update(cx, |picker, _| {
             picker.delegate.focus_handle = picker_focus_handle.clone();
@@ -171,6 +176,7 @@ impl FileFinder {
     fn handle_modifiers_changed(
         &mut self,
         event: &ModifiersChangedEvent,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         let Some(init_modifiers) = self.init_modifiers.take() else {

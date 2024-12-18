@@ -41,7 +41,7 @@ impl BranchList {
             let delegate = BranchListDelegate::new(this.clone(), 70, &cx).await?;
 
             this.update(&mut cx, |workspace, cx| {
-                workspace.toggle_modal(cx, |cx| BranchList::new(delegate, 34., window, cx))
+                workspace.toggle_modal(cx, |cx| BranchList::new(delegate, 34., cx))
             })?;
 
             Ok(())
@@ -49,13 +49,8 @@ impl BranchList {
         .detach_and_prompt_err("Failed to read branches", cx, |_, _| None)
     }
 
-    fn new(
-        delegate: BranchListDelegate,
-        rem_width: f32,
-        window: &mut Window,
-        cx: &mut ViewContext<Self>,
-    ) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
+    fn new(delegate: BranchListDelegate, rem_width: f32, cx: &mut ViewContext<Self>) -> Self {
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
         let _subscription = cx.subscribe(&picker, |_, _, _, cx| cx.emit(DismissEvent));
         Self {
             picker,
@@ -80,7 +75,7 @@ impl Render for BranchList {
             .child(self.picker.clone())
             .on_mouse_down_out(cx.listener(|this, _, window, cx| {
                 this.picker.update(cx, |this, cx| {
-                    this.cancel(&Default::default(), window, cx);
+                    this.cancel(&Default::default(), cx);
                 })
             }))
     }
