@@ -148,10 +148,10 @@ impl RenderOnce for BufferFontSizeControl {
             .child(NumericStepper::new(
                 "buffer-font-size",
                 value.to_string(),
-                move |_, cx| {
+                move |_, window, cx| {
                     Self::write(value - px(1.), cx);
                 },
-                move |_, cx| {
+                move |_, window, cx| {
                     Self::write(value + px(1.), cx);
                 },
             ))

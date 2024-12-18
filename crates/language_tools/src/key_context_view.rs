@@ -180,15 +180,15 @@ impl Render for KeyContextView {
             .key_context("KeyContextView")
             .on_mouse_up_out(
                 MouseButton::Left,
-                cx.listener(|this, _, cx| {
+                cx.listener(|this, _, window, cx| {
                     this.last_keystrokes.take();
                     this.set_context_stack(cx.context_stack(), cx);
                 }),
             )
             .on_mouse_up_out(
                 MouseButton::Right,
-                cx.listener(|_, _, cx| {
-                    cx.defer(|this, cx| {
+                cx.listener(|_, _, window, cx| {
+                    cx.defer(|this, window, cx| {
                         this.last_keystrokes.take();
                         this.set_context_stack(cx.context_stack(), cx);
                     });

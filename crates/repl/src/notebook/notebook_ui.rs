@@ -443,13 +443,19 @@ impl Render for NotebookEditor {
         div()
             .key_context("notebook")
             .track_focus(&self.focus_handle)
-            .on_action(cx.listener(|this, &OpenNotebook, cx| this.open_notebook(&OpenNotebook, cx)))
-            .on_action(cx.listener(|this, &ClearOutputs, cx| this.clear_outputs(cx)))
-            .on_action(cx.listener(|this, &RunAll, cx| this.run_cells(cx)))
-            .on_action(cx.listener(|this, &MoveCellUp, cx| this.move_cell_up(cx)))
-            .on_action(cx.listener(|this, &MoveCellDown, cx| this.move_cell_down(cx)))
-            .on_action(cx.listener(|this, &AddMarkdownBlock, cx| this.add_markdown_block(cx)))
-            .on_action(cx.listener(|this, &AddCodeBlock, cx| this.add_code_block(cx)))
+            .on_action(
+                cx.listener(|this, &OpenNotebook, window, cx| {
+                    this.open_notebook(&OpenNotebook, cx)
+                }),
+            )
+            .on_action(cx.listener(|this, &ClearOutputs, window, cx| this.clear_outputs(cx)))
+            .on_action(cx.listener(|this, &RunAll, window, cx| this.run_cells(cx)))
+            .on_action(cx.listener(|this, &MoveCellUp, window, cx| this.move_cell_up(cx)))
+            .on_action(cx.listener(|this, &MoveCellDown, window, cx| this.move_cell_down(cx)))
+            .on_action(
+                cx.listener(|this, &AddMarkdownBlock, window, cx| this.add_markdown_block(cx)),
+            )
+            .on_action(cx.listener(|this, &AddCodeBlock, window, cx| this.add_code_block(cx)))
             .on_action(cx.listener(Self::select_next))
             .on_action(cx.listener(Self::select_previous))
             .on_action(cx.listener(Self::select_first))

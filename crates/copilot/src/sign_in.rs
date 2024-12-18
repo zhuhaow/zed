@@ -136,7 +136,7 @@ impl CopilotCodeVerification {
             .justify_between()
             .on_mouse_down(gpui::MouseButton::Left, {
                 let user_code = data.user_code.clone();
-                move |_, cx| {
+                move |_, window, cx| {
                     cx.write_to_clipboard(ClipboardItem::new_string(user_code.clone()));
                     cx.refresh();
                 }
@@ -177,7 +177,7 @@ impl CopilotCodeVerification {
                 Button::new("connect-button", connect_button_label)
                     .on_click({
                         let verification_uri = data.verification_uri.clone();
-                        cx.listener(move |this, _, cx| {
+                        cx.listener(move |this, _, window, cx| {
                             cx.open_url(&verification_uri);
                             this.connect_clicked = true;
                         })
@@ -188,7 +188,7 @@ impl CopilotCodeVerification {
             .child(
                 Button::new("copilot-enable-cancel-button", "Cancel")
                     .full_width()
-                    .on_click(cx.listener(|_, _, cx| cx.emit(DismissEvent))),
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(DismissEvent))),
             )
     }
     fn render_enabled_modal(cx: &mut ViewContext<Self>) -> impl Element {
@@ -201,7 +201,7 @@ impl CopilotCodeVerification {
             .child(
                 Button::new("copilot-enabled-done-button", "Done")
                     .full_width()
-                    .on_click(cx.listener(|_, _, cx| cx.emit(DismissEvent))),
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(DismissEvent))),
             )
     }
 
@@ -215,12 +215,12 @@ impl CopilotCodeVerification {
             .child(
                 Button::new("copilot-subscribe-button", "Subscribe on GitHub")
                     .full_width()
-                    .on_click(|_, cx| cx.open_url(COPILOT_SIGN_UP_URL)),
+                    .on_click(|_, window, cx| cx.open_url(COPILOT_SIGN_UP_URL)),
             )
             .child(
                 Button::new("copilot-subscribe-cancel-button", "Cancel")
                     .full_width()
-                    .on_click(cx.listener(|_, _, cx| cx.emit(DismissEvent))),
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(DismissEvent))),
             )
     }
 
@@ -260,10 +260,10 @@ impl Render for CopilotCodeVerification {
             .items_center()
             .p_4()
             .gap_2()
-            .on_action(cx.listener(|_, _: &menu::Cancel, cx| {
+            .on_action(cx.listener(|_, _: &menu::Cancel, window, cx| {
                 cx.emit(DismissEvent);
             }))
-            .on_any_mouse_down(cx.listener(|this, _: &MouseDownEvent, cx| {
+            .on_any_mouse_down(cx.listener(|this, _: &MouseDownEvent, window, cx| {
                 cx.focus(&this.focus_handle);
             }))
             .child(

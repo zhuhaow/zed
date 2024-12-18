@@ -17,7 +17,7 @@ fn button(text: &str, on_click: impl Fn(&mut WindowContext) + 'static) -> impl I
         .rounded_md()
         .cursor_pointer()
         .child(text.to_string())
-        .on_click(move |_, cx| on_click(cx))
+        .on_click(move |_, window, cx| on_click(cx))
 }
 
 impl Render for SubWindow {

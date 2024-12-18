@@ -79,7 +79,7 @@ impl Render for ContextStrip {
                 ContextPill::new(context.clone()).on_remove({
                     let context = context.clone();
                     let context_store = self.context_store.clone();
-                    Rc::new(cx.listener(move |_this, _event, cx| {
+                    Rc::new(cx.listener(move |_this, _event, window, cx| {
                         context_store.update(cx, |this, _cx| {
                             this.remove_context(&context.id);
                         });
@@ -94,7 +94,7 @@ impl Render for ContextStrip {
                         .tooltip(move |cx| Tooltip::text("Remove All Context", cx))
                         .on_click({
                             let context_store = self.context_store.clone();
-                            cx.listener(move |_this, _event, cx| {
+                            cx.listener(move |_this, _event, window, cx| {
                                 context_store.update(cx, |this, _cx| this.clear());
                                 cx.notify();
                             })

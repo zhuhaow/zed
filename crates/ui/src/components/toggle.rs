@@ -124,7 +124,7 @@ impl RenderOnce for Checkbox {
             .when_some(
                 self.on_click.filter(|_| !self.disabled),
                 |this, on_click| {
-                    this.on_click(move |_, cx| on_click(&self.toggle_state.inverse(), cx))
+                    this.on_click(move |_, window, cx| on_click(&self.toggle_state.inverse(), cx))
                 },
             )
     }
@@ -168,7 +168,7 @@ impl RenderOnce for CheckboxWithLabel {
             .child(
                 div()
                     .id(SharedString::from(format!("{}-label", self.id)))
-                    .on_click(move |_event, cx| {
+                    .on_click(move |_event, window, cx| {
                         (self.on_click)(&self.checked.inverse(), cx);
                     })
                     .child(self.label),
@@ -276,7 +276,7 @@ impl RenderOnce for Switch {
             .when_some(
                 self.on_click.filter(|_| !self.disabled),
                 |this, on_click| {
-                    this.on_click(move |_, cx| on_click(&self.toggle_state.inverse(), cx))
+                    this.on_click(move |_, window, cx| on_click(&self.toggle_state.inverse(), cx))
                 },
             )
     }

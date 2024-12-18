@@ -516,7 +516,7 @@ impl MarkdownElement {
     ) {
         cx.on_mouse_event({
             let markdown = self.markdown.downgrade();
-            move |event, phase, cx| {
+            move |event, phase, window, cx| {
                 markdown
                     .update(cx, |markdown, cx| f(markdown, event, phase, cx))
                     .log_err();
@@ -766,7 +766,7 @@ impl Element for MarkdownElement {
         let view = self.markdown.clone();
         cx.on_action(std::any::TypeId::of::<crate::Copy>(), {
             let text = rendered_markdown.text.clone();
-            move |_, phase, cx| {
+            move |_, phase, window, cx| {
                 let text = text.clone();
                 if phase == DispatchPhase::Bubble {
                     view.update(cx, move |this, cx| this.copy(&text, cx))

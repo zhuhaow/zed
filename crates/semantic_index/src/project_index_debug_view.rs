@@ -211,7 +211,7 @@ impl Render for ProjectIndexDebugView {
                         .border_b_1()
                         .border_color(cx.theme().colors().border)
                         .cursor(CursorStyle::PointingHand)
-                        .on_click(cx.listener(|this, _, cx| {
+                        .on_click(cx.listener(|this, _, window, cx| {
                             this.selected_path.take();
                             cx.notify();
                         })),
@@ -236,7 +236,7 @@ impl Render for ProjectIndexDebugView {
                                 .id(ix)
                                 .pl_8()
                                 .child(Label::new(file_path.to_string_lossy().to_string()))
-                                .on_mouse_move(cx.listener(move |this, _: &MouseMoveEvent, cx| {
+                                .on_mouse_move(cx.listener(move |this, _: &MouseMoveEvent, window, cx| {
                                     if this.hovered_row_ix != Some(ix) {
                                         this.hovered_row_ix = Some(ix);
                                         cx.notify();

@@ -231,7 +231,7 @@ impl Render for BufferSearchBar {
                             self.render_search_option_button(
                                 SearchOptions::CASE_SENSITIVE,
                                 focus_handle.clone(),
-                                cx.listener(|this, _, cx| {
+                                cx.listener(|this, _, window, cx| {
                                     this.toggle_case_sensitive(&ToggleCaseSensitive, cx)
                                 }),
                             )
@@ -240,7 +240,7 @@ impl Render for BufferSearchBar {
                             self.render_search_option_button(
                                 SearchOptions::WHOLE_WORD,
                                 focus_handle.clone(),
-                                cx.listener(|this, _, cx| {
+                                cx.listener(|this, _, window, cx| {
                                     this.toggle_whole_word(&ToggleWholeWord, cx)
                                 }),
                             )
@@ -249,7 +249,9 @@ impl Render for BufferSearchBar {
                             self.render_search_option_button(
                                 SearchOptions::REGEX,
                                 focus_handle.clone(),
-                                cx.listener(|this, _, cx| this.toggle_regex(&ToggleRegex, cx)),
+                                cx.listener(|this, _, window, cx| {
+                                    this.toggle_regex(&ToggleRegex, cx)
+                                }),
                             )
                         }))
                     }),
@@ -269,7 +271,7 @@ impl Render for BufferSearchBar {
                             .when(self.replace_enabled, |button| {
                                 button.style(ButtonStyle::Filled)
                             })
-                            .on_click(cx.listener(|this, _: &ClickEvent, cx| {
+                            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
                                 this.toggle_replace(&ToggleReplace, cx);
                             }))
                             .toggle_state(self.replace_enabled)
@@ -297,7 +299,7 @@ impl Render for BufferSearchBar {
                             .when(self.selection_search_enabled, |button| {
                                 button.style(ButtonStyle::Filled)
                             })
-                            .on_click(cx.listener(|this, _: &ClickEvent, cx| {
+                            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
                                 this.toggle_selection(&ToggleSelection, cx);
                             }))
                             .toggle_state(self.selection_search_enabled)
@@ -390,9 +392,9 @@ impl Render for BufferSearchBar {
                                         )
                                     }
                                 })
-                                .on_click(
-                                    cx.listener(|this, _, cx| this.replace_next(&ReplaceNext, cx)),
-                                ),
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.replace_next(&ReplaceNext, cx)
+                                })),
                         )
                         .child(
                             IconButton::new("search-replace-all", ui::IconName::ReplaceAll)
@@ -408,9 +410,9 @@ impl Render for BufferSearchBar {
                                         )
                                     }
                                 })
-                                .on_click(
-                                    cx.listener(|this, _, cx| this.replace_all(&ReplaceAll, cx)),
-                                ),
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.replace_all(&ReplaceAll, cx)
+                                })),
                         ),
                 )
         });
@@ -458,7 +460,7 @@ impl Render for BufferSearchBar {
                                     .tooltip(move |cx| {
                                         Tooltip::for_action("Close Search Bar", &Dismiss, cx)
                                     })
-                                    .on_click(cx.listener(|this, _: &ClickEvent, cx| {
+                                    .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
                                         this.dismiss(&Dismiss, cx)
                                     })),
                             ),

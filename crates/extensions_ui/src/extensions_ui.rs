@@ -420,7 +420,7 @@ impl ExtensionsPage {
                                 )
                                 .on_click({
                                     let extension_id = extension.id.clone();
-                                    move |_, cx| {
+                                    move |_, window, cx| {
                                         ExtensionStore::global(cx).update(cx, |store, cx| {
                                             store.rebuild_dev_extension(extension_id.clone(), cx)
                                         });
@@ -433,7 +433,7 @@ impl ExtensionsPage {
                                 Button::new(SharedString::from(extension.id.clone()), "Uninstall")
                                     .on_click({
                                         let extension_id = extension.id.clone();
-                                        move |_, cx| {
+                                        move |_, window, cx| {
                                             ExtensionStore::global(cx).update(cx, |store, cx| {
                                                 store.uninstall_extension(extension_id.clone(), cx)
                                             });
@@ -483,7 +483,7 @@ impl ExtensionsPage {
                         .style(ButtonStyle::Filled)
                         .on_click(cx.listener({
                             let repository_url = repository_url.clone();
-                            move |_, _, cx| {
+                            move |_, _, window, cx| {
                                 cx.open_url(&repository_url);
                             }
                         }))
@@ -591,7 +591,7 @@ impl ExtensionsPage {
                                 .style(ButtonStyle::Filled)
                                 .on_click(cx.listener({
                                     let repository_url = repository_url.clone();
-                                    move |_, _, cx| {
+                                    move |_, _, window, cx| {
                                         cx.open_url(&repository_url);
                                     }
                                 }))
@@ -707,7 +707,7 @@ impl ExtensionsPage {
                 Button::new(SharedString::from(extension.id.clone()), "Install").on_click(
                     cx.listener({
                         let extension_id = extension.id.clone();
-                        move |this, _, cx| {
+                        move |this, _, window, cx| {
                             this.telemetry
                                 .report_app_event("extensions: install extension".to_string());
                             ExtensionStore::global(cx).update(cx, |store, cx| {
@@ -732,7 +732,7 @@ impl ExtensionsPage {
                 Button::new(SharedString::from(extension.id.clone()), "Uninstall").on_click(
                     cx.listener({
                         let extension_id = extension.id.clone();
-                        move |this, _, cx| {
+                        move |this, _, window, cx| {
                             this.telemetry
                                 .report_app_event("extensions: uninstall extension".to_string());
                             ExtensionStore::global(cx).update(cx, |store, cx| {
@@ -763,11 +763,11 @@ impl ExtensionsPage {
                             .on_click(cx.listener({
                                 let extension_id = extension.id.clone();
                                 let version = extension.manifest.version.clone();
-                                move |this, _, cx| {
+                                move |this, _, window, cx| {
                                     this.telemetry.report_app_event(
                                         "extensions: install extension".to_string(),
                                     );
-                                    ExtensionStore::global(cx).update(cx, |store, cx| {
+                                    ExtensionStore::global(cx).update(cx, |store, window, cx| {
                                         store
                                             .upgrade_extension(
                                                 extension_id.clone(),
@@ -994,7 +994,7 @@ impl ExtensionsPage {
                         } else {
                             ui::ToggleState::Unselected
                         },
-                        cx.listener(move |this, selection, cx| {
+                        cx.listener(move |this, selection, window, cx| {
                             this.telemetry
                                 .report_app_event("feature upsell: toggle vim".to_string());
                             this.update_settings::<VimModeSetting>(
@@ -1083,7 +1083,7 @@ impl Render for ExtensionsPage {
                                             .style(ButtonStyle::Filled)
                                             .size(ButtonSize::Large)
                                             .toggle_state(self.filter == ExtensionFilter::All)
-                                            .on_click(cx.listener(|this, _event, cx| {
+                                            .on_click(cx.listener(|this, _event, window, cx| {
                                                 this.filter = ExtensionFilter::All;
                                                 this.filter_extension_entries(cx);
                                             }))
@@ -1097,7 +1097,7 @@ impl Render for ExtensionsPage {
                                             .style(ButtonStyle::Filled)
                                             .size(ButtonSize::Large)
                                             .toggle_state(self.filter == ExtensionFilter::Installed)
-                                            .on_click(cx.listener(|this, _event, cx| {
+                                            .on_click(cx.listener(|this, _event, window, cx| {
                                                 this.filter = ExtensionFilter::Installed;
                                                 this.filter_extension_entries(cx);
                                             }))
@@ -1113,7 +1113,7 @@ impl Render for ExtensionsPage {
                                             .toggle_state(
                                                 self.filter == ExtensionFilter::NotInstalled,
                                             )
-                                            .on_click(cx.listener(|this, _event, cx| {
+                                            .on_click(cx.listener(|this, _event, window, cx| {
                                                 this.filter = ExtensionFilter::NotInstalled;
                                                 this.filter_extension_entries(cx);
                                             }))

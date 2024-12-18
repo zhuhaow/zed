@@ -560,7 +560,7 @@ impl Render for ConfigurationView {
                         .when(env_var_set, |this| {
                             this.tooltip(|cx| Tooltip::text(format!("To reset your API key, unset the {OPENAI_API_KEY_VAR} environment variable."), cx))
                         })
-                        .on_click(cx.listener(|this, _, cx| this.reset_api_key(cx))),
+                        .on_click(cx.listener(|this, _, window, cx| this.reset_api_key(cx))),
                 )
                 .into_any()
         }

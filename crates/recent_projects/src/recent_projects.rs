@@ -123,8 +123,8 @@ impl Render for RecentProjects {
         v_flex()
             .w(rems(self.rem_width))
             .child(self.picker.clone())
-            .on_mouse_down_out(cx.listener(|this, _, cx| {
-                this.picker.update(cx, |this, cx| {
+            .on_mouse_down_out(cx.listener(|this, _, window, cx| {
+                this.picker.update(cx, |this, window, cx| {
                     this.cancel(&Default::default(), cx);
                 })
             }))
@@ -427,7 +427,7 @@ impl PickerDelegate for RecentProjectsDelegate {
                         .child(
                             IconButton::new("delete", IconName::Close)
                                 .icon_size(IconSize::Small)
-                                .on_click(cx.listener(move |this, _event, cx| {
+                                .on_click(cx.listener(move |this, _event, window, cx| {
                                     cx.stop_propagation();
                                     cx.prevent_default();
 

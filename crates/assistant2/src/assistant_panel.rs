@@ -450,7 +450,7 @@ impl AssistantPanel {
                     .justify_end()
                     .mt_1()
                     .child(Button::new("subscribe", "Subscribe").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.thread.update(cx, |this, _cx| {
                                 this.clear_last_error();
                             });
@@ -460,7 +460,7 @@ impl AssistantPanel {
                         },
                     )))
                     .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.thread.update(cx, |this, _cx| {
                                 this.clear_last_error();
                             });
@@ -497,7 +497,7 @@ impl AssistantPanel {
                     .mt_1()
                     .child(
                         Button::new("subscribe", "Update Monthly Spend Limit").on_click(
-                            cx.listener(|this, _, cx| {
+                            cx.listener(|this, _, window, cx| {
                                 this.thread.update(cx, |this, _cx| {
                                     this.clear_last_error();
                                 });
@@ -508,7 +508,7 @@ impl AssistantPanel {
                         ),
                     )
                     .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.thread.update(cx, |this, _cx| {
                                 this.clear_last_error();
                             });
@@ -549,7 +549,7 @@ impl AssistantPanel {
                     .justify_end()
                     .mt_1()
                     .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.thread.update(cx, |this, _cx| {
                                 this.clear_last_error();
                             });
@@ -568,10 +568,10 @@ impl Render for AssistantPanel {
             .key_context("AssistantPanel2")
             .justify_between()
             .size_full()
-            .on_action(cx.listener(|this, _: &NewThread, cx| {
+            .on_action(cx.listener(|this, _: &NewThread, window, cx| {
                 this.new_thread(cx);
             }))
-            .on_action(cx.listener(|this, _: &OpenHistory, cx| {
+            .on_action(cx.listener(|this, _: &OpenHistory, window, cx| {
                 this.active_view = ActiveView::History;
                 this.history.focus_handle(cx).focus(cx);
                 cx.notify();

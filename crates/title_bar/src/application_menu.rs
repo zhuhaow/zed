@@ -34,12 +34,12 @@ impl Render for ApplicationMenu {
                                     NumericStepper::new(
                                         "buffer-font-size",
                                         theme::get_buffer_font_size(cx).to_string(),
-                                        |_, cx| {
+                                        |_, window, cx| {
                                             cx.dispatch_action(Box::new(
                                                 zed_actions::DecreaseBufferFontSize,
                                             ))
                                         },
-                                        |_, cx| {
+                                        |_, window, cx| {
                                             cx.dispatch_action(Box::new(
                                                 zed_actions::IncreaseBufferFontSize,
                                             ))
@@ -49,7 +49,7 @@ impl Render for ApplicationMenu {
                                     .when(
                                         theme::has_adjusted_buffer_font_size(cx),
                                         |stepper| {
-                                            stepper.on_reset(|_, cx| {
+                                            stepper.on_reset(|_, window, cx| {
                                                 cx.dispatch_action(Box::new(
                                                     zed_actions::ResetBufferFontSize,
                                                 ))
@@ -70,12 +70,12 @@ impl Render for ApplicationMenu {
                                     NumericStepper::new(
                                         "ui-font-size",
                                         theme::get_ui_font_size(cx).to_string(),
-                                        |_, cx| {
+                                        |_, window, cx| {
                                             cx.dispatch_action(Box::new(
                                                 zed_actions::DecreaseUiFontSize,
                                             ))
                                         },
-                                        |_, cx| {
+                                        |_, window, cx| {
                                             cx.dispatch_action(Box::new(
                                                 zed_actions::IncreaseUiFontSize,
                                             ))
@@ -85,7 +85,7 @@ impl Render for ApplicationMenu {
                                     .when(
                                         theme::has_adjusted_ui_font_size(cx),
                                         |stepper| {
-                                            stepper.on_reset(|_, cx| {
+                                            stepper.on_reset(|_, window, cx| {
                                                 cx.dispatch_action(Box::new(
                                                     zed_actions::ResetUiFontSize,
                                                 ))
@@ -136,7 +136,7 @@ impl Render for ApplicationMenu {
                     .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
                     .when(!self.context_menu_handle.is_deployed(), |this| {
-                        this.tooltip(|cx| Tooltip::text("Open Application Menu", cx))
+                        this.tooltip(|window, cx| Tooltip::text("Open Application Menu", cx))
                     }),
             )
             .with_handle(self.context_menu_handle.clone())

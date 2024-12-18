@@ -741,7 +741,7 @@ impl<T: Item> ItemHandle for View<T> {
                 },
             ));
 
-            cx.on_blur(&self.focus_handle(cx), move |workspace, cx| {
+            cx.on_blur(&self.focus_handle(cx), move |workspace, window, cx| {
                 if let Some(item) = weak_item.upgrade() {
                     if item.workspace_settings(cx).autosave == AutosaveSetting::OnFocusChange {
                         Pane::autosave_item(&item, workspace.project.clone(), cx)

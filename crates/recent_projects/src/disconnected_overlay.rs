@@ -171,7 +171,7 @@ impl Render for DisconnectedOverlay {
                                     Button::new("close-window", "Close Window")
                                         .style(ButtonStyle::Filled)
                                         .layer(ElevationIndex::ModalSurface)
-                                        .on_click(cx.listener(move |_, _, cx| {
+                                        .on_click(cx.listener(move |_, _, window, cx| {
                                             cx.remove_window();
                                         })),
                                 )

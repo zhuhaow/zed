@@ -504,16 +504,16 @@ impl Render for PromptEditor {
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
-                        .on_click(
-                            cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)),
-                        ),
+                        .on_click(cx.listener(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::CancelRequested)
+                        })),
                     IconButton::new("start", IconName::SparkleAlt)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|cx| Tooltip::for_action("Generate", &menu::Confirm, cx))
-                        .on_click(
-                            cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::StartRequested)),
-                        ),
+                        .on_click(cx.listener(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::StartRequested)
+                        })),
                 ]
             }
             CodegenStatus::Pending => {
@@ -522,9 +522,9 @@ impl Render for PromptEditor {
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|cx| Tooltip::text("Cancel Assist", cx))
-                        .on_click(
-                            cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)),
-                        ),
+                        .on_click(cx.listener(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::CancelRequested)
+                        })),
                     IconButton::new("stop", IconName::Stop)
                         .icon_color(Color::Error)
                         .shape(IconButtonShape::Square)
@@ -536,9 +536,9 @@ impl Render for PromptEditor {
                                 cx,
                             )
                         })
-                        .on_click(
-                            cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::StopRequested)),
-                        ),
+                        .on_click(cx.listener(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::StopRequested)
+                        })),
                 ]
             }
             CodegenStatus::Error(_) | CodegenStatus::Done => {
@@ -546,7 +546,9 @@ impl Render for PromptEditor {
                     .icon_color(Color::Muted)
                     .shape(IconButtonShape::Square)
                     .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
-                    .on_click(cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)));
+                    .on_click(
+                        cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)),
+                    );
 
                 let has_error = matches!(status, CodegenStatus::Error(_));
                 if has_error || self.edited_since_done {
@@ -563,7 +565,7 @@ impl Render for PromptEditor {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(|_, _, cx| {
+                            .on_click(cx.listener(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::StartRequested);
                             })),
                     ]
@@ -576,7 +578,7 @@ impl Render for PromptEditor {
                             .tooltip(|cx| {
                                 Tooltip::for_action("Accept Generated Command", &menu::Confirm, cx)
                             })
-                            .on_click(cx.listener(|_, _, cx| {
+                            .on_click(cx.listener(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested { execute: false });
                             })),
                         IconButton::new("confirm", IconName::Play)
@@ -589,7 +591,7 @@ impl Render for PromptEditor {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(|_, _, cx| {
+                            .on_click(cx.listener(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested { execute: true });
                             })),
                     ]

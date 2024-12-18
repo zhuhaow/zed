@@ -222,6 +222,7 @@ impl<'a, T> ModelContext<'a, T> {
 
 impl<'a, T> Context for ModelContext<'a, T> {
     type Result<U> = U;
+    type WindowResult<U> = Result<U>;
 
     fn new_model<U: 'static>(
         &mut self,
@@ -271,7 +272,7 @@ impl<'a, T> Context for ModelContext<'a, T> {
     fn read_window<U, R>(
         &self,
         window: &WindowHandle<U>,
-        read: impl FnOnce(View<U>, &AppContext) -> R,
+        read: impl FnOnce(View<U>, &Window, &AppContext) -> R,
     ) -> Result<R>
     where
         U: 'static,

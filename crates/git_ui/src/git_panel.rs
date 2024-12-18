@@ -473,7 +473,7 @@ impl GitPanel {
                     .gap_2()
                     .child(
                         IconButton::new("discard-changes", IconName::Undo)
-                            .tooltip(move |cx| {
+                            .tooltip(move |window, cx| {
                                 let focus_handle = focus_handle.clone();
 
                                 Tooltip::for_action_in(
@@ -487,13 +487,15 @@ impl GitPanel {
                             .disabled(true),
                     )
                     .child(if self.all_staged() {
-                        self.panel_button("unstage-all", "Unstage All").on_click(
-                            cx.listener(move |_, _, cx| cx.dispatch_action(Box::new(DiscardAll))),
-                        )
+                        self.panel_button("unstage-all", "Unstage All")
+                            .on_click(cx.listener(move |_, _, window, cx| {
+                                cx.dispatch_action(Box::new(DiscardAll))
+                            }))
                     } else {
-                        self.panel_button("stage-all", "Stage All").on_click(
-                            cx.listener(move |_, _, cx| cx.dispatch_action(Box::new(StageAll))),
-                        )
+                        self.panel_button("stage-all", "Stage All")
+                            .on_click(cx.listener(move |_, _, window, cx| {
+                                cx.dispatch_action(Box::new(StageAll))
+                            }))
                     }),
             )
     }
@@ -504,7 +506,7 @@ impl GitPanel {
 
         let commit_staged_button = self
             .panel_button("commit-staged-changes", "Commit")
-            .tooltip(move |cx| {
+            .tooltip(move |window, cx| {
                 let focus_handle = focus_handle_1.clone();
                 Tooltip::for_action_in(
                     "Commit all staged changes",
@@ -513,13 +515,13 @@ impl GitPanel {
                     cx,
                 )
             })
-            .on_click(cx.listener(|this, _: &ClickEvent, cx| {
+            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
                 this.commit_staged_changes(&CommitStagedChanges, cx)
             }));
 
         let commit_all_button = self
             .panel_button("commit-all-changes", "Commit All")
-            .tooltip(move |cx| {
+            .tooltip(move |window, cx| {
                 let focus_handle = focus_handle_2.clone();
                 Tooltip::for_action_in(
                     "Commit all changes, including unstaged changes",
@@ -528,7 +530,7 @@ impl GitPanel {
                     cx,
                 )
             })
-            .on_click(cx.listener(|this, _: &ClickEvent, cx| {
+            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
                 this.commit_all_changes(&CommitAllChanges, cx)
             }));
 
@@ -582,19 +584,19 @@ impl GitPanel {
             div()
                 .occlude()
                 .id("project-panel-vertical-scroll")
-                .on_mouse_move(cx.listener(|_, _, cx| {
+                .on_mouse_move(cx.listener(|_, _, window, cx| {
                     cx.notify();
                     cx.stop_propagation()
                 }))
-                .on_hover(|_, cx| {
+                .on_hover(|_, window, cx| {
                     cx.stop_propagation();
                 })
-                .on_any_mouse_down(|_, cx| {
+                .on_any_mouse_down(|_, window, cx| {
                     cx.stop_propagation();
                 })
                 .on_mouse_up(
                     MouseButton::Left,
-                    cx.listener(|this, _, cx| {
+                    cx.listener(|this, _, window, cx| {
                         if !this.scrollbar_state.is_dragging()
                             && !this.focus_handle.contains_focused(cx)
                         {
@@ -605,7 +607,7 @@ impl GitPanel {
                         cx.stop_propagation();
                     }),
                 )
-                .on_scroll_wheel(cx.listener(|_, _, cx| {
+                .on_scroll_wheel(cx.listener(|_, _, window, cx| {
                     cx.notify();
                 }))
                 .h_full()
@@ -690,21 +692,23 @@ impl Render for GitPanel {
             .track_focus(&self.focus_handle)
             .on_modifiers_changed(cx.listener(Self::handle_modifiers_changed))
             .when(!project.is_read_only(cx), |this| {
-                this.on_action(cx.listener(|this, &StageAll, cx| this.stage_all(&StageAll, cx)))
-                    .on_action(
-                        cx.listener(|this, &UnstageAll, cx| this.unstage_all(&UnstageAll, cx)),
-                    )
-                    .on_action(
-                        cx.listener(|this, &DiscardAll, cx| this.discard_all(&DiscardAll, cx)),
-                    )
-                    .on_action(cx.listener(|this, &CommitStagedChanges, cx| {
-                        this.commit_staged_changes(&CommitStagedChanges, cx)
-                    }))
-                    .on_action(cx.listener(|this, &CommitAllChanges, cx| {
-                        this.commit_all_changes(&CommitAllChanges, cx)
-                    }))
+                this.on_action(
+                    cx.listener(|this, &StageAll, window, cx| this.stage_all(&StageAll, cx)),
+                )
+                .on_action(
+                    cx.listener(|this, &UnstageAll, window, cx| this.unstage_all(&UnstageAll, cx)),
+                )
+                .on_action(
+                    cx.listener(|this, &DiscardAll, window, cx| this.discard_all(&DiscardAll, cx)),
+                )
+                .on_action(cx.listener(|this, &CommitStagedChanges, window, cx| {
+                    this.commit_staged_changes(&CommitStagedChanges, cx)
+                }))
+                .on_action(cx.listener(|this, &CommitAllChanges, window, cx| {
+                    this.commit_all_changes(&CommitAllChanges, cx)
+                }))
             })
-            .on_hover(cx.listener(|this, hovered, cx| {
+            .on_hover(cx.listener(|this, hovered, window, cx| {
                 if *hovered {
                     this.show_scrollbar = true;
                     this.hide_scrollbar_task.take();

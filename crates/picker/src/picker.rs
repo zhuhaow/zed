@@ -518,7 +518,7 @@ impl<D: PickerDelegate> Picker<D> {
         div()
             .id(("item", ix))
             .cursor_pointer()
-            .on_click(cx.listener(move |this, event: &ClickEvent, cx| {
+            .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                 this.handle_click(ix, event.down.modifiers.secondary(), cx)
             }))
             // As of this writing, GPUI intercepts `ctrl-[mouse-event]`s on macOS
@@ -527,7 +527,7 @@ impl<D: PickerDelegate> Picker<D> {
             // switcher) can't be clicked on. Hence, this handler.
             .on_mouse_up(
                 MouseButton::Right,
-                cx.listener(move |this, event: &MouseUpEvent, cx| {
+                cx.listener(move |this, event: &MouseUpEvent, window, cx| {
                     // We specifically want to use the platform key here, as
                     // ctrl will already be held down for the tab switcher.
                     this.handle_click(ix, event.modifiers.platform, cx)

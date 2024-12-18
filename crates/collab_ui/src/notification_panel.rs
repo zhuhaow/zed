@@ -117,7 +117,7 @@ impl NotificationPanel {
                         .unwrap_or_else(|| div().into_any())
                 });
             notification_list.set_scroll_handler(cx.listener(
-                |this, event: &ListScrollEvent, cx| {
+                |this, event: &ListScrollEvent, window, cx| {
                     if event.count.saturating_sub(event.visible_range.end) < LOADING_THRESHOLD {
                         if let Some(task) = this
                             .notification_store
@@ -259,7 +259,7 @@ impl NotificationPanel {
                 .when(can_navigate, |el| {
                     el.cursor(CursorStyle::PointingHand).on_click({
                         let notification = notification.clone();
-                        cx.listener(move |this, _, cx| {
+                        cx.listener(move |this, _, window, cx| {
                             this.did_click_notification(&notification, cx)
                         })
                     })
@@ -774,9 +774,9 @@ impl Render for NotificationToast {
             .child(Label::new(self.text.clone()))
             .child(
                 IconButton::new("close", IconName::Close)
-                    .on_click(cx.listener(|_, _, cx| cx.emit(DismissEvent))),
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(DismissEvent))),
             )
-            .on_click(cx.listener(|this, _, cx| {
+            .on_click(cx.listener(|this, _, window, cx| {
                 this.focus_notification_panel(cx);
                 cx.emit(DismissEvent);
             }))

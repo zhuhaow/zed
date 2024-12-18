@@ -15,7 +15,7 @@ impl Render for UniformListExample {
                             .id(ix)
                             .px_2()
                             .cursor_pointer()
-                            .on_click(move |_event, _cx| {
+                            .on_click(move |_event, _window, _cx| {
                                 println!("clicked Item {item:?}");
                             })
                             .child(format!("Item {item}")),

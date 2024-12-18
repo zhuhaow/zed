@@ -16,7 +16,7 @@ pub enum AudioStatus {
 #[derive(IntoElement)]
 pub struct AvatarAudioStatusIndicator {
     audio_status: AudioStatus,
-    tooltip: Option<Box<dyn Fn(&mut WindowContext) -> AnyView>>,
+    tooltip: Option<Box<dyn Fn(&mut Window, &mut WindowContext) -> AnyView>>,
 }
 
 impl AvatarAudioStatusIndicator {
@@ -29,7 +29,10 @@ impl AvatarAudioStatusIndicator {
     }
 
     /// Sets the tooltip for the indicator.
-    pub fn tooltip(mut self, tooltip: impl Fn(&mut WindowContext) -> AnyView + 'static) -> Self {
+    pub fn tooltip(
+        mut self,
+        tooltip: impl Fn(&mut Window, &mut WindowContext) -> AnyView + 'static,
+    ) -> Self {
         self.tooltip = Some(Box::new(tooltip));
         self
     }
@@ -65,7 +68,7 @@ impl RenderOnce for AvatarAudioStatusIndicator {
                         .color(Color::Error),
                     )
                     .when_some(self.tooltip, |this, tooltip| {
-                        this.tooltip(move |cx| tooltip(cx))
+                        this.tooltip(move |window, cx| tooltip(window, cx))
                     }),
             )
     }

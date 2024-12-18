@@ -37,7 +37,7 @@ impl Render for UpdateNotification {
                             .id("cancel")
                             .child(Icon::new(IconName::Close))
                             .cursor_pointer()
-                            .on_click(cx.listener(|this, _, cx| this.dismiss(&menu::Cancel, cx))),
+                            .on_click(cx.listener(|this, _, window, cx| this.dismiss(&menu::Cancel, cx))),
                     ),
             )
             .child(
@@ -45,9 +45,9 @@ impl Render for UpdateNotification {
                     .id("notes")
                     .child(Label::new("View the release notes"))
                     .cursor_pointer()
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         this.workspace
-                            .update(cx, |workspace, cx| {
+                            .update(cx, |workspace, window, cx| {
                                 crate::view_release_notes_locally(workspace, cx);
                             })
                             .log_err();

@@ -23,7 +23,7 @@ impl RenderOnce for LinuxWindowControls {
             .id("generic-window-controls")
             .px_3()
             .gap_3()
-            .on_mouse_down(MouseButton::Left, |_, cx| cx.stop_propagation())
+            .on_mouse_down(MouseButton::Left, |_, window, cx| cx.stop_propagation())
             .child(WindowControl::new(
                 "minimize",
                 WindowControlType::Minimize,

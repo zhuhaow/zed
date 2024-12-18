@@ -70,7 +70,7 @@ impl Render for DiagnosticIndicator {
                     .tooltip(|cx| {
                         Tooltip::for_action("Next Diagnostic", &editor::actions::GoToDiagnostic, cx)
                     })
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         this.go_to_next_diagnostic(cx);
                     }))
                     .into_any_element(),
@@ -88,9 +88,9 @@ impl Render for DiagnosticIndicator {
                 ButtonLike::new("diagnostic-indicator")
                     .child(diagnostic_indicator)
                     .tooltip(|cx| Tooltip::for_action("Project Diagnostics", &Deploy, cx))
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
-                            workspace.update(cx, |workspace, cx| {
+                            workspace.update(cx, |workspace, window, cx| {
                                 ProjectDiagnosticsEditor::deploy(workspace, &Default::default(), cx)
                             })
                         }

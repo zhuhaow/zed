@@ -486,13 +486,13 @@ impl Render for PromptEditor {
                     .icon_color(Color::Muted)
                     .shape(IconButtonShape::Square)
                     .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
-                    .on_click(cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)))
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)))
                     .into_any_element(),
                 IconButton::new("start", IconName::SparkleAlt)
                     .icon_color(Color::Muted)
                     .shape(IconButtonShape::Square)
                     .tooltip(|cx| Tooltip::for_action("Generate", &menu::Confirm, cx))
-                    .on_click(cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::StartRequested)))
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::StartRequested)))
                     .into_any_element(),
             ],
             CodegenStatus::Pending => vec![
@@ -500,7 +500,7 @@ impl Render for PromptEditor {
                     .icon_color(Color::Muted)
                     .shape(IconButtonShape::Square)
                     .tooltip(|cx| Tooltip::text("Cancel Assist", cx))
-                    .on_click(cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)))
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)))
                     .into_any_element(),
                 IconButton::new("stop", IconName::Stop)
                     .icon_color(Color::Error)
@@ -513,7 +513,7 @@ impl Render for PromptEditor {
                             cx,
                         )
                     })
-                    .on_click(cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::StopRequested)))
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::StopRequested)))
                     .into_any_element(),
             ],
             CodegenStatus::Error(_) | CodegenStatus::Done => {
@@ -521,7 +521,7 @@ impl Render for PromptEditor {
                     .icon_color(Color::Muted)
                     .shape(IconButtonShape::Square)
                     .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
-                    .on_click(cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)))
+                    .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)))
                     .into_any_element();
 
                 let has_error = matches!(status, CodegenStatus::Error(_));
@@ -539,7 +539,7 @@ impl Render for PromptEditor {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(|_, _, cx| {
+                            .on_click(cx.listener(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::StartRequested);
                             }))
                             .into_any_element(),
@@ -553,7 +553,7 @@ impl Render for PromptEditor {
                             .tooltip(|cx| {
                                 Tooltip::for_action("Accept Generated Command", &menu::Confirm, cx)
                             })
-                            .on_click(cx.listener(|_, _, cx| {
+                            .on_click(cx.listener(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested { execute: false });
                             }))
                             .into_any_element(),
@@ -567,7 +567,7 @@ impl Render for PromptEditor {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(|_, _, cx| {
+                            .on_click(cx.listener(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested { execute: true });
                             }))
                             .into_any_element(),

@@ -68,8 +68,8 @@ impl Render for BranchList {
         v_flex()
             .w(rems(self.rem_width))
             .child(self.picker.clone())
-            .on_mouse_down_out(cx.listener(|this, _, cx| {
-                this.picker.update(cx, |this, cx| {
+            .on_mouse_down_out(cx.listener(|this, _, window, cx| {
+                this.picker.update(cx, |this, window, cx| {
                     this.cancel(&Default::default(), cx);
                 })
             }))

@@ -4,7 +4,7 @@ use crate::{
     LayoutId, Model, PaintIndex, Pixels, PrepaintStateIndex, Render, Style, StyleRefinement,
     TextStyle, ViewContext, VisualContext, WeakModel, WindowContext,
 };
-use crate::{Empty, Window};
+use crate::{AnyWindowHandle, Empty, Window};
 use anyhow::{Context, Result};
 use refineable::Refineable;
 use std::mem;
@@ -75,6 +75,21 @@ impl<V: 'static> View<V> {
         C: VisualContext,
     {
         cx.update_view(self, f)
+    }
+
+    /// Updates the view's state with the given function, which is passed a mutable reference and a context.
+    pub fn update_in_window<C, R>(
+        &self,
+        window: AnyWindowHandle,
+        cx: &mut C,
+        f: impl FnOnce(&mut V, &mut Window, &mut ViewContext<'_, V>) -> R,
+    ) -> C::WindowResult<R>
+    where
+        C: VisualContext,
+    {
+        cx.update_window(window, |_, window, cx| {
+            cx.update_view(self, |view, cx| f(view, window, cx))
+        })
     }
 
     /// Obtain a read-only reference to this view's state.

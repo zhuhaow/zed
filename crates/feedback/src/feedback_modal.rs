@@ -410,7 +410,7 @@ impl Render for FeedbackModal {
             "Submit"
         };
 
-        let open_zed_repo = cx.listener(|_, _, cx| cx.dispatch_action(Box::new(OpenZedRepo)));
+        let open_zed_repo = cx.listener(|_, _, window, cx| cx.dispatch_action(Box::new(OpenZedRepo)));
 
         v_flex()
             .elevation_3(cx)
@@ -491,9 +491,9 @@ impl Render for FeedbackModal {
                                 Button::new("cancel_feedback", "Cancel")
                                     .style(ButtonStyle::Subtle)
                                     .color(Color::Muted)
-                                    .on_click(cx.listener(move |_, _, cx| {
+                                    .on_click(cx.listener(move |_, _, window, cx| {
                                         cx.spawn(|this, mut cx| async move {
-                                            this.update(&mut cx, |_, cx| cx.emit(DismissEvent))
+                                            this.update(&mut cx, |_, window, cx| cx.emit(DismissEvent))
                                                 .ok();
                                         })
                                         .detach();
@@ -503,7 +503,7 @@ impl Render for FeedbackModal {
                                 Button::new("submit_feedback", submit_button_text)
                                     .color(Color::Accent)
                                     .style(ButtonStyle::Filled)
-                                    .on_click(cx.listener(|this, _, cx| {
+                                    .on_click(cx.listener(|this, _, window, cx| {
                                         this.submit(cx).detach();
                                     }))
                                     .tooltip(move |cx| {

@@ -313,7 +313,7 @@ impl Render for SyntaxTreeView {
                                 )
                                 .on_mouse_down(
                                     MouseButton::Left,
-                                    cx.listener(move |tree_view, _: &MouseDownEvent, cx| {
+                                    cx.listener(move |tree_view, _: &MouseDownEvent, window, cx| {
                                         tree_view.update_editor_with_range_for_descendant_ix(
                                             descendant_ix,
                                             cx,
@@ -333,7 +333,7 @@ impl Render for SyntaxTreeView {
                                     }),
                                 )
                                 .on_mouse_move(cx.listener(
-                                    move |tree_view, _: &MouseMoveEvent, cx| {
+                                    move |tree_view, _: &MouseMoveEvent, window, cx| {
                                         if tree_view.hovered_descendant_ix != Some(descendant_ix) {
                                             tree_view.hovered_descendant_ix = Some(descendant_ix);
                                             tree_view.update_editor_with_range_for_descendant_ix(descendant_ix, cx, |editor, range, cx| {

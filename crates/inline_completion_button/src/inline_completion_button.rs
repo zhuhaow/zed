@@ -83,7 +83,7 @@ impl Render for InlineCompletionButton {
                     return div().child(
                         IconButton::new("copilot-error", icon)
                             .icon_size(IconSize::Small)
-                            .on_click(cx.listener(move |_, _, cx| {
+                            .on_click(cx.listener(move |_, _, window, cx| {
                                 if let Some(workspace) = cx.window_handle().downcast::<Workspace>()
                                 {
                                     workspace
@@ -214,9 +214,9 @@ impl Render for InlineCompletionButton {
                                 cx,
                             )
                         })
-                        .on_click(cx.listener(|this, _, cx| {
+                        .on_click(cx.listener(|this, _, window, cx| {
                             if let Some(workspace) = this.workspace.upgrade() {
-                                workspace.update(cx, |workspace, cx| {
+                                workspace.update(cx, |workspace, window, cx| {
                                     RateCompletionModal::toggle(workspace, cx)
                                 });
                             }

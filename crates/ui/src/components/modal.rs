@@ -168,7 +168,7 @@ impl RenderOnce for ModalHeader {
                 this.child(
                     IconButton::new("back", IconName::ArrowLeft)
                         .shape(IconButtonShape::Square)
-                        .on_click(|_, cx| {
+                        .on_click(|_, window, cx| {
                             cx.dispatch_action(menu::Cancel.boxed_clone());
                         }),
                 )
@@ -178,7 +178,7 @@ impl RenderOnce for ModalHeader {
                 this.child(
                     IconButton::new("dismiss", IconName::Close)
                         .shape(IconButtonShape::Square)
-                        .on_click(|_, cx| {
+                        .on_click(|_, window, cx| {
                             cx.dispatch_action(menu::Cancel.boxed_clone());
                         }),
                 )

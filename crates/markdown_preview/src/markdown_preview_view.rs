@@ -190,7 +190,7 @@ impl MarkdownPreviewView {
                                 .id(ix)
                                 .when(should_apply_padding, |this| this.pb_3())
                                 .group("markdown-block")
-                                .on_click(cx.listener(move |this, event: &ClickEvent, cx| {
+                                .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                                     if event.down.click_count == 2 {
                                         if let Some(source_range) = this
                                             .contents

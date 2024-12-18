@@ -242,7 +242,7 @@ impl PickerDelegate for PromptPickerDelegate {
                     .icon_color(Color::Accent)
                     .shape(IconButtonShape::Square)
                     .tooltip(move |cx| Tooltip::text("Remove from Default Prompt", cx))
-                    .on_click(cx.listener(move |_, _, cx| {
+                    .on_click(cx.listener(move |_, _, window, cx| {
                         cx.emit(PromptPickerEvent::ToggledDefault { prompt_id })
                     }))
             }))
@@ -267,7 +267,7 @@ impl PickerDelegate for PromptPickerDelegate {
                             .icon_color(Color::Muted)
                             .shape(IconButtonShape::Square)
                             .tooltip(move |cx| Tooltip::text("Delete Prompt", cx))
-                            .on_click(cx.listener(move |_, _, cx| {
+                            .on_click(cx.listener(move |_, _, window, cx| {
                                 cx.emit(PromptPickerEvent::Deleted { prompt_id })
                             }))
                             .into_any_element()
@@ -288,7 +288,7 @@ impl PickerDelegate for PromptPickerDelegate {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(move |_, _, cx| {
+                            .on_click(cx.listener(move |_, _, window, cx| {
                                 cx.emit(PromptPickerEvent::ToggledDefault { prompt_id })
                             })),
                     ),
@@ -873,7 +873,7 @@ impl PromptLibrary {
                         .overflow_hidden()
                         .pl(DynamicSpacing::Base16.rems(cx))
                         .pt(DynamicSpacing::Base08.rems(cx))
-                        .on_click(cx.listener(move |_, _, cx| {
+                        .on_click(cx.listener(move |_, _, window, cx| {
                             cx.focus(&focus_handle);
                         }))
                         .child(
@@ -1103,10 +1103,12 @@ impl Render for PromptLibrary {
         h_flex()
             .id("prompt-manager")
             .key_context("PromptLibrary")
-            .on_action(cx.listener(|this, &NewPrompt, cx| this.new_prompt(cx)))
-            .on_action(cx.listener(|this, &DeletePrompt, cx| this.delete_active_prompt(cx)))
-            .on_action(cx.listener(|this, &DuplicatePrompt, cx| this.duplicate_active_prompt(cx)))
-            .on_action(cx.listener(|this, &ToggleDefaultPrompt, cx| {
+            .on_action(cx.listener(|this, &NewPrompt, window, cx| this.new_prompt(cx)))
+            .on_action(cx.listener(|this, &DeletePrompt, window, cx| this.delete_active_prompt(cx)))
+            .on_action(
+                cx.listener(|this, &DuplicatePrompt, window, cx| this.duplicate_active_prompt(cx)),
+            )
+            .on_action(cx.listener(|this, &ToggleDefaultPrompt, window, cx| {
                 this.toggle_default_for_active_prompt(cx)
             }))
             .size_full()

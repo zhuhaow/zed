@@ -486,7 +486,7 @@ impl Render for ActivityIndicator {
                                 }
                             })
                             .when_some(content.on_click, |this, handler| {
-                                this.on_click(cx.listener(move |this, _, cx| {
+                                this.on_click(cx.listener(move |this, _, window, cx| {
                                     handler(this, cx);
                                 }))
                                 .cursor(CursorStyle::PointingHand)

@@ -296,7 +296,7 @@ impl Element for Scrollbar {
                 let scroll = scroll.clone();
                 let state = self.state.clone();
                 let axis = self.kind;
-                move |event: &MouseDownEvent, phase, _cx| {
+                move |event: &MouseDownEvent, phase, _window, _cx| {
                     if !(phase.bubble() && bounds.contains(&event.position)) {
                         return;
                     }
@@ -333,7 +333,7 @@ impl Element for Scrollbar {
             });
             cx.on_mouse_event({
                 let scroll = scroll.clone();
-                move |event: &ScrollWheelEvent, phase, cx| {
+                move |event: &ScrollWheelEvent, phase, window, cx| {
                     if phase.bubble() && bounds.contains(&event.position) {
                         let current_offset = scroll.offset();
                         scroll
@@ -343,7 +343,7 @@ impl Element for Scrollbar {
             });
             let state = self.state.clone();
             let kind = self.kind;
-            cx.on_mouse_event(move |event: &MouseMoveEvent, _, cx| {
+            cx.on_mouse_event(move |event: &MouseMoveEvent, _, window, cx| {
                 if let Some(drag_state) = state.drag.get().filter(|_| event.dragging()) {
                     if let Some(ContentSize {
                         size: item_size, ..
@@ -381,7 +381,7 @@ impl Element for Scrollbar {
                 }
             });
             let state = self.state.clone();
-            cx.on_mouse_event(move |_event: &MouseUpEvent, phase, cx| {
+            cx.on_mouse_event(move |_event: &MouseUpEvent, phase, window, cx| {
                 if phase.bubble() {
                     state.drag.take();
                     if let Some(id) = state.parent_id {

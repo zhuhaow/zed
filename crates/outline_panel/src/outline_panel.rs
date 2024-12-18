@@ -2210,7 +2210,7 @@ impl OutlinePanel {
             .id(item_id.clone())
             .on_click({
                 let clicked_entry = rendered_entry.clone();
-                cx.listener(move |outline_panel, event: &gpui::ClickEvent, cx| {
+                cx.listener(move |outline_panel, event: &gpui::ClickEvent, window, cx| {
                     if event.down.button == MouseButton::Right || event.down.first_mouse {
                         return;
                     }
@@ -2230,7 +2230,7 @@ impl OutlinePanel {
                     })
                     .child(h_flex().h_6().child(label_element).ml_1())
                     .on_secondary_mouse_down(cx.listener(
-                        move |outline_panel, event: &MouseDownEvent, cx| {
+                        move |outline_panel, event: &MouseDownEvent, window, cx| {
                             // Stop propagation to prevent the catch-all context menu for the project
                             // panel from being deployed.
                             cx.stop_propagation();
@@ -3883,7 +3883,7 @@ impl OutlinePanel {
             div()
                 .occlude()
                 .id("project-panel-vertical-scroll")
-                .on_mouse_move(cx.listener(|_, _, cx| {
+                .on_mouse_move(cx.listener(|_, _, window, cx| {
                     cx.notify();
                     cx.stop_propagation()
                 }))
@@ -3895,7 +3895,7 @@ impl OutlinePanel {
                 })
                 .on_mouse_up(
                     MouseButton::Left,
-                    cx.listener(|outline_panel, _, cx| {
+                    cx.listener(|outline_panel, _, window, cx| {
                         if !outline_panel.vertical_scrollbar_state.is_dragging()
                             && !outline_panel.focus_handle.contains_focused(cx)
                         {
@@ -3906,7 +3906,7 @@ impl OutlinePanel {
                         cx.stop_propagation();
                     }),
                 )
-                .on_scroll_wheel(cx.listener(|_, _, cx| {
+                .on_scroll_wheel(cx.listener(|_, _, window, cx| {
                     cx.notify();
                 }))
                 .h_full()
@@ -3942,7 +3942,7 @@ impl OutlinePanel {
             div()
                 .occlude()
                 .id("project-panel-horizontal-scroll")
-                .on_mouse_move(cx.listener(|_, _, cx| {
+                .on_mouse_move(cx.listener(|_, _, window, cx| {
                     cx.notify();
                     cx.stop_propagation()
                 }))
@@ -3954,7 +3954,7 @@ impl OutlinePanel {
                 })
                 .on_mouse_up(
                     MouseButton::Left,
-                    cx.listener(|outline_panel, _, cx| {
+                    cx.listener(|outline_panel, _, window, cx| {
                         if !outline_panel.horizontal_scrollbar_state.is_dragging()
                             && !outline_panel.focus_handle.contains_focused(cx)
                         {
@@ -3965,7 +3965,7 @@ impl OutlinePanel {
                         cx.stop_propagation();
                     }),
                 )
-                .on_scroll_wheel(cx.listener(|_, _, cx| {
+                .on_scroll_wheel(cx.listener(|_, _, window, cx| {
                     cx.notify();
                 }))
                 .w_full()
@@ -4293,7 +4293,7 @@ impl OutlinePanel {
                             )
                         })
                         .shape(IconButtonShape::Square)
-                        .on_click(cx.listener(|outline_panel, _, cx| {
+                        .on_click(cx.listener(|outline_panel, _, window, cx| {
                             outline_panel.toggle_active_editor_pin(&ToggleActiveEditorPin, cx);
                         })),
                     ),
@@ -4501,7 +4501,7 @@ impl Render for OutlinePanel {
             .size_full()
             .overflow_hidden()
             .relative()
-            .on_hover(cx.listener(|this, hovered, cx| {
+            .on_hover(cx.listener(|this, hovered, window, cx| {
                 if *hovered {
                     this.show_scrollbar = true;
                     this.hide_scrollbar_task.take();
@@ -4537,7 +4537,7 @@ impl Render for OutlinePanel {
             })
             .on_mouse_down(
                 MouseButton::Right,
-                cx.listener(move |outline_panel, event: &MouseDownEvent, cx| {
+                cx.listener(move |outline_panel, event: &MouseDownEvent, window, cx| {
                     if let Some(entry) = outline_panel.selected_entry().cloned() {
                         outline_panel.deploy_context_menu(event.position, entry, cx)
                     } else if let Some(entry) = outline_panel.fs_entries.first().cloned() {

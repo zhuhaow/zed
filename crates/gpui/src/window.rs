@@ -3849,6 +3849,7 @@ impl WindowContext<'_> {
 
 impl Context for WindowContext<'_> {
     type Result<T> = T;
+    type WindowResult<T> = Result<T>;
 
     fn new_model<T>(&mut self, build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T) -> Model<T>
     where
@@ -3897,7 +3898,7 @@ impl Context for WindowContext<'_> {
         read(entity, &*self.app)
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, update: F) -> Result<T>
+    fn update_window<T, F>(&mut self, window: AnyWindowHandle, update: F) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
@@ -3912,8 +3913,8 @@ impl Context for WindowContext<'_> {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
-    ) -> Result<R>
+        read: impl FnOnce(View<T>, &Window, &AppContext) -> R,
+    ) -> Self::WindowResult<R>
     where
         T: 'static,
     {
@@ -3925,7 +3926,7 @@ impl Context for WindowContext<'_> {
                 .unwrap()
                 .downcast::<T>()
                 .map_err(|_| anyhow!("the type of the window's root view has changed"))?;
-            Ok(read(root_view, self))
+            Ok(read(root_view, self.window, self))
         } else {
             self.app.read_window(window, read)
         }
@@ -4406,7 +4407,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     pub fn on_blur(
         &mut self,
         handle: &FocusHandle,
-        mut listener: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
+        mut listener: impl FnMut(&mut V, &mut Window, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
         let view = self.view.downgrade();
         let focus_id = handle.id;
@@ -4417,7 +4418,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
                         if event.previous_focus_path.last() == Some(&focus_id)
                             && event.current_focus_path.last() != Some(&focus_id)
                         {
-                            listener(view, cx)
+                            listener(view, window, cx)
                         }
                     })
                     .is_ok()
@@ -4563,6 +4564,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
 
 impl<V> Context for ViewContext<'_, V> {
     type Result<U> = U;
+    type WindowResult<U> = Result<U>;
 
     fn new_model<T: 'static>(
         &mut self,
@@ -4602,7 +4604,7 @@ impl<V> Context for ViewContext<'_, V> {
         self.window_cx.read_model(handle, read)
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, update: F) -> Result<T>
+    fn update_window<T, F>(&mut self, window: AnyWindowHandle, update: F) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
@@ -4612,8 +4614,8 @@ impl<V> Context for ViewContext<'_, V> {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
-    ) -> Result<R>
+        read: impl FnOnce(View<T>, &Window, &AppContext) -> R,
+    ) -> Self::WindowResult<R>
     where
         T: 'static,
     {
@@ -4718,6 +4720,7 @@ impl<V: 'static + Render> WindowHandle<V> {
     pub fn root<C>(&self, cx: &mut C) -> Result<View<V>>
     where
         C: Context,
+        C::WindowResult<Result<View<V>>>: Flatten<View<V>>,
     {
         Flatten::flatten(cx.update_window(self.any_handle, |root_view, _, _| {
             root_view
@@ -4736,13 +4739,15 @@ impl<V: 'static + Render> WindowHandle<V> {
     ) -> Result<R>
     where
         C: Context,
+        C::WindowResult<Result<R>>: Flatten<R>,
     {
         cx.update_window(self.any_handle, |root_view, window, cx| {
             let view = root_view
                 .downcast::<V>()
                 .map_err(|_| anyhow!("the type of the window's root view has changed"))?;
             Ok(cx.update_view(&view, |view, cx| update(view, window, cx)))
-        })?
+        })
+        .flatten()
     }
 
     /// Read the root view out of this window.
@@ -4767,21 +4772,27 @@ impl<V: 'static + Render> WindowHandle<V> {
     /// Read the root view out of this window, with a callback
     ///
     /// This will fail if the window is closed or if the root view's type does not match `V`.
-    pub fn read_with<C, R>(&self, cx: &C, read_with: impl FnOnce(&V, &AppContext) -> R) -> Result<R>
+    pub fn read_with<C, R>(
+        &self,
+        cx: &C,
+        read_with: impl FnOnce(&V, &Window, &AppContext) -> R,
+    ) -> C::WindowResult<R>
     where
         C: Context,
     {
-        cx.read_window(self, |root_view, cx| read_with(root_view.read(cx), cx))
+        cx.read_window(self, |root_view, window, cx| {
+            read_with(root_view.read(cx), window, cx)
+        })
     }
 
     /// Read the root view pointer off of this window.
     ///
     /// This will fail if the window is closed or if the root view's type does not match `V`.
-    pub fn root_view<C>(&self, cx: &C) -> Result<View<V>>
+    pub fn root_view<C>(&self, cx: &C) -> C::WindowResult<View<V>>
     where
         C: Context,
     {
-        cx.read_window(self, |root_view, _cx| root_view.clone())
+        cx.read_window(self, |root_view, _window, _cx| root_view.clone())
     }
 
     /// Check if this window is 'active'.
@@ -4858,27 +4869,33 @@ impl AnyWindowHandle {
         self,
         cx: &mut C,
         update: impl FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> R,
-    ) -> Result<R>
+    ) -> C::WindowResult<R>
     where
         C: Context,
     {
         cx.update_window(self, update)
     }
 
-    /// Read the state of the root view of this window.
-    ///
-    /// This will fail if the window has been closed.
-    pub fn read<T, C, R>(self, cx: &C, read: impl FnOnce(View<T>, &AppContext) -> R) -> Result<R>
-    where
-        C: Context,
-        T: 'static,
-    {
-        let view = self
-            .downcast::<T>()
-            .context("the type of the window's root view has changed")?;
+    // todo! delete this??
+    // /// Read the state of the root view of this window.
+    // ///
+    // /// This will fail if the window has been closed.
+    // pub fn read<T, C, R>(
+    //     self,
+    //     cx: &C,
+    //     read: impl FnOnce(View<T>, &AppContext) -> R,
+    // ) -> C::WindowResult<R>
+    // where
+    //     C: Context,
+    //     C::WindowResult<Result<R>>: Flatten<R>,
+    //     T: 'static,
+    // {
+    //     let view = self
+    //         .downcast::<T>()
+    //         .context("the type of the window's root view does not match the given callback")?;
 
-        cx.read_window(&view, read)
-    }
+    //     cx.read_window(&view, { |view, app_context| read(view, app_context) })
+    // }
 }
 
 /// An identifier for an [`Element`](crate::Element).

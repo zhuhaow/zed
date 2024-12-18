@@ -235,8 +235,8 @@ async fn test_basic_following(
 
     // Client C closes the project.
     let weak_workspace_c = workspace_c.downgrade();
-    workspace_c.update(cx_c, |workspace, cx| {
-        workspace.close_window(&Default::default(), cx);
+    workspace_c.update_in_window(window, cx_c, |workspace, window, cx| {
+        workspace.close_window(&Default::default(), window, cx);
     });
     executor.run_until_parked();
     // are you sure you want to leave the call?
@@ -737,8 +737,12 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
     executor.run_until_parked();
 
     // Clients A and B return focus to the original files they had open
-    workspace_a.update(cx_a, |workspace, cx| workspace.activate_next_pane(cx));
-    workspace_b.update(cx_b, |workspace, cx| workspace.activate_next_pane(cx));
+    workspace_a.update_in_window(window, cx_a, |workspace, window, cx| {
+        workspace.activate_next_pane(window, cx)
+    });
+    workspace_b.update_in_window(window, cx_b, |workspace, window, cx| {
+        workspace.activate_next_pane(window, cx)
+    });
     executor.run_until_parked();
 
     // Both clients see the other client's focused file in their right pane.
@@ -831,7 +835,9 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
     );
 
     // Client A focuses their right pane, in which they're following client B.
-    workspace_a.update(cx_a, |workspace, cx| workspace.activate_next_pane(cx));
+    workspace_a.update_in_window(window, cx_a, |workspace, window, cx| {
+        workspace.activate_next_pane(window, cx)
+    });
     executor.run_until_parked();
 
     // Client B sees that client A is now looking at the same file as them.
@@ -877,7 +883,9 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
 
     // Client B focuses their right pane, in which they're following client A,
     // who is following them.
-    workspace_b.update(cx_b, |workspace, cx| workspace.activate_next_pane(cx));
+    workspace_b.update_in_window(window, cx_b, |workspace, window, cx| {
+        workspace.activate_next_pane(window, cx)
+    });
     executor.run_until_parked();
 
     // Client A sees that client B is now looking at the same file as them.
@@ -1297,9 +1305,12 @@ async fn test_auto_unfollowing(cx_a: &mut TestAppContext, cx_b: &mut TestAppCont
         Some(leader_id)
     );
 
-    workspace_b.update(cx_b, |workspace, cx| workspace.activate_next_pane(cx));
+    workspace_b.update_in_window(window, cx_b, |workspace, window, cx| {
+        workspace.activate_next_pane(window, cx)
+    });
     assert_eq!(
-        workspace_b.update(cx_b, |workspace, _| workspace.leader_for_pane(&pane_b)),
+        workspace_b.update_in_window(window, cx_b, |workspace, window, _| workspace
+            .leader_for_pane(&pane_b)),
         Some(leader_id)
     );
 

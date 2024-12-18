@@ -163,7 +163,7 @@ impl Render for ModalLayer {
                 background.fade_out(0.2);
                 el.bg(background)
                     .occlude()
-                    .on_mouse_down_out(cx.listener(|this, _, cx| {
+                    .on_mouse_down_out(cx.listener(|this, _, window, cx| {
                         this.hide_modal(cx);
                     }))
             })

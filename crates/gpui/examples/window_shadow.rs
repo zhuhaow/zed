@@ -74,8 +74,8 @@ impl Render for WindowShadow {
                     .when(!tiling.bottom, |div| div.pb(shadow_size))
                     .when(!tiling.left, |div| div.pl(shadow_size))
                     .when(!tiling.right, |div| div.pr(shadow_size))
-                    .on_mouse_move(|_e, cx| cx.refresh())
-                    .on_mouse_down(MouseButton::Left, move |e, cx| {
+                    .on_mouse_move(|_e, window, cx| cx.refresh())
+                    .on_mouse_down(MouseButton::Left, move |e, window, cx| {
                         let size = cx.window_bounds().get_bounds().size;
                         let pos = e.position;
 
@@ -115,7 +115,7 @@ impl Render for WindowShadow {
                                 }])
                             }),
                     })
-                    .on_mouse_move(|_e, cx| {
+                    .on_mouse_move(|_e, window, cx| {
                         cx.stop_propagation();
                     })
                     .bg(gpui::rgb(0xCCCCFF))
@@ -156,10 +156,13 @@ impl Render for WindowShadow {
                                         .map(|div| match decorations {
                                             Decorations::Server => div,
                                             Decorations::Client { .. } => div
-                                                .on_mouse_down(MouseButton::Left, |_e, cx| {
-                                                    cx.start_window_move();
-                                                })
-                                                .on_click(|e, cx| {
+                                                .on_mouse_down(
+                                                    MouseButton::Left,
+                                                    |_e, window, cx| {
+                                                        cx.start_window_move();
+                                                    },
+                                                )
+                                                .on_click(|e, window, cx| {
                                                     if e.down.button == MouseButton::Right {
                                                         cx.show_window_menu(e.up.position);
                                                     }

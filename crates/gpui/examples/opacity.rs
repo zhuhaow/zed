@@ -42,7 +42,7 @@ impl HelloWorld {
         }
     }
 
-    fn change_opacity(&mut self, _: &ClickEvent, cx: &mut ViewContext<Self>) {
+    fn change_opacity(&mut self, _: &ClickEvent, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.opacity = 0.0;
         cx.notify();
 

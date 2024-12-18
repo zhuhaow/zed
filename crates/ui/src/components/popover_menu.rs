@@ -131,7 +131,7 @@ impl<M: ManagedView> PopoverMenu<M> {
             let open = menu.borrow().is_some();
             t.toggle_state(open)
                 .when_some(builder, |el, builder| {
-                    el.on_click(move |_, cx| show_menu(&builder, &menu, cx))
+                    el.on_click(move |_, window, cx| show_menu(&builder, &menu, cx))
                 })
                 .into_any_element()
         }));
@@ -360,7 +360,7 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
                 let menu_handle = request_layout.menu_handle.clone();
                 // Mouse-downing outside the menu dismisses it, so we don't
                 // want a click on the toggle to re-open it.
-                cx.on_mouse_event(move |_: &MouseDownEvent, phase, cx| {
+                cx.on_mouse_event(move |_: &MouseDownEvent, phase, window, cx| {
                     if phase == DispatchPhase::Bubble && child_hitbox.is_hovered(cx) {
                         if let Some(menu) = menu_handle.borrow().as_ref() {
                             menu.update(cx, |_, cx| {

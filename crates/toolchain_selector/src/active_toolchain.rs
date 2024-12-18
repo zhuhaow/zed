@@ -149,9 +149,9 @@ impl Render for ActiveToolchain {
             el.child(
                 Button::new("change-toolchain", active_toolchain.name.clone())
                     .label_size(LabelSize::Small)
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
-                            workspace.update(cx, |workspace, cx| {
+                            workspace.update(cx, |workspace, window, cx| {
                                 ToolchainSelector::toggle(workspace, cx)
                             });
                         }

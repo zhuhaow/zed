@@ -390,7 +390,7 @@ impl PickerDelegate for TabSwitcherDelegate {
             // See the same handler in Picker for more details.
             .on_mouse_up(
                 MouseButton::Right,
-                cx.listener(move |picker, _: &MouseUpEvent, cx| {
+                cx.listener(move |picker, _: &MouseUpEvent, window, cx| {
                     cx.stop_propagation();
                     picker.delegate.close_item_at(ix, cx);
                 }),

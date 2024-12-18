@@ -467,7 +467,7 @@ impl RateCompletionModal {
                                                 Tooltip::text("Explain what's bad about it before reporting it", cx)
                                             })
                                         })
-                                        .on_click(cx.listener(move |this, _, cx| {
+                                        .on_click(cx.listener(move |this, _, window, cx| {
                                             this.thumbs_down_active(
                                                 &ThumbsDownActiveCompletion,
                                                 cx,
@@ -486,7 +486,7 @@ impl RateCompletionModal {
                                         .icon_size(IconSize::Small)
                                         .icon_position(IconPosition::Start)
                                         .disabled(rated)
-                                        .on_click(cx.listener(move |this, _, cx| {
+                                        .on_click(cx.listener(move |this, _, window, cx| {
                                             this.thumbs_up_active(&ThumbsUpActiveCompletion, cx);
                                         })),
                                 ),
@@ -595,7 +595,7 @@ impl Render for RateCompletionModal {
                                                             .size(LabelSize::XSmall)
                                                         )
                                                 )
-                                                .on_click(cx.listener(move |this, _, cx| {
+                                                .on_click(cx.listener(move |this, _, window, cx| {
                                                     this.select_completion(Some(completion.clone()), true, cx);
                                                 }))
                                         },
@@ -604,7 +604,7 @@ impl Render for RateCompletionModal {
                     ),
             )
             .children(self.render_active_completion(cx))
-            .on_mouse_down_out(cx.listener(|_, _, cx| cx.emit(DismissEvent)))
+            .on_mouse_down_out(cx.listener(|_, _, window, cx| cx.emit(DismissEvent)))
     }
 }
 

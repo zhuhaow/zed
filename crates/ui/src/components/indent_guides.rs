@@ -282,7 +282,7 @@ mod uniform_list {
                         let hitboxes = hitboxes.clone();
                         let indent_guides = self.indent_guides.clone();
                         let on_hovered_indent_guide_click = on_hovered_indent_guide_click.clone();
-                        move |event: &MouseDownEvent, phase, cx| {
+                        move |event: &MouseDownEvent, phase, window, cx| {
                             if phase == DispatchPhase::Bubble && event.button == MouseButton::Left {
                                 let mut active_hitbox_ix = None;
                                 for (i, hitbox) in hitboxes.iter().enumerate() {
@@ -323,7 +323,7 @@ mod uniform_list {
                     cx.on_mouse_event({
                         let prev_hovered_hitbox_id = hovered_hitbox_id;
                         let hitboxes = hitboxes.clone();
-                        move |_: &MouseMoveEvent, phase, cx| {
+                        move |_: &MouseMoveEvent, phase, window, cx| {
                             let mut hovered_hitbox_id = None;
                             for hitbox in hitboxes.as_ref() {
                                 if hitbox.is_hovered(cx) {

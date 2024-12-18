@@ -644,7 +644,7 @@ impl Render for Session {
                 Some(
                     Button::new("interrupt", "Interrupt")
                         .style(ButtonStyle::Subtle)
-                        .on_click(cx.listener(move |session, _, cx| {
+                        .on_click(cx.listener(move |session, _, window, cx| {
                             session.interrupt(cx);
                         })),
                 ),
@@ -674,7 +674,7 @@ impl Render for Session {
                 Button::new("shutdown", "Shutdown")
                     .style(ButtonStyle::Subtle)
                     .disabled(self.kernel.is_shutting_down())
-                    .on_click(cx.listener(move |session, _, cx| {
+                    .on_click(cx.listener(move |session, _, window, cx| {
                         session.shutdown(cx);
                     })),
             )

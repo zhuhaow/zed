@@ -836,16 +836,18 @@ impl CollabPanel {
                     return el;
                 }
                 el.tooltip(move |cx| Tooltip::text(tooltip.clone(), cx))
-                    .on_click(cx.listener(move |this, _, cx| {
+                    .on_click(cx.listener(move |this, _, window, cx| {
                         this.workspace
-                            .update(cx, |workspace, cx| workspace.follow(peer_id, cx))
+                            .update(cx, |workspace, window, cx| workspace.follow(peer_id, cx))
                             .ok();
                     }))
             })
             .when(is_call_admin, |el| {
-                el.on_secondary_mouse_down(cx.listener(move |this, event: &MouseDownEvent, cx| {
-                    this.deploy_participant_context_menu(event.position, user_id, role, cx)
-                }))
+                el.on_secondary_mouse_down(cx.listener(
+                    move |this, event: &MouseDownEvent, window, cx| {
+                        this.deploy_participant_context_menu(event.position, user_id, role, cx)
+                    },
+                ))
             })
     }
 
@@ -867,9 +869,9 @@ impl CollabPanel {
 
         ListItem::new(project_id as usize)
             .toggle_state(is_selected)
-            .on_click(cx.listener(move |this, _, cx| {
+            .on_click(cx.listener(move |this, _, window, cx| {
                 this.workspace
-                    .update(cx, |workspace, cx| {
+                    .update(cx, |workspace, window, cx| {
                         let app_state = workspace.app_state().clone();
                         workspace::join_in_room_project(project_id, host_user_id, app_state, cx)
                             .detach_and_prompt_err("Failed to join project", cx, |_, _| None);
@@ -905,9 +907,9 @@ impl CollabPanel {
             )
             .child(Label::new("Screen"))
             .when_some(peer_id, |this, _| {
-                this.on_click(cx.listener(move |this, _, cx| {
+                this.on_click(cx.listener(move |this, _, window, cx| {
                     this.workspace
-                        .update(cx, |workspace, cx| {
+                        .update(cx, |workspace, window, cx| {
                             workspace.open_shared_screen(peer_id.unwrap(), cx)
                         })
                         .ok();
@@ -937,7 +939,7 @@ impl CollabPanel {
         let has_channel_buffer_changed = channel_store.has_channel_buffer_changed(channel_id);
         ListItem::new("channel-notes")
             .toggle_state(is_selected)
-            .on_click(cx.listener(move |this, _, cx| {
+            .on_click(cx.listener(move |this, _, window, cx| {
                 this.open_channel_notes(channel_id, cx);
             }))
             .start_slot(
@@ -969,7 +971,7 @@ impl CollabPanel {
         let has_messages_notification = channel_store.has_new_messages(channel_id);
         ListItem::new("channel-chat")
             .toggle_state(is_selected)
-            .on_click(cx.listener(move |this, _, cx| {
+            .on_click(cx.listener(move |this, _, window, cx| {
                 this.join_channel_chat(channel_id, cx);
             }))
             .start_slot(
@@ -1991,7 +1993,7 @@ impl CollabPanel {
                             .icon_position(IconPosition::Start)
                             .style(ButtonStyle::Filled)
                             .full_width()
-                            .on_click(cx.listener(|this, _, cx| {
+                            .on_click(cx.listener(|this, _, window, cx| {
                                 let client = this.client.clone();
                                 cx.spawn(|_, mut cx| async move {
                                     client
@@ -2193,13 +2195,13 @@ impl CollabPanel {
             }),
             Section::Contacts => Some(
                 IconButton::new("add-contact", IconName::Plus)
-                    .on_click(cx.listener(|this, _, cx| this.toggle_contact_finder(cx)))
+                    .on_click(cx.listener(|this, _, window, cx| this.toggle_contact_finder(cx)))
                     .tooltip(|cx| Tooltip::text("Search for new contact", cx))
                     .into_any_element(),
             ),
             Section::Channels => Some(
                 IconButton::new("add-channel", IconName::Plus)
-                    .on_click(cx.listener(|this, _, cx| this.new_root_channel(cx)))
+                    .on_click(cx.listener(|this, _, window, cx| this.new_root_channel(cx)))
                     .tooltip(|cx| Tooltip::text("Create a channel", cx))
                     .into_any_element(),
             ),
@@ -2217,11 +2219,11 @@ impl CollabPanel {
         h_flex().w_full().group("section-header").child(
             ListHeader::new(text)
                 .when(can_collapse, |header| {
-                    header
-                        .toggle(Some(!is_collapsed))
-                        .on_toggle(cx.listener(move |this, _, cx| {
+                    header.toggle(Some(!is_collapsed)).on_toggle(cx.listener(
+                        move |this, _, window, cx| {
                             this.toggle_section_expanded(section, cx);
-                        }))
+                        },
+                    ))
                 })
                 .inset(true)
                 .end_slot::<AnyElement>(button)
@@ -2258,7 +2260,7 @@ impl CollabPanel {
                                 .visible_on_hover("")
                                 .on_click(cx.listener({
                                     let contact = contact.clone();
-                                    move |this, event: &ClickEvent, cx| {
+                                    move |this, event: &ClickEvent, window, cx| {
                                         this.deploy_contact_context_menu(
                                             event.down.position,
                                             contact.clone(),
@@ -2271,7 +2273,7 @@ impl CollabPanel {
             )
             .on_secondary_mouse_down(cx.listener({
                 let contact = contact.clone();
-                move |this, event: &MouseDownEvent, cx| {
+                move |this, event: &MouseDownEvent, window, cx| {
                     this.deploy_contact_context_menu(event.position, contact.clone(), cx);
                 }
             }))
@@ -2328,13 +2330,13 @@ impl CollabPanel {
         let controls = if is_incoming {
             vec![
                 IconButton::new("decline-contact", IconName::Close)
-                    .on_click(cx.listener(move |this, _, cx| {
+                    .on_click(cx.listener(move |this, _, window, cx| {
                         this.respond_to_contact_request(user_id, false, cx);
                     }))
                     .icon_color(color)
                     .tooltip(|cx| Tooltip::text("Decline invite", cx)),
                 IconButton::new("accept-contact", IconName::Check)
-                    .on_click(cx.listener(move |this, _, cx| {
+                    .on_click(cx.listener(move |this, _, window, cx| {
                         this.respond_to_contact_request(user_id, true, cx);
                     }))
                     .icon_color(color)
@@ -2343,7 +2345,7 @@ impl CollabPanel {
         } else {
             let github_login = github_login.clone();
             vec![IconButton::new("remove_contact", IconName::Close)
-                .on_click(cx.listener(move |this, _, cx| {
+                .on_click(cx.listener(move |this, _, window, cx| {
                     this.remove_contact(user_id, &github_login, cx);
                 }))
                 .icon_color(color)
@@ -2383,13 +2385,13 @@ impl CollabPanel {
 
         let controls = [
             IconButton::new("reject-invite", IconName::Close)
-                .on_click(cx.listener(move |this, _, cx| {
+                .on_click(cx.listener(move |this, _, window, cx| {
                     this.respond_to_channel_invite(channel_id, false, cx);
                 }))
                 .icon_color(color)
                 .tooltip(|cx| Tooltip::text("Decline invite", cx)),
             IconButton::new("accept-invite", IconName::Check)
-                .on_click(cx.listener(move |this, _, cx| {
+                .on_click(cx.listener(move |this, _, window, cx| {
                     this.respond_to_channel_invite(channel_id, true, cx);
                 }))
                 .icon_color(color)
@@ -2421,7 +2423,7 @@ impl CollabPanel {
             .child(Icon::new(IconName::Plus))
             .child(Label::new("Add a Contact"))
             .toggle_state(is_selected)
-            .on_click(cx.listener(|this, _, cx| this.toggle_contact_finder(cx)))
+            .on_click(cx.listener(|this, _, window, cx| this.toggle_contact_finder(cx)))
     }
 
     fn render_channel(
@@ -2508,12 +2510,14 @@ impl CollabPanel {
                     }
                 }
             })
-            .on_drop(cx.listener(move |this, dragged_channel: &Channel, cx| {
-                if dragged_channel.root_id() != root_id {
-                    return;
-                }
-                this.move_channel(dragged_channel.id, channel_id, cx);
-            }))
+            .on_drop(
+                cx.listener(move |this, dragged_channel: &Channel, window, cx| {
+                    if dragged_channel.root_id() != root_id {
+                        return;
+                    }
+                    this.move_channel(dragged_channel.id, channel_id, cx);
+                }),
+            )
             .child(
                 ListItem::new(channel_id.0 as usize)
                     // Add one level of depth for the disclosure arrow.
@@ -2521,12 +2525,10 @@ impl CollabPanel {
                     .indent_step_size(px(20.))
                     .toggle_state(is_selected || is_active)
                     .toggle(disclosed)
-                    .on_toggle(
-                        cx.listener(move |this, _, cx| {
-                            this.toggle_channel_collapsed(channel_id, cx)
-                        }),
-                    )
-                    .on_click(cx.listener(move |this, _, cx| {
+                    .on_toggle(cx.listener(move |this, _, window, cx| {
+                        this.toggle_channel_collapsed(channel_id, cx)
+                    }))
+                    .on_click(cx.listener(move |this, _, window, cx| {
                         if is_active {
                             this.open_channel_notes(channel_id, cx)
                         } else {
@@ -2534,7 +2536,7 @@ impl CollabPanel {
                         }
                     }))
                     .on_secondary_mouse_down(cx.listener(
-                        move |this, event: &MouseDownEvent, cx| {
+                        move |this, event: &MouseDownEvent, window, cx| {
                             this.deploy_channel_context_menu(event.position, channel_id, ix, cx)
                         },
                     ))
@@ -2582,7 +2584,7 @@ impl CollabPanel {
                                 } else {
                                     Color::Muted
                                 })
-                                .on_click(cx.listener(move |this, _, cx| {
+                                .on_click(cx.listener(move |this, _, window, cx| {
                                     this.join_channel_chat(channel_id, cx)
                                 }))
                                 .tooltip(|cx| Tooltip::text("Open channel chat", cx))
@@ -2598,7 +2600,7 @@ impl CollabPanel {
                                 } else {
                                     Color::Muted
                                 })
-                                .on_click(cx.listener(move |this, _, cx| {
+                                .on_click(cx.listener(move |this, _, window, cx| {
                                     this.open_channel_notes(channel_id, cx)
                                 }))
                                 .tooltip(|cx| Tooltip::text("Open channel notes", cx))

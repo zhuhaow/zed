@@ -322,10 +322,9 @@ impl Render for LanguageServerPrompt {
                                             .size(LabelSize::Default),
                                     ),
                             )
-                            .child(
-                                ui::IconButton::new("close", ui::IconName::Close)
-                                    .on_click(cx.listener(|_, _, cx| cx.emit(gpui::DismissEvent))),
-                            ),
+                            .child(ui::IconButton::new("close", ui::IconName::Close).on_click(
+                                cx.listener(|_, _, window, cx| cx.emit(gpui::DismissEvent)),
+                            )),
                     )
                     .child(
                         v_flex()
@@ -334,13 +333,13 @@ impl Render for LanguageServerPrompt {
                                     ui::IconButton::new("copy", ui::IconName::Copy)
                                         .on_click({
                                             let message = request.message.clone();
-                                            move |_, cx| {
+                                            move |_, window, cx| {
                                                 cx.write_to_clipboard(ClipboardItem::new_string(
                                                     message.clone(),
                                                 ))
                                             }
                                         })
-                                        .tooltip(|cx| Tooltip::text("Copy", cx))
+                                        .tooltip(|window, cx| Tooltip::text("Copy", cx))
                                         .visible_on_hover(""),
                                 ),
                             )
@@ -350,7 +349,7 @@ impl Render for LanguageServerPrompt {
                         let this_handle = cx.view().clone();
                         ui::Button::new(ix, action.title.clone())
                             .size(ButtonSize::Large)
-                            .on_click(move |_, cx| {
+                            .on_click(move |_, window, cx| {
                                 let this_handle = this_handle.clone();
                                 cx.spawn(|cx| async move {
                                     LanguageServerPrompt::select_option(this_handle, ix, cx).await
@@ -418,10 +417,9 @@ impl Render for ErrorMessagePrompt {
                                             .text_color(Color::Error.color(cx))
                                     }),
                             )
-                            .child(
-                                ui::IconButton::new("close", ui::IconName::Close)
-                                    .on_click(cx.listener(|_, _, cx| cx.emit(gpui::DismissEvent))),
-                            ),
+                            .child(ui::IconButton::new("close", ui::IconName::Close).on_click(
+                                cx.listener(|_, _, window, cx| cx.emit(gpui::DismissEvent)),
+                            )),
                     )
                     .child(
                         div()
@@ -432,7 +430,7 @@ impl Render for ErrorMessagePrompt {
                         elm.child(
                             div().mt_2().child(
                                 ui::Button::new("error_message_prompt_notification_button", label)
-                                    .on_click(move |_, cx| cx.open_url(&url)),
+                                    .on_click(move |_, window, cx| cx.open_url(&url)),
                             ),
                         )
                     }),
@@ -526,7 +524,7 @@ pub mod simple_message_notification {
                                 .id("cancel")
                                 .child(Icon::new(IconName::Close))
                                 .cursor_pointer()
-                                .on_click(cx.listener(|this, _, cx| this.dismiss(cx))),
+                                .on_click(cx.listener(|this, _, window, cx| this.dismiss(cx))),
                         ),
                 )
                 .child(
@@ -534,7 +532,7 @@ pub mod simple_message_notification {
                         .gap_3()
                         .children(self.click_message.iter().map(|message| {
                             Button::new(message.clone(), message.clone()).on_click(cx.listener(
-                                |this, _, cx| {
+                                |this, _, window, cx| {
                                     if let Some(on_click) = this.on_click.as_ref() {
                                         (on_click)(cx)
                                     };
@@ -545,7 +543,7 @@ pub mod simple_message_notification {
                         .children(self.secondary_click_message.iter().map(|message| {
                             Button::new(message.clone(), message.clone())
                                 .style(ButtonStyle::Filled)
-                                .on_click(cx.listener(|this, _, cx| {
+                                .on_click(cx.listener(|this, _, window, cx| {
                                     if let Some(on_click) = this.secondary_on_click.as_ref() {
                                         (on_click)(cx)
                                     };

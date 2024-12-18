@@ -21,6 +21,7 @@ pub struct AsyncAppContext {
 
 impl Context for AsyncAppContext {
     type Result<T> = Result<T>;
+    type WindowResult<T> = Result<T>;
 
     fn new_model<T: 'static>(
         &mut self,
@@ -82,7 +83,7 @@ impl Context for AsyncAppContext {
         Ok(lock.read_model(handle, callback))
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Result<T>
+    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
@@ -94,8 +95,8 @@ impl Context for AsyncAppContext {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
-    ) -> Result<R>
+        read: impl FnOnce(View<T>, &Window, &AppContext) -> R,
+    ) -> Self::WindowResult<R>
     where
         T: 'static,
     {
@@ -310,6 +311,7 @@ impl AsyncWindowContext {
 
 impl Context for AsyncWindowContext {
     type Result<T> = Result<T>;
+    type WindowResult<T> = Result<T>;
 
     fn new_model<T>(
         &mut self,
@@ -366,7 +368,7 @@ impl Context for AsyncWindowContext {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
+        read: impl FnOnce(View<T>, &Window, &AppContext) -> R,
     ) -> Result<R>
     where
         T: 'static,

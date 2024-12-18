@@ -128,7 +128,7 @@ impl TitleBar {
 
                     this.children(current_user_face_pile.map(|face_pile| {
                         v_flex()
-                            .on_mouse_down(MouseButton::Left, |_, cx| cx.stop_propagation())
+                            .on_mouse_down(MouseButton::Left, |_, window, cx| cx.stop_propagation())
                             .child(face_pile)
                             .child(render_color_ribbon(player_colors.local().cursor))
                     }))
@@ -165,9 +165,9 @@ impl TitleBar {
                                 .cursor_pointer()
                                 .on_click({
                                     let peer_id = collaborator.peer_id;
-                                    cx.listener(move |this, _, cx| {
+                                    cx.listener(move |this, _, window, cx| {
                                         this.workspace
-                                            .update(cx, |workspace, cx| {
+                                            .update(cx, |workspace, window, cx| {
                                                 if is_following {
                                                     workspace.unfollow(peer_id, cx);
                                                 } else {
@@ -179,7 +179,7 @@ impl TitleBar {
                                 })
                                 .tooltip({
                                     let login = collaborator.user.github_login.clone();
-                                    move |cx| Tooltip::text(format!("Follow {login}"), cx)
+                                    move |_window, cx| Tooltip::text(format!("Follow {login}"), cx)
                                 }),
                         )
                     }))
@@ -235,7 +235,7 @@ impl TitleBar {
                                         AvatarAudioStatusIndicator::new(ui::AudioStatus::Muted)
                                             .tooltip({
                                                 let github_login = user.github_login.clone();
-                                                move |cx| {
+                                                move |window, cx| {
                                                     Tooltip::text(
                                                         format!("{} is muted", github_login),
                                                         cx,
@@ -310,7 +310,7 @@ impl TitleBar {
                     "toggle_sharing",
                     if is_shared { "Unshare" } else { "Share" },
                 )
-                .tooltip(move |cx| {
+                .tooltip(move |window, cx| {
                     Tooltip::text(
                         if is_shared {
                             "Stop sharing project with call participants"
@@ -324,7 +324,7 @@ impl TitleBar {
                 .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                 .toggle_state(is_shared)
                 .label_size(LabelSize::Small)
-                .on_click(cx.listener(move |this, _, cx| {
+                .on_click(cx.listener(move |this, _, window, cx| {
                     if is_shared {
                         this.unshare_project(&Default::default(), cx);
                     } else {
@@ -341,9 +341,9 @@ impl TitleBar {
                 .child(
                     IconButton::new("leave-call", ui::IconName::Exit)
                         .style(ButtonStyle::Subtle)
-                        .tooltip(|cx| Tooltip::text("Leave call", cx))
+                        .tooltip(|window, cx| Tooltip::text("Leave call", cx))
                         .icon_size(IconSize::Small)
-                        .on_click(move |_, cx| {
+                        .on_click(move |_, window, cx| {
                             ActiveCall::global(cx)
                                 .update(cx, |call, cx| call.hang_up(cx))
                                 .detach_and_log_err(cx);
@@ -362,7 +362,7 @@ impl TitleBar {
                         ui::IconName::Mic
                     },
                 )
-                .tooltip(move |cx| {
+                .tooltip(move |window, cx| {
                     if is_muted {
                         if is_deafened {
                             Tooltip::with_meta(
@@ -382,7 +382,7 @@ impl TitleBar {
                 .icon_size(IconSize::Small)
                 .toggle_state(is_muted)
                 .selected_style(ButtonStyle::Tinted(TintColor::Negative))
-                .on_click(move |_, cx| {
+                .on_click(move |_, window, cx| {
                     toggle_mute(&Default::default(), cx);
                 })
                 .into_any_element(),
@@ -401,7 +401,7 @@ impl TitleBar {
                 .selected_style(ButtonStyle::Tinted(TintColor::Negative))
                 .icon_size(IconSize::Small)
                 .toggle_state(is_deafened)
-                .tooltip(move |cx| {
+                .tooltip(move |window, cx| {
                     if is_deafened {
                         let label = "Unmute Audio";
 
@@ -420,7 +420,7 @@ impl TitleBar {
                         }
                     }
                 })
-                .on_click(move |_, cx| toggle_deafen(&Default::default(), cx))
+                .on_click(move |_, window, cx| toggle_deafen(&Default::default(), cx))
                 .into_any_element(),
             );
         }
@@ -432,7 +432,7 @@ impl TitleBar {
                     .icon_size(IconSize::Small)
                     .toggle_state(is_screen_sharing)
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                    .tooltip(move |cx| {
+                    .tooltip(move |window, cx| {
                         Tooltip::text(
                             if is_screen_sharing {
                                 "Stop Sharing Screen"
@@ -442,7 +442,7 @@ impl TitleBar {
                             cx,
                         )
                     })
-                    .on_click(move |_, cx| toggle_screen_sharing(&Default::default(), cx))
+                    .on_click(move |_, window, cx| toggle_screen_sharing(&Default::default(), cx))
                     .into_any_element(),
             );
         }

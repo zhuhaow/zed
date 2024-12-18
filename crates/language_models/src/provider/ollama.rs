@@ -544,7 +544,11 @@ impl Render for ConfigurationView {
                             Button::new("retry_ollama_models", "Connect")
                                 .icon_position(IconPosition::Start)
                                 .icon(IconName::ArrowCircle)
-                                .on_click(cx.listener(move |this, _, cx| this.retry_connection(cx)))
+                                .on_click(
+                                    cx.listener(move |this, _, window, cx| {
+                                        this.retry_connection(cx)
+                                    }),
+                                )
                                 .into_any_element()
                         }),
                 )

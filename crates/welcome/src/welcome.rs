@@ -128,7 +128,7 @@ impl Render for WelcomePage {
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
                                             .icon_position(IconPosition::Start)
-                                            .on_click(cx.listener(|this, _, cx| {
+                                            .on_click(cx.listener(|this, _, window, cx| {
                                                 this.telemetry.report_app_event(
                                                     "welcome page: change theme".to_string(),
                                                 );
@@ -145,7 +145,7 @@ impl Render for WelcomePage {
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
                                             .icon_position(IconPosition::Start)
-                                            .on_click(cx.listener(|this, _, cx| {
+                                            .on_click(cx.listener(|this, _, window, cx| {
                                                 this.telemetry.report_app_event(
                                                     "welcome page: change keymap".to_string(),
                                                 );
@@ -170,7 +170,7 @@ impl Render for WelcomePage {
                                         .icon_color(Color::Muted)
                                         .icon_position(IconPosition::Start)
                                         .on_click(
-                                            cx.listener(|this, _, cx| {
+                                            cx.listener(|this, _, window, cx| {
                                                 this.telemetry.report_app_event(
                                                     "welcome page: sign in to copilot".to_string(),
                                                 );
@@ -184,7 +184,7 @@ impl Render for WelcomePage {
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
                                             .icon_position(IconPosition::Start)
-                                            .on_click(cx.listener(|this, _, cx| {
+                                            .on_click(cx.listener(|this, _, window, cx| {
                                                 this.telemetry.report_app_event(
                                                     "welcome page: edit settings".to_string(),
                                                 );
@@ -211,7 +211,7 @@ impl Render for WelcomePage {
                                                 .icon_size(IconSize::XSmall)
                                                 .icon_color(Color::Muted)
                                                 .icon_position(IconPosition::Start)
-                                                .on_click(cx.listener(|this, _, cx| {
+                                                .on_click(cx.listener(|this, _, window, cx| {
                                                     this.telemetry.report_app_event(
                                                         "welcome page: install cli".to_string(),
                                                     );
@@ -229,7 +229,7 @@ impl Render for WelcomePage {
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
                                             .icon_position(IconPosition::Start)
-                                            .on_click(cx.listener(|this, _, cx| {
+                                            .on_click(cx.listener(|this, _, window, cx| {
                                                 this.telemetry.report_app_event(
                                                     "welcome page: view docs".to_string(),
                                                 );
@@ -242,7 +242,7 @@ impl Render for WelcomePage {
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
                                             .icon_position(IconPosition::Start)
-                                            .on_click(cx.listener(|this, _, cx| {
+                                            .on_click(cx.listener(|this, _, window, cx| {
                                                 this.telemetry.report_app_event(
                                                     "welcome page: open extensions".to_string(),
                                                 );
@@ -257,7 +257,7 @@ impl Render for WelcomePage {
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
                                             .icon_position(IconPosition::Start)
-                                            .on_click(cx.listener(|_, _, cx| {
+                                            .on_click(cx.listener(|_, _, window, cx| {
                                                 cx.open_url(BOOK_ONBOARDING);
                                             })),
                                     ),
@@ -277,7 +277,7 @@ impl Render for WelcomePage {
                                         } else {
                                             ui::ToggleState::Unselected
                                         },
-                                        cx.listener(move |this, selection, cx| {
+                                        cx.listener(move |this, selection, window, cx| {
                                             this.telemetry
                                                 .report_app_event("welcome page: toggle vim".to_string());
                                             this.update_settings::<VimModeSetting>(
@@ -302,7 +302,7 @@ impl Render for WelcomePage {
                                 } else {
                                     ui::ToggleState::Unselected
                                 },
-                                cx.listener(move |this, selection, cx| {
+                                cx.listener(move |this, selection, window, cx| {
                                     this.telemetry.report_app_event(
                                         "welcome page: toggle diagnostic telemetry".to_string(),
                                     );
@@ -328,7 +328,7 @@ impl Render for WelcomePage {
                                 } else {
                                     ui::ToggleState::Unselected
                                 },
-                                cx.listener(move |this, selection, cx| {
+                                cx.listener(move |this, selection, window, cx| {
                                     this.telemetry.report_app_event(
                                         "welcome page: toggle metric telemetry".to_string(),
                                     );

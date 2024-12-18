@@ -713,8 +713,8 @@ impl InfoPopover {
             .elevation_2(cx)
             // Prevent a mouse down/move on the popover from being propagated to the editor,
             // because that would dismiss the popover.
-            .on_mouse_move(|_, cx| cx.stop_propagation())
-            .on_mouse_down(MouseButton::Left, move |_, cx| {
+            .on_mouse_move(|_, window, cx| cx.stop_propagation())
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
                 let mut keyboard_grace = keyboard_grace.borrow_mut();
                 *keyboard_grace = false;
                 cx.stop_propagation();
@@ -750,23 +750,23 @@ impl InfoPopover {
         div()
             .occlude()
             .id("info-popover-vertical-scroll")
-            .on_mouse_move(cx.listener(|_, _, cx| {
+            .on_mouse_move(cx.listener(|_, _, window, cx| {
                 cx.notify();
                 cx.stop_propagation()
             }))
-            .on_hover(|_, cx| {
+            .on_hover(|_, window, cx| {
                 cx.stop_propagation();
             })
-            .on_any_mouse_down(|_, cx| {
+            .on_any_mouse_down(|_, window, cx| {
                 cx.stop_propagation();
             })
             .on_mouse_up(
                 MouseButton::Left,
-                cx.listener(|_, _, cx| {
+                cx.listener(|_, _, window, cx| {
                     cx.stop_propagation();
                 }),
             )
-            .on_scroll_wheel(cx.listener(|_, _, cx| {
+            .on_scroll_wheel(cx.listener(|_, _, window, cx| {
                 cx.notify();
             }))
             .h_full()
@@ -824,10 +824,10 @@ impl DiagnosticPopover {
             })
             // Prevent a mouse move on the popover from being propagated to the editor,
             // because that would dismiss the popover.
-            .on_mouse_move(|_, cx| cx.stop_propagation())
+            .on_mouse_move(|_, window, cx| cx.stop_propagation())
             // Prevent a mouse down on the popover from being propagated to the editor,
             // because that would move the cursor.
-            .on_mouse_down(MouseButton::Left, move |_, cx| {
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
                 let mut keyboard_grace = keyboard_grace.borrow_mut();
                 *keyboard_grace = false;
                 cx.stop_propagation();

@@ -197,10 +197,10 @@ impl TerminalPanel {
                             .icon_size(IconSize::Small)
                             .toggle_state(zoomed)
                             .selected_icon(IconName::Minimize)
-                            .on_click(cx.listener(|pane, _, cx| {
+                            .on_click(cx.listener(|pane, _, window, cx| {
                                 pane.toggle_zoom(&workspace::ToggleZoom, cx);
                             }))
-                            .tooltip(move |cx| {
+                            .tooltip(move |window, cx| {
                                 Tooltip::for_action(
                                     if zoomed { "Zoom Out" } else { "Zoom In" },
                                     &ToggleZoom,
@@ -1158,25 +1158,27 @@ impl Render for TerminalPanel {
             .ok()
             .map(|div| {
                 div.on_action({
-                    cx.listener(|terminal_panel, action: &ActivatePaneInDirection, cx| {
-                        if let Some(pane) = terminal_panel.center.find_pane_in_direction(
-                            &terminal_panel.active_pane,
-                            action.0,
-                            cx,
-                        ) {
-                            cx.focus_view(&pane);
-                        } else {
-                            terminal_panel
-                                .workspace
-                                .update(cx, |workspace, cx| {
-                                    workspace.activate_pane_in_direction(action.0, cx)
-                                })
-                                .ok();
-                        }
-                    })
+                    cx.listener(
+                        |terminal_panel, action: &ActivatePaneInDirection, window, cx| {
+                            if let Some(pane) = terminal_panel.center.find_pane_in_direction(
+                                &terminal_panel.active_pane,
+                                action.0,
+                                cx,
+                            ) {
+                                cx.focus_view(&pane);
+                            } else {
+                                terminal_panel
+                                    .workspace
+                                    .update(cx, |workspace, cx| {
+                                        workspace.activate_pane_in_direction(action.0, cx)
+                                    })
+                                    .ok();
+                            }
+                        },
+                    )
                 })
                 .on_action(
-                    cx.listener(|terminal_panel, _action: &ActivateNextPane, cx| {
+                    cx.listener(|terminal_panel, _action: &ActivateNextPane, window, cx| {
                         let panes = terminal_panel.center.panes();
                         if let Some(ix) = panes
                             .iter()
@@ -1187,8 +1189,8 @@ impl Render for TerminalPanel {
                         }
                     }),
                 )
-                .on_action(
-                    cx.listener(|terminal_panel, _action: &ActivatePreviousPane, cx| {
+                .on_action(cx.listener(
+                    |terminal_panel, _action: &ActivatePreviousPane, window, cx| {
                         let panes = terminal_panel.center.panes();
                         if let Some(ix) = panes
                             .iter()
@@ -1197,30 +1199,32 @@ impl Render for TerminalPanel {
                             let prev_ix = cmp::min(ix.wrapping_sub(1), panes.len() - 1);
                             cx.focus_view(&panes[prev_ix]);
                         }
+                    },
+                ))
+                .on_action(
+                    cx.listener(|terminal_panel, action: &ActivatePane, window, cx| {
+                        let panes = terminal_panel.center.panes();
+                        if let Some(&pane) = panes.get(action.0) {
+                            cx.focus_view(pane);
+                        } else {
+                            if let Some(new_pane) =
+                                terminal_panel.new_pane_with_cloned_active_terminal(cx)
+                            {
+                                terminal_panel
+                                    .center
+                                    .split(
+                                        &terminal_panel.active_pane,
+                                        &new_pane,
+                                        SplitDirection::Right,
+                                    )
+                                    .log_err();
+                                cx.focus_view(&new_pane);
+                            }
+                        }
                     }),
                 )
-                .on_action(cx.listener(|terminal_panel, action: &ActivatePane, cx| {
-                    let panes = terminal_panel.center.panes();
-                    if let Some(&pane) = panes.get(action.0) {
-                        cx.focus_view(pane);
-                    } else {
-                        if let Some(new_pane) =
-                            terminal_panel.new_pane_with_cloned_active_terminal(cx)
-                        {
-                            terminal_panel
-                                .center
-                                .split(
-                                    &terminal_panel.active_pane,
-                                    &new_pane,
-                                    SplitDirection::Right,
-                                )
-                                .log_err();
-                            cx.focus_view(&new_pane);
-                        }
-                    }
-                }))
-                .on_action(
-                    cx.listener(|terminal_panel, action: &SwapPaneInDirection, cx| {
+                .on_action(cx.listener(
+                    |terminal_panel, action: &SwapPaneInDirection, window, cx| {
                         if let Some(to) = terminal_panel
                             .center
                             .find_pane_in_direction(&terminal_panel.active_pane, action.0, cx)
@@ -1229,23 +1233,26 @@ impl Render for TerminalPanel {
                             terminal_panel.center.swap(&terminal_panel.active_pane, &to);
                             cx.notify();
                         }
+                    },
+                ))
+                .on_action(
+                    cx.listener(|terminal_panel, action: &MoveItemToPane, window, cx| {
+                        let Some(&target_pane) =
+                            terminal_panel.center.panes().get(action.destination)
+                        else {
+                            return;
+                        };
+                        move_active_item(
+                            &terminal_panel.active_pane,
+                            target_pane,
+                            action.focus,
+                            true,
+                            cx,
+                        );
                     }),
                 )
-                .on_action(cx.listener(|terminal_panel, action: &MoveItemToPane, cx| {
-                    let Some(&target_pane) = terminal_panel.center.panes().get(action.destination)
-                    else {
-                        return;
-                    };
-                    move_active_item(
-                        &terminal_panel.active_pane,
-                        target_pane,
-                        action.focus,
-                        true,
-                        cx,
-                    );
-                }))
                 .on_action(cx.listener(
-                    |terminal_panel, action: &MoveItemToPaneInDirection, cx| {
+                    |terminal_panel, action: &MoveItemToPaneInDirection, window, cx| {
                         let source_pane = &terminal_panel.active_pane;
                         if let Some(destination_pane) = terminal_panel
                             .center
@@ -1392,7 +1399,7 @@ impl Render for InlineAssistTabBarButton {
         let focus_handle = self.focus_handle.clone();
         IconButton::new("terminal_inline_assistant", IconName::ZedAssistant)
             .icon_size(IconSize::Small)
-            .on_click(cx.listener(|_, _, cx| {
+            .on_click(cx.listener(|_, _, window, cx| {
                 cx.dispatch_action(InlineAssist::default().boxed_clone());
             }))
             .tooltip(move |cx| {

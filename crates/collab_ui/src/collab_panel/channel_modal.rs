@@ -169,7 +169,7 @@ impl Render for ChannelModal {
                                 Some(
                                     Button::new("copy-link", "Copy Link")
                                         .label_size(LabelSize::Small)
-                                        .on_click(cx.listener(move |this, _, cx| {
+                                        .on_click(cx.listener(move |this, _, window, cx| {
                                             if let Some(channel) = this
                                                 .channel_store
                                                 .read(cx)
@@ -197,7 +197,7 @@ impl Render for ChannelModal {
                                         this.border_color(cx.theme().colors().border)
                                     })
                                     .child(Label::new("Manage Members"))
-                                    .on_click(cx.listener(|this, _, cx| {
+                                    .on_click(cx.listener(|this, _, window, cx| {
                                         this.set_mode(Mode::ManageMembers, cx);
                                     })),
                             )
@@ -212,7 +212,7 @@ impl Render for ChannelModal {
                                         this.border_color(cx.theme().colors().border)
                                     })
                                     .child(Label::new("Invite Members"))
-                                    .on_click(cx.listener(|this, _, cx| {
+                                    .on_click(cx.listener(|this, _, window, cx| {
                                         this.set_mode(Mode::InviteMembers, cx);
                                     })),
                             ),

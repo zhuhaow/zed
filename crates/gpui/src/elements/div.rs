@@ -865,14 +865,15 @@ pub trait InteractiveElement: Sized {
     /// Apply the given style when the given data type is dragged over this element
     fn drag_over<S: 'static>(
         mut self,
-        f: impl 'static + Fn(StyleRefinement, &S, &WindowContext) -> StyleRefinement,
+        f: impl 'static + Fn(StyleRefinement, &S, &mut Window, &WindowContext) -> StyleRefinement,
     ) -> Self {
         self.interactivity().drag_over_styles.push((
             TypeId::of::<S>(),
-            Box::new(move |currently_dragged: &dyn Any, cx| {
+            Box::new(move |currently_dragged: &dyn Any, window, cx| {
                 f(
                     StyleRefinement::default(),
                     currently_dragged.downcast_ref::<S>().unwrap(),
+                    window,
                     cx,
                 )
             }),
@@ -1342,7 +1343,7 @@ pub struct Interactivity {
     pub(crate) group_active_style: Option<GroupStyle>,
     pub(crate) drag_over_styles: Vec<(
         TypeId,
-        Box<dyn Fn(&dyn Any, &mut WindowContext) -> StyleRefinement>,
+        Box<dyn Fn(&dyn Any, &mut Window, &mut WindowContext) -> StyleRefinement>,
     )>,
     pub(crate) group_drag_over_styles: Vec<(TypeId, GroupStyle)>,
     pub(crate) mouse_down_listeners: Vec<MouseDownListener>,
@@ -2277,7 +2278,7 @@ impl Interactivity {
 
                     for (state_type, build_drag_over_style) in &self.drag_over_styles {
                         if *state_type == drag.value.as_ref().type_id() && hitbox.is_hovered(cx) {
-                            style.refine(&build_drag_over_style(drag.value.as_ref(), cx));
+                            style.refine(&build_drag_over_style(drag.value.as_ref(), window, cx));
                         }
                     }
                 }

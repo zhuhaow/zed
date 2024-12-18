@@ -1421,7 +1421,7 @@ impl Render for LspLogToolbarItemView {
                 div()
                     .child(
                         Button::new("clear_log_button", "Clear").on_click(cx.listener(
-                            |this, _, cx| {
+                            |this, _, window, cx| {
                                 if let Some(log_view) = this.log_view.as_ref() {
                                     log_view.update(cx, |log_view, cx| {
                                         log_view.editor.update(cx, |editor, cx| {

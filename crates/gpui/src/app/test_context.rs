@@ -31,6 +31,7 @@ pub struct TestAppContext {
 
 impl Context for TestAppContext {
     type Result<T> = T;
+    type WindowResult<T> = T;
 
     fn new_model<T: 'static>(
         &mut self,
@@ -75,24 +76,24 @@ impl Context for TestAppContext {
         app.read_model(handle, read)
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Result<T>
+    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
         let mut lock = self.app.borrow_mut();
-        lock.update_window(window, f)
+        lock.update_window(window, f).unwrap()
     }
 
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
-    ) -> Result<R>
+        read: impl FnOnce(View<T>, &Window, &AppContext) -> R,
+    ) -> Self::WindowResult<R>
     where
         T: 'static,
     {
         let app = self.app.borrow();
-        app.read_window(window, read)
+        app.read_window(window, read).unwrap()
     }
 }
 
@@ -235,7 +236,7 @@ impl TestAppContext {
             )
             .unwrap();
         drop(cx);
-        let view = window.root_view(self).unwrap();
+        let view = window.root_view(self);
         let cx = VisualTestContext::from_window(*window.deref(), self).as_mut();
         cx.run_until_parked();
 
@@ -364,11 +365,9 @@ impl TestAppContext {
     where
         A: Action,
     {
-        window
-            .update(self, |_, window, cx| {
-                cx.dispatch_action(action.boxed_clone())
-            })
-            .unwrap();
+        window.update(self, |_, window, cx| {
+            cx.dispatch_action(action.boxed_clone())
+        });
 
         self.background_executor.run_until_parked()
     }
@@ -403,8 +402,7 @@ impl TestAppContext {
 
     /// dispatches a single Keystroke (see also `simulate_keystrokes` and `simulate_input`)
     pub fn dispatch_keystroke(&mut self, window: AnyWindowHandle, keystroke: Keystroke) {
-        self.update_window(window, |_, _, cx| cx.dispatch_keystroke(keystroke))
-            .unwrap();
+        self.update_window(window, |_, _, cx| cx.dispatch_keystroke(keystroke));
     }
 
     /// Returns the `TestWindow` backing the given handle.
@@ -655,7 +653,8 @@ pub struct VisualTestContext {
     #[deref_mut]
     /// cx is the original TestAppContext (you can more easily access this using Deref)
     pub cx: TestAppContext,
-    window: AnyWindowHandle,
+    /// The window handle for views in this context
+    pub window: AnyWindowHandle,
 }
 
 impl VisualTestContext {
@@ -666,9 +665,7 @@ impl VisualTestContext {
 
     /// Provides the `WindowContext` for the duration of the closure.
     pub fn update<R>(&mut self, f: impl FnOnce(&mut WindowContext) -> R) -> R {
-        self.cx
-            .update_window(self.window, |_, _, cx| f(cx))
-            .unwrap()
+        self.cx.update_window(self.window, |_, _, cx| f(cx))
     }
 
     /// Creates a new VisualTestContext. You would typically shadow the passed in
@@ -812,7 +809,6 @@ impl VisualTestContext {
 
             (request_layout_state, prepaint_state)
         })
-        .unwrap()
     }
 
     /// Simulate an event from the platform, e.g. a SrollWheelEvent
@@ -834,7 +830,7 @@ impl VisualTestContext {
     /// Simulates the user closing the window.
     /// Returns true if the window was closed.
     pub fn simulate_close(&mut self) -> bool {
-        let handler = self
+        let mut handler = self
             .cx
             .update_window(self.window, |_, _, cx| {
                 cx.window
@@ -847,17 +843,11 @@ impl VisualTestContext {
                     .take()
             })
             .unwrap();
-        if let Some(mut handler) = handler {
-            let should_close = handler();
-            self.cx
-                .update_window(self.window, |_, _, cx| {
-                    cx.window.platform_window.on_should_close(handler);
-                })
-                .unwrap();
-            should_close
-        } else {
-            false
-        }
+        let should_close = handler();
+        self.cx.update_window(self.window, |_, _, cx| {
+            cx.window.platform_window.on_should_close(handler)
+        });
+        should_close
     }
 
     /// Get an &mut VisualTestContext (which is mostly what you need to pass to other methods).
@@ -877,6 +867,7 @@ impl VisualTestContext {
 
 impl Context for VisualTestContext {
     type Result<T> = <TestAppContext as Context>::Result<T>;
+    type WindowResult<T> = <TestAppContext as Context>::WindowResult<T>;
 
     fn new_model<T: 'static>(
         &mut self,
@@ -919,7 +910,7 @@ impl Context for VisualTestContext {
         self.cx.read_model(handle, read)
     }
 
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Result<T>
+    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
@@ -929,8 +920,8 @@ impl Context for VisualTestContext {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
-    ) -> Result<R>
+        read: impl FnOnce(View<T>, &Window, &AppContext) -> R,
+    ) -> Self::WindowResult<R>
     where
         T: 'static,
     {
@@ -948,7 +939,6 @@ impl VisualContext for VisualTestContext {
     {
         self.window
             .update(&mut self.cx, |_, window, cx| cx.new_view(build_view))
-            .unwrap()
     }
 
     fn update_view<V: 'static, R>(
@@ -958,7 +948,6 @@ impl VisualContext for VisualTestContext {
     ) -> Self::Result<R> {
         self.window
             .update(&mut self.cx, |_, window, cx| cx.update_view(view, update))
-            .unwrap()
     }
 
     fn replace_root_view<V>(
@@ -968,30 +957,24 @@ impl VisualContext for VisualTestContext {
     where
         V: 'static + Render,
     {
-        self.window
-            .update(&mut self.cx, |_, window, cx| {
-                cx.replace_root_view(build_view)
-            })
-            .unwrap()
+        self.window.update(&mut self.cx, |_, window, cx| {
+            cx.replace_root_view(build_view)
+        })
     }
 
     fn focus_view<V: crate::FocusableView>(&mut self, view: &View<V>) -> Self::Result<()> {
-        self.window
-            .update(&mut self.cx, |_, window, cx| {
-                view.read(cx).focus_handle(cx).clone().focus(cx)
-            })
-            .unwrap()
+        self.window.update(&mut self.cx, |_, window, cx| {
+            view.read(cx).focus_handle(cx).clone().focus(cx)
+        })
     }
 
     fn dismiss_view<V>(&mut self, view: &View<V>) -> Self::Result<()>
     where
         V: crate::ManagedView,
     {
-        self.window
-            .update(&mut self.cx, |_, window, cx| {
-                view.update(cx, |_, cx| cx.emit(crate::DismissEvent))
-            })
-            .unwrap()
+        self.window.update(&mut self.cx, |_, window, cx| {
+            view.update(cx, |_, cx| cx.emit(crate::DismissEvent))
+        })
     }
 }
 
@@ -1003,6 +986,5 @@ impl AnyWindowHandle {
         build_view: impl FnOnce(&mut ViewContext<'_, V>) -> V,
     ) -> View<V> {
         self.update(cx, |_, window, cx| cx.new_view(build_view))
-            .unwrap()
     }
 }

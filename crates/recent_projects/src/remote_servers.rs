@@ -643,7 +643,7 @@ impl RemoteServerProjects {
                             .anchor_scroll(ssh_server.open_folder.scroll_anchor.clone())
                             .on_action(cx.listener({
                                 let ssh_connection = ssh_server.clone();
-                                move |this, _: &menu::Confirm, cx| {
+                                move |this, _: &menu::Confirm, window, cx| {
                                     this.create_ssh_project(
                                         ix,
                                         ssh_connection.connection.clone(),
@@ -662,7 +662,7 @@ impl RemoteServerProjects {
                                     .child(Label::new("Open Folder"))
                                     .on_click(cx.listener({
                                         let ssh_connection = ssh_server.clone();
-                                        move |this, _, cx| {
+                                        move |this, _, window, cx| {
                                             this.create_ssh_project(
                                                 ix,
                                                 ssh_connection.connection.clone(),
@@ -679,7 +679,7 @@ impl RemoteServerProjects {
                             .anchor_scroll(ssh_server.configure.scroll_anchor.clone())
                             .on_action(cx.listener({
                                 let ssh_connection = ssh_server.clone();
-                                move |this, _: &menu::Confirm, cx| {
+                                move |this, _: &menu::Confirm, window, cx| {
                                     this.view_server_options(
                                         (ix, ssh_connection.connection.clone()),
                                         cx,
@@ -697,7 +697,7 @@ impl RemoteServerProjects {
                                     .child(Label::new("View Server Options"))
                                     .on_click(cx.listener({
                                         let ssh_connection = ssh_server.clone();
-                                        move |this, _, cx| {
+                                        move |this, _, window, cx| {
                                             this.view_server_options(
                                                 (ix, ssh_connection.connection.clone()),
                                                 cx,
@@ -766,7 +766,7 @@ impl RemoteServerProjects {
             .anchor_scroll(navigation.scroll_anchor.clone())
             .on_action(cx.listener({
                 let callback = callback.clone();
-                move |this, _: &menu::Confirm, cx| {
+                move |this, _: &menu::Confirm, window, cx| {
                     callback(this, cx);
                 }
             }))
@@ -781,7 +781,7 @@ impl RemoteServerProjects {
                             .size(IconSize::Small),
                     )
                     .child(Label::new(project.paths.join(", ")))
-                    .on_click(cx.listener(move |this, _, cx| callback(this, cx)))
+                    .on_click(cx.listener(move |this, _, window, cx| callback(this, cx)))
                     .end_hover_slot::<AnyElement>(Some(
                         div()
                             .mr_2()
@@ -793,7 +793,7 @@ impl RemoteServerProjects {
                                     .shape(IconButtonShape::Square)
                                     .size(ButtonSize::Large)
                                     .tooltip(|cx| Tooltip::text("Delete Remote Project", cx))
-                                    .on_click(cx.listener(move |this, _, cx| {
+                                    .on_click(cx.listener(move |this, _, window, cx| {
                                         this.delete_ssh_project(server_ix, &project, cx)
                                     }))
                             })
@@ -975,13 +975,15 @@ impl RemoteServerProjects {
                             div()
                                 .id("ssh-options-add-nickname")
                                 .track_focus(&entries[0].focus_handle)
-                                .on_action(cx.listener(move |this, _: &menu::Confirm, cx| {
-                                    this.mode = Mode::EditNickname(EditNicknameState::new(
-                                        server_index,
-                                        cx,
-                                    ));
-                                    cx.notify();
-                                }))
+                                .on_action(cx.listener(
+                                    move |this, _: &menu::Confirm, window, cx| {
+                                        this.mode = Mode::EditNickname(EditNicknameState::new(
+                                            server_index,
+                                            cx,
+                                        ));
+                                        cx.notify();
+                                    },
+                                ))
                                 .child(
                                     ListItem::new("add-nickname")
                                         .toggle_state(entries[0].focus_handle.contains_focused(cx))
@@ -989,7 +991,7 @@ impl RemoteServerProjects {
                                         .spacing(ui::ListItemSpacing::Sparse)
                                         .start_slot(Icon::new(IconName::Pencil).color(Color::Muted))
                                         .child(Label::new(label))
-                                        .on_click(cx.listener(move |this, _, cx| {
+                                        .on_click(cx.listener(move |this, _, window, cx| {
                                             this.mode = Mode::EditNickname(EditNicknameState::new(
                                                 server_index,
                                                 cx,
@@ -1104,7 +1106,7 @@ impl RemoteServerProjects {
                                 .track_focus(&entries[2].focus_handle)
                                 .on_action(cx.listener({
                                     let connection_string = connection_string.clone();
-                                    move |_, _: &menu::Confirm, cx| {
+                                    move |_, _: &menu::Confirm, window, cx| {
                                         remove_ssh_server(
                                             cx.view().clone(),
                                             server_index,
@@ -1121,7 +1123,7 @@ impl RemoteServerProjects {
                                         .spacing(ui::ListItemSpacing::Sparse)
                                         .start_slot(Icon::new(IconName::Trash).color(Color::Error))
                                         .child(Label::new("Remove Server").color(Color::Error))
-                                        .on_click(cx.listener(move |_, _, cx| {
+                                        .on_click(cx.listener(move |_, _, window, cx| {
                                             remove_ssh_server(
                                                 cx.view().clone(),
                                                 server_index,
@@ -1137,7 +1139,7 @@ impl RemoteServerProjects {
                             div()
                                 .id("ssh-options-copy-server-address")
                                 .track_focus(&entries[3].focus_handle)
-                                .on_action(cx.listener(|this, _: &menu::Confirm, cx| {
+                                .on_action(cx.listener(|this, _: &menu::Confirm, window, cx| {
                                     this.mode = Mode::default_mode(cx);
                                     cx.focus_self();
                                     cx.notify();
@@ -1151,7 +1153,7 @@ impl RemoteServerProjects {
                                             Icon::new(IconName::ArrowLeft).color(Color::Muted),
                                         )
                                         .child(Label::new("Go Back"))
-                                        .on_click(cx.listener(|this, _, cx| {
+                                        .on_click(cx.listener(|this, _, window, cx| {
                                             this.mode = Mode::default_mode(cx);
                                             cx.focus_self();
                                             cx.notify()
@@ -1238,14 +1240,14 @@ impl RemoteServerProjects {
                     .spacing(ui::ListItemSpacing::Sparse)
                     .start_slot(Icon::new(IconName::Plus).color(Color::Muted))
                     .child(Label::new("Connect New Server"))
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         let state = CreateRemoteServer::new(cx);
                         this.mode = Mode::CreateRemoteServer(state);
 
                         cx.notify();
                     })),
             )
-            .on_action(cx.listener(|this, _: &menu::Confirm, cx| {
+            .on_action(cx.listener(|this, _: &menu::Confirm, window, cx| {
                 let state = CreateRemoteServer::new(cx);
                 this.mode = Mode::CreateRemoteServer(state);
 
@@ -1366,10 +1368,10 @@ impl Render for RemoteServerProjects {
             .key_context("RemoteServerModal")
             .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener(Self::confirm))
-            .capture_any_mouse_down(cx.listener(|this, _, cx| {
+            .capture_any_mouse_down(cx.listener(|this, _, window, cx| {
                 this.focus_handle(cx).focus(cx);
             }))
-            .on_mouse_down_out(cx.listener(|this, _, cx| {
+            .on_mouse_down_out(cx.listener(|this, _, window, cx| {
                 if matches!(this.mode, Mode::Default(_)) {
                     cx.emit(DismissEvent)
                 }

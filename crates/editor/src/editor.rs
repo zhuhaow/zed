@@ -1103,8 +1103,8 @@ impl Editor {
                     .size_full()
                     .cursor_pointer()
                     .child("⋯")
-                    .on_mouse_down(MouseButton::Left, |_, cx| cx.stop_propagation())
-                    .on_click(move |_, cx| {
+                    .on_mouse_down(MouseButton::Left, |_, window, cx| cx.stop_propagation())
+                    .on_click(move |_, window, cx| {
                         editor
                             .update(cx, |editor, cx| {
                                 editor.unfold_ranges(
@@ -4896,7 +4896,7 @@ impl Editor {
                     .toggle_state(is_active)
                     .tooltip({
                         let focus_handle = self.focus_handle.clone();
-                        move |cx| {
+                        move |window, cx| {
                             Tooltip::for_action_in(
                                 "Toggle Code Actions",
                                 &ToggleCodeActions {
@@ -4907,7 +4907,7 @@ impl Editor {
                             )
                         }
                     })
-                    .on_click(cx.listener(move |editor, _e, cx| {
+                    .on_click(cx.listener(move |editor, _e, window, cx| {
                         editor.focus(cx);
                         editor.toggle_code_actions(
                             &ToggleCodeActions {
@@ -5071,7 +5071,7 @@ impl Editor {
             .icon_size(IconSize::XSmall)
             .icon_color(Color::Muted)
             .toggle_state(is_active)
-            .on_click(cx.listener(move |editor, _e, cx| {
+            .on_click(cx.listener(move |editor, _e, window, cx| {
                 editor.focus(cx);
                 editor.toggle_code_actions(
                     &ToggleCodeActions {
@@ -12793,7 +12793,7 @@ impl Editor {
         }
     }
 
-    pub fn handle_blur(&mut self, cx: &mut ViewContext<Self>) {
+    pub fn handle_blur(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.blink_manager.update(cx, BlinkManager::disable);
         self.buffer
             .update(cx, |buffer, cx| buffer.remove_active_selections(cx));
@@ -12821,7 +12821,7 @@ impl Editor {
             Box::new(move |cx| {
                 let cx = cx.window_context();
                 let listener = listener.clone();
-                cx.on_action(TypeId::of::<A>(), move |action, phase, cx| {
+                cx.on_action(TypeId::of::<A>(), move |action, phase, window, cx| {
                     let action = action.downcast_ref().unwrap();
                     if phase == DispatchPhase::Bubble {
                         listener(action, cx)
@@ -14535,7 +14535,7 @@ pub fn diagnostic_block_renderer(
                         .style(ButtonStyle::Transparent)
                         .visible_on_hover(group_id.clone())
                         .on_click(move |_click, cx| cx.dispatch_action(Box::new(Cancel)))
-                        .tooltip(|cx| Tooltip::for_action("Close Diagnostics", &Cancel, cx))
+                        .tooltip(|window, cx| Tooltip::for_action("Close Diagnostics", &Cancel, cx))
                 }))
             })
             .child(
@@ -14550,7 +14550,7 @@ pub fn diagnostic_block_renderer(
                             cx.write_to_clipboard(ClipboardItem::new_string(message.clone()))
                         }
                     })
-                    .tooltip(|cx| Tooltip::text("Copy diagnostic message", cx)),
+                    .tooltip(|window, cx| Tooltip::text("Copy diagnostic message", cx)),
             )
         };
 

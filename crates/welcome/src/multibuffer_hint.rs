@@ -159,7 +159,7 @@ impl Render for MultibufferHint {
                     .style(ButtonStyle::Transparent)
                     .shape(IconButtonShape::Square)
                     .icon_size(IconSize::Small)
-                    .on_click(cx.listener(|this, _event, cx| {
+                    .on_click(cx.listener(|this, _event, window, cx| {
                         this.dismiss(cx);
                         cx.emit(ToolbarItemEvent::ChangeLocation(
                             ToolbarItemLocation::Hidden,

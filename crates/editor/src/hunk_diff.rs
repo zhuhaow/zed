@@ -603,7 +603,7 @@ impl Editor {
                                                     .disabled(!has_multiple_hunks)
                                                     .tooltip({
                                                         let focus_handle = editor.focus_handle(cx);
-                                                        move |cx| {
+                                                        move |window, cx| {
                                                             Tooltip::for_action_in(
                                                                 "Next Hunk",
                                                                 &GoToHunk,
@@ -632,7 +632,7 @@ impl Editor {
                                                     .disabled(!has_multiple_hunks)
                                                     .tooltip({
                                                         let focus_handle = editor.focus_handle(cx);
-                                                        move |cx| {
+                                                        move |window, cx| {
                                                             Tooltip::for_action_in(
                                                                 "Previous Hunk",
                                                                 &GoToPrevHunk,
@@ -661,7 +661,7 @@ impl Editor {
                                                 .icon_size(IconSize::Small)
                                                 .tooltip({
                                                     let focus_handle = editor.focus_handle(cx);
-                                                    move |cx| {
+                                                    move |window, cx| {
                                                         Tooltip::for_action_in(
                                                             "Discard Hunk",
                                                             &RevertSelectedHunks,
@@ -689,7 +689,7 @@ impl Editor {
                                                         .tooltip({
                                                             let focus_handle =
                                                                 editor.focus_handle(cx);
-                                                            move |cx| {
+                                                            move |window, cx| {
                                                                 Tooltip::for_action_in(
                                                                     "Apply Hunk",
                                                                     &ApplyDiffHunk,
@@ -733,7 +733,7 @@ impl Editor {
                                                                 !hunk_controls_menu_handle
                                                                     .is_deployed(),
                                                                 |this| {
-                                                                    this.tooltip(|cx| {
+                                                                    this.tooltip(|window, cx| {
                                                                         Tooltip::text(
                                                                             "Hunk Controls",
                                                                             cx,
@@ -770,7 +770,7 @@ impl Editor {
                                             .icon_size(IconSize::Small)
                                             .tooltip({
                                                 let focus_handle = editor.focus_handle(cx);
-                                                move |cx| {
+                                                move |window, cx| {
                                                     Tooltip::for_action_in(
                                                         "Collapse Hunk",
                                                         &ToggleHunkDiff,

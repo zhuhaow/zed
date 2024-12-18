@@ -215,7 +215,7 @@ impl<M: ManagedView> Element for RightClickMenu<M> {
             let child_bounds = prepaint_state.child_bounds;
 
             let hitbox_id = prepaint_state.hitbox.id;
-            cx.on_mouse_event(move |event: &MouseDownEvent, phase, cx| {
+            cx.on_mouse_event(move |event: &MouseDownEvent, phase, window, cx| {
                 if phase == DispatchPhase::Bubble
                     && event.button == MouseButton::Right
                     && hitbox_id.is_hovered(cx)

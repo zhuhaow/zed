@@ -16,15 +16,15 @@ impl Render for ToolStripStory {
                         ToolStrip::vertical("tool_strip_example")
                             .tool(
                                 IconButton::new("example_tool", IconName::AudioOn)
-                                    .tooltip(|cx| Tooltip::text("Example tool", cx)),
+                                    .tooltip(|window, cx| Tooltip::text("Example tool", cx)),
                             )
                             .tool(
                                 IconButton::new("example_tool_2", IconName::MicMute)
-                                    .tooltip(|cx| Tooltip::text("Example tool 2", cx)),
+                                    .tooltip(|window, cx| Tooltip::text("Example tool 2", cx)),
                             )
                             .tool(
                                 IconButton::new("example_tool_3", IconName::Screen)
-                                    .tooltip(|cx| Tooltip::text("Example tool 3", cx)),
+                                    .tooltip(|window, cx| Tooltip::text("Example tool 3", cx)),
                             ),
                     ),
                 )),

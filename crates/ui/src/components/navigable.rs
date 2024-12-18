@@ -64,7 +64,7 @@ impl RenderOnce for Navigable {
             .on_action({
                 let children = self.selectable_children.clone();
 
-                move |_: &menu::SelectNext, cx| {
+                move |_: &menu::SelectNext, window, cx| {
                     let target = Self::find_focused(&children, cx)
                         .and_then(|index| {
                             index.checked_add(1).filter(|index| *index < children.len())
@@ -80,7 +80,7 @@ impl RenderOnce for Navigable {
             })
             .on_action({
                 let children = self.selectable_children;
-                move |_: &menu::SelectPrev, cx| {
+                move |_: &menu::SelectPrev, window, cx| {
                     let target = Self::find_focused(&children, cx)
                         .and_then(|index| index.checked_sub(1))
                         .or(children.len().checked_sub(1));

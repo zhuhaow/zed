@@ -162,6 +162,10 @@ pub trait Context {
     /// can't hold a direct reference to the application context.
     type Result<T>;
 
+    /// The result type for this context when operating on a window.
+    /// This enables us to avoid unwrapping in test contexts.
+    type WindowResult<T>;
+
     /// Create a new model in the app context.
     fn new_model<T: 'static>(
         &mut self,
@@ -200,16 +204,16 @@ pub trait Context {
         T: 'static;
 
     /// Update a window for the given handle.
-    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Result<T>
+    fn update_window<T, F>(&mut self, window: AnyWindowHandle, f: F) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T;
 
     /// Read a window off of the application context.
     fn read_window<T, R>(
         &self,
-        window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
-    ) -> Result<R>
+        handle: &WindowHandle<T>,
+        read: impl FnOnce(View<T>, &Window, &AppContext) -> R,
+    ) -> Self::WindowResult<R>
     where
         T: 'static;
 }

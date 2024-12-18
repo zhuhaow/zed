@@ -299,7 +299,7 @@ impl ThemePreview {
                                 )
                                 .size(ButtonSize::None)
                                 .style(ButtonStyle::Transparent)
-                                .tooltip(move |cx| {
+                                .tooltip(move |window, cx| {
                                     let name = name.clone();
                                     Tooltip::with_meta(name, None, format!("{:?}", color), cx)
                                 }),
@@ -391,7 +391,7 @@ impl ThemePreview {
             .bg(Self::preview_bg(cx))
             .children(ThemePreviewPage::iter().map(|p| {
                 Button::new(ElementId::Name(p.name().into()), p.name())
-                    .on_click(cx.listener(move |this, _, cx| {
+                    .on_click(cx.listener(move |this, _, window, cx| {
                         this.current_page = p;
                         cx.notify();
                     }))

@@ -615,19 +615,19 @@ impl Render for Dock {
             let create_resize_handle = || {
                 let handle = div()
                     .id("resize-handle")
-                    .on_drag(DraggedDock(position), |dock, _, cx| {
+                    .on_drag(DraggedDock(position), |dock, _, window, cx| {
                         cx.stop_propagation();
                         cx.new_view(|_| dock.clone())
                     })
                     .on_mouse_down(
                         MouseButton::Left,
-                        cx.listener(|_, _: &MouseDownEvent, cx| {
+                        cx.listener(|_, _: &MouseDownEvent, window, cx| {
                             cx.stop_propagation();
                         }),
                     )
                     .on_mouse_up(
                         MouseButton::Left,
-                        cx.listener(|v, e: &MouseUpEvent, cx| {
+                        cx.listener(|v, e: &MouseUpEvent, window, cx| {
                             if e.click_count == 2 {
                                 v.resize_active_panel(None, cx);
                                 cx.stop_propagation();
@@ -782,9 +782,9 @@ impl Render for PanelButtons {
                                 .toggle_state(is_active_button)
                                 .on_click({
                                     let action = action.boxed_clone();
-                                    move |_, cx| cx.dispatch_action(action.boxed_clone())
+                                    move |_, window, cx| cx.dispatch_action(action.boxed_clone())
                                 })
-                                .tooltip(move |cx| {
+                                .tooltip(move |window, cx| {
                                     Tooltip::for_action(tooltip.clone(), &*action, cx)
                                 }),
                         ),

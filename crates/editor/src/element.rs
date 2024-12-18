@@ -470,7 +470,7 @@ impl EditorElement {
         cx.on_key_event({
             let editor = self.editor.clone();
             let text_hitbox = layout.text_hitbox.clone();
-            move |event: &ModifiersChangedEvent, phase, cx| {
+            move |event: &ModifiersChangedEvent, phase, window, cx| {
                 if phase != DispatchPhase::Bubble {
                     return;
                 }
@@ -2423,7 +2423,7 @@ impl EditorElement {
                                 })
                                 .tooltip({
                                     let jump_data = jump_data.clone();
-                                    move |cx| {
+                                    move |window, cx| {
                                         let jump_message = format!(
                                             "Jump to {}:L{}",
                                             match &jump_data.path {
@@ -2590,7 +2590,7 @@ impl EditorElement {
                                         .children(toggle_chevron_icon)
                                         .tooltip({
                                             let focus_handle = focus_handle.clone();
-                                            move |cx| {
+                                            move |window, cx| {
                                                 Tooltip::for_action_in(
                                                     "Toggle Excerpt Fold",
                                                     &ToggleFold,
@@ -2599,7 +2599,7 @@ impl EditorElement {
                                                 )
                                             }
                                         })
-                                        .on_click(move |_, cx| {
+                                        .on_click(move |_, window, cx| {
                                             if is_folded {
                                                 editor.update(cx, |editor, cx| {
                                                     editor.unfold_buffer(buffer_id, cx);
@@ -2638,7 +2638,7 @@ impl EditorElement {
                             .cursor_pointer()
                             .tooltip({
                                 let focus_handle = focus_handle.clone();
-                                move |cx| {
+                                move |window, cx| {
                                     Tooltip::for_action_in(
                                         "Jump To File",
                                         &OpenExcerpts,
@@ -2647,7 +2647,7 @@ impl EditorElement {
                                     )
                                 }
                             })
-                            .on_mouse_down(MouseButton::Left, |_, cx| cx.stop_propagation())
+                            .on_mouse_down(MouseButton::Left, |_, window, cx| cx.stop_propagation())
                             .on_click(cx.listener_for(&self.editor, {
                                 move |editor, e: &ClickEvent, cx| {
                                     editor.open_excerpts_common(
@@ -2684,7 +2684,9 @@ impl EditorElement {
                 }
             }))
             .tooltip({
-                move |cx| Tooltip::for_action("Expand Excerpt", &ExpandExcerpts { lines: 0 }, cx)
+                move |_window, cx| {
+                    Tooltip::for_action("Expand Excerpt", &ExpandExcerpts { lines: 0 }, cx)
+                }
             })
     }
 
@@ -3348,7 +3350,7 @@ impl EditorElement {
             let mut occlusion = div()
                 .size_full()
                 .occlude()
-                .on_mouse_move(|_, cx| cx.stop_propagation())
+                .on_mouse_move(|_, window, cx| cx.stop_propagation())
                 .into_any_element();
             occlusion.layout_as_root(size(width, HOVER_POPOVER_GAP).into(), window, cx);
             cx.defer_draw(occlusion, origin, 2);
@@ -4127,7 +4129,7 @@ impl EditorElement {
                 let hitbox = hitbox.clone();
 
                 let mut mouse_position = cx.mouse_position();
-                move |event: &MouseMoveEvent, phase, cx| {
+                move |event: &MouseMoveEvent, phase, window, cx| {
                     if phase == DispatchPhase::Capture {
                         return;
                     }
@@ -4175,7 +4177,7 @@ impl EditorElement {
             {
                 cx.on_mouse_event({
                     let editor = self.editor.clone();
-                    move |_: &MouseUpEvent, phase, cx| {
+                    move |_: &MouseUpEvent, phase, window, cx| {
                         if phase == DispatchPhase::Capture {
                             return;
                         }
@@ -4194,7 +4196,7 @@ impl EditorElement {
                 cx.on_mouse_event({
                     let editor = self.editor.clone();
 
-                    move |event: &MouseDownEvent, phase, cx| {
+                    move |event: &MouseDownEvent, phase, window, cx| {
                         if phase == DispatchPhase::Capture || !hitbox.is_hovered(cx) {
                             return;
                         }
@@ -4286,7 +4288,7 @@ impl EditorElement {
                 let hitbox = hitbox.clone();
 
                 let mut mouse_position = cx.mouse_position();
-                move |event: &MouseMoveEvent, phase, cx| {
+                move |event: &MouseMoveEvent, phase, window, cx| {
                     if phase == DispatchPhase::Capture {
                         return;
                     }
@@ -4329,7 +4331,7 @@ impl EditorElement {
             {
                 cx.on_mouse_event({
                     let editor = self.editor.clone();
-                    move |_: &MouseUpEvent, phase, cx| {
+                    move |_: &MouseUpEvent, phase, window, cx| {
                         if phase == DispatchPhase::Capture {
                             return;
                         }
@@ -4348,7 +4350,7 @@ impl EditorElement {
                 cx.on_mouse_event({
                     let editor = self.editor.clone();
 
-                    move |event: &MouseDownEvent, phase, cx| {
+                    move |event: &MouseDownEvent, phase, window, cx| {
                         if phase == DispatchPhase::Capture || !hitbox.is_hovered(cx) {
                             return;
                         }
@@ -4673,7 +4675,7 @@ impl EditorElement {
             // accidentally turn off their scrolling.
             let scroll_sensitivity = EditorSettings::get_global(cx).scroll_sensitivity.max(0.01);
 
-            move |event: &ScrollWheelEvent, phase, cx| {
+            move |event: &ScrollWheelEvent, phase, window, cx| {
                 if phase == DispatchPhase::Bubble && hitbox.is_hovered(cx) {
                     delta = delta.coalesce(event.delta);
                     editor.update(cx, |editor, cx| {
@@ -4739,7 +4741,7 @@ impl EditorElement {
             let text_hitbox = layout.text_hitbox.clone();
             let gutter_hitbox = layout.gutter_hitbox.clone();
 
-            move |event: &MouseDownEvent, phase, cx| {
+            move |event: &MouseDownEvent, phase, window, cx| {
                 if phase == DispatchPhase::Bubble {
                     match event.button {
                         MouseButton::Left => editor.update(cx, |editor, cx| {
@@ -4770,7 +4772,7 @@ impl EditorElement {
             let position_map = layout.position_map.clone();
             let text_hitbox = layout.text_hitbox.clone();
 
-            move |event: &MouseUpEvent, phase, cx| {
+            move |event: &MouseUpEvent, phase, window, cx| {
                 if phase == DispatchPhase::Bubble {
                     editor.update(cx, |editor, cx| {
                         Self::mouse_up(editor, event, &position_map, &text_hitbox, cx)
@@ -4784,7 +4786,7 @@ impl EditorElement {
             let text_hitbox = layout.text_hitbox.clone();
             let gutter_hitbox = layout.gutter_hitbox.clone();
 
-            move |event: &MouseMoveEvent, phase, cx| {
+            move |event: &MouseMoveEvent, phase, window, cx| {
                 if phase == DispatchPhase::Bubble {
                     editor.update(cx, |editor, cx| {
                         if editor.hover_state.focused(cx) {
@@ -5056,7 +5058,7 @@ fn render_blame_entry(
         .on_mouse_down(MouseButton::Right, {
             let blame_entry = blame_entry.clone();
             let details = details.clone();
-            move |event, cx| {
+            move |event, window, cx| {
                 deploy_blame_entry_context_menu(
                     &blame_entry,
                     details.as_ref(),
@@ -5071,7 +5073,7 @@ fn render_blame_entry(
             details.and_then(|details| details.permalink),
             |this, url| {
                 let url = url.clone();
-                this.cursor_pointer().on_click(move |_, cx| {
+                this.cursor_pointer().on_click(move |_, window, cx| {
                     cx.stop_propagation();
                     cx.open_url(url.as_str())
                 })
@@ -7219,7 +7221,7 @@ pub fn register_action<T: Action>(
     listener: impl Fn(&mut Editor, &T, &mut ViewContext<Editor>) + 'static,
 ) {
     let view = view.clone();
-    cx.on_action(TypeId::of::<T>(), move |action, phase, cx| {
+    cx.on_action(TypeId::of::<T>(), move |action, phase, window, cx| {
         let action = action.downcast_ref().unwrap();
         if phase == DispatchPhase::Bubble {
             view.update(cx, |editor, cx| {

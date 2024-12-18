@@ -518,21 +518,17 @@ mod test {
             cx.bind_keys(vec![KeyBinding::new("ctrl-g", TestAction, Some("parent"))]);
         });
 
-        window
-            .update(cx, |test_view, window, cx| {
-                cx.focus(&test_view.focus_handle)
-            })
-            .unwrap();
+        window.update(cx, |test_view, window, cx| {
+            cx.focus(&test_view.focus_handle)
+        });
 
         cx.dispatch_keystroke(*window, Keystroke::parse("a").unwrap());
         cx.dispatch_keystroke(*window, Keystroke::parse("ctrl-g").unwrap());
 
-        window
-            .update(cx, |test_view, window, _| {
-                assert!(test_view.saw_key_down || test_view.saw_action);
-                assert!(test_view.saw_key_down);
-                assert!(test_view.saw_action);
-            })
-            .unwrap();
+        window.update(cx, |test_view, window, _| {
+            assert!(test_view.saw_key_down || test_view.saw_action);
+            assert!(test_view.saw_key_down);
+            assert!(test_view.saw_action);
+        });
     }
 }

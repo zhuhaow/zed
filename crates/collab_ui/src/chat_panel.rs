@@ -104,7 +104,7 @@ impl ChatPanel {
                     }
                 });
 
-            message_list.set_scroll_handler(cx.listener(|this, event: &ListScrollEvent, cx| {
+            message_list.set_scroll_handler(cx.listener(|this, event: &ListScrollEvent, window, cx| {
                 if event.visible_range.start < MESSAGE_LOADING_THRESHOLD {
                     this.load_more_messages(cx);
                 }
@@ -370,7 +370,7 @@ impl ChatPanel {
                 )
                 .cursor(CursorStyle::PointingHand)
                 .tooltip(|cx| Tooltip::text("Go to message", cx))
-                .on_click(cx.listener(move |chat_panel, _, cx| {
+                .on_click(cx.listener(move |chat_panel, _, window, cx| {
                     if let Some(channel_id) = current_channel_id {
                         chat_panel
                             .select_channel(channel_id, reply_to_message_id.into(), cx)
@@ -606,7 +606,7 @@ impl ChatPanel {
                             .id("reply")
                             .child(
                                 IconButton::new(("reply", message_id), IconName::ReplyArrowRight)
-                                    .on_click(cx.listener(move |this, _, cx| {
+                                    .on_click(cx.listener(move |this, _, window, cx| {
                                         this.cancel_edit_message(cx);
 
                                         this.message_editor.update(cx, |editor, cx| {
@@ -628,8 +628,8 @@ impl ChatPanel {
                                 .id("edit")
                                 .child(
                                     IconButton::new(("edit", message_id), IconName::Pencil)
-                                        .on_click(cx.listener(move |this, _, cx| {
-                                            this.message_editor.update(cx, |editor, cx| {
+                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                            this.message_editor.update(cx, |editor, window, cx| {
                                                 editor.clear_reply_to_message_id();
 
                                                 let message = this
@@ -1000,7 +1000,7 @@ impl Render for ChatPanel {
                             IconButton::new("cancel-edit-message", IconName::Close)
                                 .shape(ui::IconButtonShape::Square)
                                 .tooltip(|cx| Tooltip::text("Cancel edit message", cx))
-                                .on_click(cx.listener(move |this, _, cx| {
+                                .on_click(cx.listener(move |this, _, window, cx| {
                                     this.cancel_edit_message(cx);
                                 })),
                         ),
@@ -1045,7 +1045,7 @@ impl Render for ChatPanel {
                                         )
                                         .when_some(channel_id, |this, channel_id| {
                                             this.cursor_pointer().on_click(cx.listener(
-                                                move |chat_panel, _, cx| {
+                                                move |chat_panel, _, window, cx| {
                                                     chat_panel
                                                         .select_channel(
                                                             channel_id,
@@ -1062,7 +1062,7 @@ impl Render for ChatPanel {
                                 IconButton::new("close-reply-preview", IconName::Close)
                                     .shape(ui::IconButtonShape::Square)
                                     .tooltip(|cx| Tooltip::text("Close reply", cx))
-                                    .on_click(cx.listener(move |this, _, cx| {
+                                    .on_click(cx.listener(move |this, _, window, cx| {
                                         this.close_reply_preview(cx);
                                     })),
                             ),
@@ -1073,7 +1073,7 @@ impl Render for ChatPanel {
                 Some(
                     h_flex()
                         .p_2()
-                        .on_action(cx.listener(|this, _: &actions::Cancel, cx| {
+                        .on_action(cx.listener(|this, _: &actions::Cancel, window, cx| {
                             this.cancel_edit_message(cx);
                             this.close_reply_preview(cx);
                         }))

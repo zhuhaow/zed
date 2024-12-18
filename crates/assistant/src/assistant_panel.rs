@@ -425,7 +425,7 @@ impl AssistantPanel {
                     .icon_size(IconSize::Small)
                     .on_click(cx.listener({
                         let focus_handle = focus_handle.clone();
-                        move |_, _, cx| {
+                        move |_, _, window, cx| {
                             focus_handle.focus(cx);
                             cx.dispatch_action(DeployHistory.boxed_clone())
                         }
@@ -451,11 +451,9 @@ impl AssistantPanel {
                     .child(
                         IconButton::new("new-chat", IconName::Plus)
                             .icon_size(IconSize::Small)
-                            .on_click(
-                                cx.listener(|_, _, cx| {
-                                    cx.dispatch_action(NewContext.boxed_clone())
-                                }),
-                            )
+                            .on_click(cx.listener(|_, _, window, cx| {
+                                cx.dispatch_action(NewContext.boxed_clone())
+                            }))
                             .tooltip(move |cx| {
                                 Tooltip::for_action_in("New Chat", &NewContext, &focus_handle, cx)
                             }),
@@ -1352,12 +1350,12 @@ impl Render for AssistantPanel {
         v_flex()
             .key_context("AssistantPanel")
             .size_full()
-            .on_action(cx.listener(|this, _: &NewContext, cx| {
+            .on_action(cx.listener(|this, _: &NewContext, window, cx| {
                 this.new_context(cx);
             }))
-            .on_action(
-                cx.listener(|this, _: &ShowConfiguration, cx| this.show_configuration_tab(cx)),
-            )
+            .on_action(cx.listener(|this, _: &ShowConfiguration, window, cx| {
+                this.show_configuration_tab(cx)
+            }))
             .on_action(cx.listener(AssistantPanel::deploy_history))
             .on_action(cx.listener(AssistantPanel::deploy_prompt_library))
             .on_action(cx.listener(AssistantPanel::toggle_model_selector))
@@ -3490,8 +3488,8 @@ impl ContextEditor {
                     this.border_color(theme.colors().text_accent)
                 })
                 .cursor(CursorStyle::PointingHand)
-                .on_click(cx.listener(move |this, _, cx| {
-                    this.editor.update(cx, |editor, cx| {
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    this.editor.update(cx, |editor, window, cx| {
                         editor.change_selections(None, cx, |selections| {
                             selections.select_ranges(vec![anchor..anchor]);
                         });
@@ -3583,7 +3581,7 @@ impl ContextEditor {
                         Button::new("sign-in", "Sign in")
                             .size(ButtonSize::Compact)
                             .style(ButtonStyle::Filled)
-                            .on_click(cx.listener(|this, _event, cx| {
+                            .on_click(cx.listener(|this, _event, window, cx| {
                                 let client = this
                                     .workspace
                                     .update(cx, |workspace, _| workspace.client().clone())
@@ -3818,7 +3816,7 @@ impl ContextEditor {
                     .justify_end()
                     .mt_1()
                     .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.last_error = None;
                             cx.notify();
                         },
@@ -3851,14 +3849,14 @@ impl ContextEditor {
                     .justify_end()
                     .mt_1()
                     .child(Button::new("subscribe", "Subscribe").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.last_error = None;
                             cx.open_url(&zed_urls::account_url(cx));
                             cx.notify();
                         },
                     )))
                     .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.last_error = None;
                             cx.notify();
                         },
@@ -3892,7 +3890,7 @@ impl ContextEditor {
                     .mt_1()
                     .child(
                         Button::new("subscribe", "Update Monthly Spend Limit").on_click(
-                            cx.listener(|this, _, cx| {
+                            cx.listener(|this, _, window, cx| {
                                 this.last_error = None;
                                 cx.open_url(&zed_urls::account_url(cx));
                                 cx.notify();
@@ -3900,7 +3898,7 @@ impl ContextEditor {
                         ),
                     )
                     .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.last_error = None;
                             cx.notify();
                         },
@@ -3938,7 +3936,7 @@ impl ContextEditor {
                     .justify_end()
                     .mt_1()
                     .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
-                        |this, _, cx| {
+                        |this, _, window, cx| {
                             this.last_error = None;
                             cx.notify();
                         },
@@ -4550,7 +4548,7 @@ impl Render for ContextEditorToolbarItem {
                     IconButton::new("regenerate-context", IconName::RefreshTitle)
                         .shape(ui::IconButtonShape::Square)
                         .tooltip(|cx| Tooltip::text("Regenerate Title", cx))
-                        .on_click(cx.listener(move |_, _, cx| {
+                        .on_click(cx.listener(move |_, _, window, cx| {
                             cx.emit(ContextEditorToolbarItemEvent::RegenerateSummary)
                         })),
                 ),
@@ -4820,7 +4818,7 @@ impl ConfigurationView {
 
         let open_new_context = cx.listener({
             let provider = provider.clone();
-            move |_, _, cx| {
+            move |_, _, window, cx| {
                 cx.emit(ConfigurationViewEvent::NewProviderContextEditor(
                     provider.clone(),
                 ))

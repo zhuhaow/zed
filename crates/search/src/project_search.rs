@@ -1604,9 +1604,11 @@ impl Render for ProjectSearchBar {
         };
 
         let query_column = input_base_styles()
-            .on_action(cx.listener(|this, action, cx| this.confirm(action, cx)))
-            .on_action(cx.listener(|this, action, cx| this.previous_history_query(action, cx)))
-            .on_action(cx.listener(|this, action, cx| this.next_history_query(action, cx)))
+            .on_action(cx.listener(|this, action, window, cx| this.confirm(action, cx)))
+            .on_action(
+                cx.listener(|this, action, window, cx| this.previous_history_query(action, cx)),
+            )
+            .on_action(cx.listener(|this, action, window, cx| this.next_history_query(action, cx)))
             .child(self.render_text_input(&search.query_editor, cx))
             .child(
                 h_flex()
@@ -1614,21 +1616,21 @@ impl Render for ProjectSearchBar {
                     .child(SearchOptions::CASE_SENSITIVE.as_button(
                         self.is_option_enabled(SearchOptions::CASE_SENSITIVE, cx),
                         focus_handle.clone(),
-                        cx.listener(|this, _, cx| {
+                        cx.listener(|this, _, window, cx| {
                             this.toggle_search_option(SearchOptions::CASE_SENSITIVE, cx);
                         }),
                     ))
                     .child(SearchOptions::WHOLE_WORD.as_button(
                         self.is_option_enabled(SearchOptions::WHOLE_WORD, cx),
                         focus_handle.clone(),
-                        cx.listener(|this, _, cx| {
+                        cx.listener(|this, _, window, cx| {
                             this.toggle_search_option(SearchOptions::WHOLE_WORD, cx);
                         }),
                     ))
                     .child(SearchOptions::REGEX.as_button(
                         self.is_option_enabled(SearchOptions::REGEX, cx),
                         focus_handle.clone(),
-                        cx.listener(|this, _, cx| {
+                        cx.listener(|this, _, window, cx| {
                             this.toggle_search_option(SearchOptions::REGEX, cx);
                         }),
                     )),
@@ -1640,7 +1642,7 @@ impl Render for ProjectSearchBar {
                 IconButton::new("project-search-filter-button", IconName::Filter)
                     .shape(IconButtonShape::Square)
                     .tooltip(|cx| Tooltip::for_action("Toggle Filters", &ToggleFilters, cx))
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         this.toggle_filters(cx);
                     }))
                     .toggle_state(
@@ -1664,7 +1666,7 @@ impl Render for ProjectSearchBar {
             .child(
                 IconButton::new("project-search-toggle-replace", IconName::Replace)
                     .shape(IconButtonShape::Square)
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         this.toggle_replace(&ToggleReplace, cx);
                     }))
                     .toggle_state(
@@ -1715,9 +1717,9 @@ impl Render for ProjectSearchBar {
                 IconButton::new("project-search-prev-match", IconName::ChevronLeft)
                     .shape(IconButtonShape::Square)
                     .disabled(search.active_match_index.is_none())
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(search) = this.active_project_search.as_ref() {
-                            search.update(cx, |this, cx| {
+                            search.update(cx, |this, window, cx| {
                                 this.select_match(Direction::Prev, cx);
                             })
                         }
@@ -1738,9 +1740,9 @@ impl Render for ProjectSearchBar {
                 IconButton::new("project-search-next-match", IconName::ChevronRight)
                     .shape(IconButtonShape::Square)
                     .disabled(search.active_match_index.is_none())
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(search) = this.active_project_search.as_ref() {
-                            search.update(cx, |this, cx| {
+                            search.update(cx, |this, window, cx| {
                                 this.select_match(Direction::Next, cx);
                             })
                         }
@@ -1795,9 +1797,9 @@ impl Render for ProjectSearchBar {
                         this.child(
                             IconButton::new("project-search-replace-next", IconName::ReplaceNext)
                                 .shape(IconButtonShape::Square)
-                                .on_click(cx.listener(|this, _, cx| {
+                                .on_click(cx.listener(|this, _, window, cx| {
                                     if let Some(search) = this.active_project_search.as_ref() {
-                                        search.update(cx, |this, cx| {
+                                        search.update(cx, |this, window, cx| {
                                             this.replace_next(&ReplaceNext, cx);
                                         })
                                     }
@@ -1817,9 +1819,9 @@ impl Render for ProjectSearchBar {
                         .child(
                             IconButton::new("project-search-replace-all", IconName::ReplaceAll)
                                 .shape(IconButtonShape::Square)
-                                .on_click(cx.listener(|this, _, cx| {
+                                .on_click(cx.listener(|this, _, window, cx| {
                                     if let Some(search) = this.active_project_search.as_ref() {
-                                        search.update(cx, |this, cx| {
+                                        search.update(cx, |this, window, cx| {
                                             this.replace_all(&ReplaceAll, cx);
                                         })
                                     }
@@ -1851,22 +1853,22 @@ impl Render for ProjectSearchBar {
                 .gap_2()
                 .child(
                     input_base_styles()
-                        .on_action(
-                            cx.listener(|this, action, cx| this.previous_history_query(action, cx)),
-                        )
-                        .on_action(
-                            cx.listener(|this, action, cx| this.next_history_query(action, cx)),
-                        )
+                        .on_action(cx.listener(|this, action, window, cx| {
+                            this.previous_history_query(action, cx)
+                        }))
+                        .on_action(cx.listener(|this, action, window, cx| {
+                            this.next_history_query(action, cx)
+                        }))
                         .child(self.render_text_input(&search.included_files_editor, cx)),
                 )
                 .child(
                     input_base_styles()
-                        .on_action(
-                            cx.listener(|this, action, cx| this.previous_history_query(action, cx)),
-                        )
-                        .on_action(
-                            cx.listener(|this, action, cx| this.next_history_query(action, cx)),
-                        )
+                        .on_action(cx.listener(|this, action, window, cx| {
+                            this.previous_history_query(action, cx)
+                        }))
+                        .on_action(cx.listener(|this, action, window, cx| {
+                            this.next_history_query(action, cx)
+                        }))
                         .child(self.render_text_input(&search.excluded_files_editor, cx)),
                 )
                 .child(
@@ -1878,7 +1880,7 @@ impl Render for ProjectSearchBar {
                                 .shape(IconButtonShape::Square)
                                 .toggle_state(self.is_opened_only_enabled(cx))
                                 .tooltip(|cx| Tooltip::text("Only Search Open Files", cx))
-                                .on_click(cx.listener(|this, _, cx| {
+                                .on_click(cx.listener(|this, _, window, cx| {
                                     this.toggle_opened_only(cx);
                                 })),
                         )
@@ -1888,7 +1890,7 @@ impl Render for ProjectSearchBar {
                                     .search_options
                                     .contains(SearchOptions::INCLUDE_IGNORED),
                                 focus_handle.clone(),
-                                cx.listener(|this, _, cx| {
+                                cx.listener(|this, _, window, cx| {
                                     this.toggle_search_option(SearchOptions::INCLUDE_IGNORED, cx);
                                 }),
                             ),
@@ -1906,44 +1908,46 @@ impl Render for ProjectSearchBar {
 
         v_flex()
             .key_context(key_context)
-            .on_action(cx.listener(|this, _: &ToggleFocus, cx| this.move_focus_to_results(cx)))
-            .on_action(cx.listener(|this, _: &ToggleFilters, cx| {
+            .on_action(
+                cx.listener(|this, _: &ToggleFocus, window, cx| this.move_focus_to_results(cx)),
+            )
+            .on_action(cx.listener(|this, _: &ToggleFilters, window, cx| {
                 this.toggle_filters(cx);
             }))
-            .capture_action(cx.listener(|this, action, cx| {
+            .capture_action(cx.listener(|this, action, window, cx| {
                 this.tab(action, cx);
                 cx.stop_propagation();
             }))
-            .capture_action(cx.listener(|this, action, cx| {
+            .capture_action(cx.listener(|this, action, window, cx| {
                 this.tab_previous(action, cx);
                 cx.stop_propagation();
             }))
-            .on_action(cx.listener(|this, action, cx| this.confirm(action, cx)))
-            .on_action(cx.listener(|this, action, cx| {
+            .on_action(cx.listener(|this, action, window, cx| this.confirm(action, cx)))
+            .on_action(cx.listener(|this, action, window, cx| {
                 this.toggle_replace(action, cx);
             }))
-            .on_action(cx.listener(|this, _: &ToggleWholeWord, cx| {
+            .on_action(cx.listener(|this, _: &ToggleWholeWord, window, cx| {
                 this.toggle_search_option(SearchOptions::WHOLE_WORD, cx);
             }))
-            .on_action(cx.listener(|this, _: &ToggleCaseSensitive, cx| {
+            .on_action(cx.listener(|this, _: &ToggleCaseSensitive, window, cx| {
                 this.toggle_search_option(SearchOptions::CASE_SENSITIVE, cx);
             }))
-            .on_action(cx.listener(|this, action, cx| {
+            .on_action(cx.listener(|this, action, window, cx| {
                 if let Some(search) = this.active_project_search.as_ref() {
-                    search.update(cx, |this, cx| {
+                    search.update(cx, |this, window, cx| {
                         this.replace_next(action, cx);
                     })
                 }
             }))
-            .on_action(cx.listener(|this, action, cx| {
+            .on_action(cx.listener(|this, action, window, cx| {
                 if let Some(search) = this.active_project_search.as_ref() {
-                    search.update(cx, |this, cx| {
+                    search.update(cx, |this, window, cx| {
                         this.replace_all(action, cx);
                     })
                 }
             }))
             .when(search.filters_enabled, |this| {
-                this.on_action(cx.listener(|this, _: &ToggleIncludeIgnored, cx| {
+                this.on_action(cx.listener(|this, _: &ToggleIncludeIgnored, window, cx| {
                     this.toggle_search_option(SearchOptions::INCLUDE_IGNORED, cx);
                 }))
             })

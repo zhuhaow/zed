@@ -1422,6 +1422,7 @@ impl AppContext {
 
 impl Context for AppContext {
     type Result<T> = T;
+    type WindowResult<T> = Result<T>;
 
     /// Build an entity that is owned by the application. The given function will be invoked with
     /// a `ModelContext` and must return an object representing the entity. A `Model` handle will be returned,
@@ -1493,7 +1494,7 @@ impl Context for AppContext {
         read(entity, self)
     }
 
-    fn update_window<T, F>(&mut self, handle: AnyWindowHandle, update: F) -> Result<T>
+    fn update_window<T, F>(&mut self, handle: AnyWindowHandle, update: F) -> Self::WindowResult<T>
     where
         F: FnOnce(AnyView, &mut Window, &mut WindowContext<'_>) -> T,
     {
@@ -1525,8 +1526,8 @@ impl Context for AppContext {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
-    ) -> Result<R>
+        read: impl FnOnce(View<T>, &Window, &AppContext) -> R,
+    ) -> Self::WindowResult<R>
     where
         T: 'static,
     {
@@ -1542,7 +1543,7 @@ impl Context for AppContext {
             .downcast::<T>()
             .map_err(|_| anyhow!("root view's type has changed"))?;
 
-        Ok(read(view, self))
+        Ok(read(view, window, self))
     }
 }
 

@@ -963,7 +963,7 @@ impl Render for TerminalView {
             .on_key_down(cx.listener(Self::key_down))
             .on_mouse_down(
                 MouseButton::Right,
-                cx.listener(|this, event: &MouseDownEvent, cx| {
+                cx.listener(|this, event: &MouseDownEvent, window, cx| {
                     if !this.terminal.read(cx).mouse_mode(event.modifiers.shift) {
                         this.deploy_context_menu(event.position, cx);
                         cx.notify();

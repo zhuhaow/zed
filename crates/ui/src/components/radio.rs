@@ -56,7 +56,7 @@ impl RenderOnce for RadioWithLabel {
                     }),
             )
             .child(self.label)
-            .on_click(move |_event, cx| {
+            .on_click(move |_event, window, cx| {
                 (self.on_click)(&true, cx);
             })
     }

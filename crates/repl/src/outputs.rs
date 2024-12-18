@@ -148,7 +148,7 @@ impl Output {
                         IconButton::new(ElementId::Name("copy-output".into()), IconName::Copy)
                             .style(ButtonStyle::Transparent)
                             .tooltip(move |cx| Tooltip::text("Copy Output", cx))
-                            .on_click(cx.listener(move |_, _, cx| {
+                            .on_click(cx.listener(move |_, _, window, cx| {
                                 let clipboard_content = v.clipboard_content(cx);
 
                                 if let Some(clipboard_content) = clipboard_content.as_ref() {

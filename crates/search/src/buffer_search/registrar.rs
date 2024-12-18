@@ -39,7 +39,7 @@ impl<T: 'static> SearchActionsRegistrar for DivRegistrar<'_, '_, T> {
     fn register_handler<A: Action>(&mut self, callback: impl ActionExecutor<A>) {
         let getter = self.search_getter;
         self.div = self.div.take().map(|div| {
-            div.on_action(self.cx.listener(move |this, action, cx| {
+            div.on_action(self.cx.listener(move |this, action, window, cx| {
                 let should_notify = (getter)(this, cx)
                     .clone()
                     .map(|search_bar| {

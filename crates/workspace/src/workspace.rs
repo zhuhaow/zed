@@ -1725,7 +1725,12 @@ impl Workspace {
         });
     }
 
-    pub fn close_window(&mut self, _: &CloseWindow, cx: &mut ViewContext<Self>) {
+    pub fn close_window(
+        &mut self,
+        _: &CloseWindow,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let prepare = self.prepare_to_close(CloseIntent::CloseWindow, cx);
         let window = cx.window_handle();
         cx.spawn(|_, mut cx| async move {
@@ -1805,12 +1810,17 @@ impl Workspace {
         })
     }
 
-    fn save_all(&mut self, action: &SaveAll, cx: &mut ViewContext<Self>) {
+    fn save_all(&mut self, action: &SaveAll, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.save_all_internal(action.save_intent.unwrap_or(SaveIntent::SaveAll), cx)
             .detach_and_log_err(cx);
     }
 
-    fn send_keystrokes(&mut self, action: &SendKeystrokes, cx: &mut ViewContext<Self>) {
+    fn send_keystrokes(
+        &mut self,
+        action: &SendKeystrokes,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let mut state = self.dispatching_keystrokes.borrow_mut();
         if !state.0.insert(action.0.clone()) {
             cx.propagate();
@@ -2099,7 +2109,12 @@ impl Workspace {
         }
     }
 
-    fn add_folder_to_project(&mut self, _: &AddFolderToProject, cx: &mut ViewContext<Self>) {
+    fn add_folder_to_project(
+        &mut self,
+        _: &AddFolderToProject,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let project = self.project.read(cx);
         if project.is_via_collab() {
             self.show_error(
@@ -2213,6 +2228,7 @@ impl Workspace {
     pub fn close_inactive_items_and_panes(
         &mut self,
         action: &CloseInactiveTabsAndPanes,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         if let Some(task) =
@@ -2225,6 +2241,7 @@ impl Workspace {
     pub fn close_all_items_and_panes(
         &mut self,
         action: &CloseAllItemsAndPanes,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         if let Some(task) =
@@ -2840,7 +2857,12 @@ impl Workspace {
         }
     }
 
-    fn activate_pane_at_index(&mut self, action: &ActivatePane, cx: &mut ViewContext<Self>) {
+    fn activate_pane_at_index(
+        &mut self,
+        action: &ActivatePane,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let panes = self.center.panes();
         if let Some(pane) = panes.get(action.0).map(|p| (*p).clone()) {
             cx.focus_view(&pane);
@@ -2849,14 +2871,19 @@ impl Workspace {
         }
     }
 
-    fn move_item_to_pane_at_index(&mut self, action: &MoveItemToPane, cx: &mut ViewContext<Self>) {
+    fn move_item_to_pane_at_index(
+        &mut self,
+        action: &MoveItemToPane,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let Some(&target_pane) = self.center.panes().get(action.destination) else {
             return;
         };
         move_active_item(&self.active_pane, target_pane, action.focus, true, cx);
     }
 
-    pub fn activate_next_pane(&mut self, cx: &mut WindowContext) {
+    pub fn activate_next_pane(&mut self, window: &mut Window, cx: &mut WindowContext) {
         let panes = self.center.panes();
         if let Some(ix) = panes.iter().position(|pane| **pane == self.active_pane) {
             let next_ix = (ix + 1) % panes.len();
@@ -3383,6 +3410,7 @@ impl Workspace {
     pub fn follow_next_collaborator(
         &mut self,
         _: &FollowNextCollaborator,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         let collaborators = self.project.read(cx).collaborators();
@@ -4446,70 +4474,74 @@ impl Workspace {
             .on_action(cx.listener(Self::close_window))
             .on_action(cx.listener(Self::activate_pane_at_index))
             .on_action(cx.listener(Self::move_item_to_pane_at_index))
-            .on_action(cx.listener(|workspace, _: &Unfollow, cx| {
+            .on_action(cx.listener(|workspace, _: &Unfollow, window, cx| {
                 let pane = workspace.active_pane().clone();
                 workspace.unfollow_in_pane(&pane, cx);
             }))
-            .on_action(cx.listener(|workspace, action: &Save, cx| {
+            .on_action(cx.listener(|workspace, action: &Save, window, cx| {
                 workspace
                     .save_active_item(action.save_intent.unwrap_or(SaveIntent::Save), cx)
                     .detach_and_prompt_err("Failed to save", cx, |_, _| None);
             }))
-            .on_action(cx.listener(|workspace, _: &SaveWithoutFormat, cx| {
+            .on_action(cx.listener(|workspace, _: &SaveWithoutFormat, window, cx| {
                 workspace
                     .save_active_item(SaveIntent::SaveWithoutFormat, cx)
                     .detach_and_prompt_err("Failed to save", cx, |_, _| None);
             }))
-            .on_action(cx.listener(|workspace, _: &SaveAs, cx| {
+            .on_action(cx.listener(|workspace, _: &SaveAs, window, cx| {
                 workspace
                     .save_active_item(SaveIntent::SaveAs, cx)
                     .detach_and_prompt_err("Failed to save", cx, |_, _| None);
             }))
-            .on_action(cx.listener(|workspace, _: &ActivatePreviousPane, cx| {
-                workspace.activate_previous_pane(cx)
+            .on_action(
+                cx.listener(|workspace, _: &ActivatePreviousPane, window, cx| {
+                    workspace.activate_previous_pane(cx)
+                }),
+            )
+            .on_action(cx.listener(|workspace, _: &ActivateNextPane, window, cx| {
+                workspace.activate_next_pane(window, cx)
             }))
             .on_action(
-                cx.listener(|workspace, _: &ActivateNextPane, cx| workspace.activate_next_pane(cx)),
-            )
-            .on_action(
-                cx.listener(|workspace, action: &ActivatePaneInDirection, cx| {
+                cx.listener(|workspace, action: &ActivatePaneInDirection, window, cx| {
                     workspace.activate_pane_in_direction(action.0, cx)
                 }),
             )
-            .on_action(
-                cx.listener(|workspace, action: &MoveItemToPaneInDirection, cx| {
+            .on_action(cx.listener(
+                |workspace, action: &MoveItemToPaneInDirection, window, cx| {
                     workspace.move_item_to_pane_in_direction(action, cx)
+                },
+            ))
+            .on_action(
+                cx.listener(|workspace, action: &SwapPaneInDirection, window, cx| {
+                    workspace.swap_pane_in_direction(action.0, cx)
                 }),
             )
-            .on_action(cx.listener(|workspace, action: &SwapPaneInDirection, cx| {
-                workspace.swap_pane_in_direction(action.0, cx)
-            }))
-            .on_action(cx.listener(|this, _: &ToggleLeftDock, cx| {
+            .on_action(cx.listener(|this, _: &ToggleLeftDock, window, cx| {
                 this.toggle_dock(DockPosition::Left, cx);
             }))
-            .on_action(
-                cx.listener(|workspace: &mut Workspace, _: &ToggleRightDock, cx| {
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ToggleRightDock, window, cx| {
                     workspace.toggle_dock(DockPosition::Right, cx);
-                }),
-            )
-            .on_action(
-                cx.listener(|workspace: &mut Workspace, _: &ToggleBottomDock, cx| {
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ToggleBottomDock, window, cx| {
                     workspace.toggle_dock(DockPosition::Bottom, cx);
-                }),
-            )
+                },
+            ))
             .on_action(
-                cx.listener(|workspace: &mut Workspace, _: &CloseAllDocks, cx| {
+                cx.listener(|workspace: &mut Workspace, _: &CloseAllDocks, window, cx| {
                     workspace.close_all_docks(cx);
                 }),
             )
-            .on_action(
-                cx.listener(|workspace: &mut Workspace, _: &ClearAllNotifications, cx| {
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ClearAllNotifications, window, cx| {
                     workspace.clear_all_notifications(cx);
-                }),
-            )
+                },
+            ))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ReopenClosedItem, window, cx| {
-                    workspace.reopen_closed_item(cx).detach();
+                    workspace.reopen_closed_item(window, cx).detach();
                 },
             ))
             .on_action(cx.listener(Workspace::toggle_centered_layout))
@@ -4549,9 +4581,9 @@ impl Workspace {
 
         self.workspace_actions.push(Box::new(move |div, cx| {
             let callback = callback.clone();
-            div.on_action(
-                cx.listener(move |workspace, event, cx| (callback.clone())(workspace, event, cx)),
-            )
+            div.on_action(cx.listener(move |workspace, event, window, cx| {
+                (callback.clone())(workspace, event, cx)
+            }))
         }));
         self
     }
@@ -4579,7 +4611,12 @@ impl Workspace {
             .update(cx, |modal_layer, cx| modal_layer.toggle_modal(cx, build))
     }
 
-    pub fn toggle_centered_layout(&mut self, _: &ToggleCenteredLayout, cx: &mut ViewContext<Self>) {
+    pub fn toggle_centered_layout(
+        &mut self,
+        _: &ToggleCenteredLayout,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.centered_layout = !self.centered_layout;
         if let Some(database_id) = self.database_id() {
             cx.background_executor()
@@ -4906,7 +4943,7 @@ impl Render for Workspace {
                                 })
                                 .when(self.zoomed.is_none(), |this| {
                                     this.on_drag_move(cx.listener(
-                                        |workspace, e: &DragMoveEvent<DraggedDock>, cx| {
+                                        |workspace, e: &DragMoveEvent<DraggedDock>, window, cx| {
                                             match e.drag(cx).0 {
                                                 DockPosition::Left => {
                                                     resize_left_dock(
@@ -5974,7 +6011,7 @@ pub fn client_side_decorations(element: impl IntoElement, cx: &mut WindowContext
                 .when(!tiling.right, |div| {
                     div.pr(theme::CLIENT_SIDE_DECORATION_SHADOW)
                 })
-                .on_mouse_move(move |e, cx| {
+                .on_mouse_move(move |e, window, cx| {
                     let size = cx.window_bounds().get_bounds().size;
                     let pos = e.position;
 
@@ -5990,7 +6027,7 @@ pub fn client_side_decorations(element: impl IntoElement, cx: &mut WindowContext
                             .ok();
                     }
                 })
-                .on_mouse_down(MouseButton::Left, move |e, cx| {
+                .on_mouse_down(MouseButton::Left, move |e, window, cx| {
                     let size = cx.window_bounds().get_bounds().size;
                     let pos = e.position;
 
@@ -6045,7 +6082,7 @@ pub fn client_side_decorations(element: impl IntoElement, cx: &mut WindowContext
                             }])
                         }),
                 })
-                .on_mouse_move(|_e, cx| {
+                .on_mouse_move(|_e, window, cx| {
                     cx.stop_propagation();
                 })
                 .size_full()
@@ -7018,7 +7055,10 @@ mod tests {
         workspace.update(cx, |workspace, cx| {
             workspace.toggle_dock(DockPosition::Right, cx)
         });
-        pane.update(cx, |pane, cx| pane.toggle_zoom(&Default::default(), cx));
+        pane.update_in_window(cx.window, cx, |pane, window, cx| {
+            pane.toggle_zoom(&Default::default(), window, cx)
+        })
+        .unwrap();
 
         // Opening a dock unzooms the pane.
         workspace.update(cx, |workspace, cx| {

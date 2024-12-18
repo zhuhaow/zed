@@ -1403,7 +1403,7 @@ impl Render for PromptEditor {
                         .shape(IconButtonShape::Square)
                         .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
                         .on_click(
-                            cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)),
+                            cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)),
                         )
                         .into_any_element(),
                     IconButton::new("start", IconName::SparkleAlt)
@@ -1411,7 +1411,7 @@ impl Render for PromptEditor {
                         .shape(IconButtonShape::Square)
                         .tooltip(|cx| Tooltip::for_action("Transform", &menu::Confirm, cx))
                         .on_click(
-                            cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::StartRequested)),
+                            cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::StartRequested)),
                         )
                         .into_any_element(),
                 ]
@@ -1423,7 +1423,7 @@ impl Render for PromptEditor {
                         .shape(IconButtonShape::Square)
                         .tooltip(|cx| Tooltip::text("Cancel Assist", cx))
                         .on_click(
-                            cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)),
+                            cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)),
                         )
                         .into_any_element(),
                     IconButton::new("stop", IconName::Stop)
@@ -1437,7 +1437,7 @@ impl Render for PromptEditor {
                                 cx,
                             )
                         })
-                        .on_click(cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::StopRequested)))
+                        .on_click(cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::StopRequested)))
                         .into_any_element(),
                 ]
             }
@@ -1457,7 +1457,7 @@ impl Render for PromptEditor {
                         .shape(IconButtonShape::Square)
                         .tooltip(|cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
                         .on_click(
-                            cx.listener(|_, _, cx| cx.emit(PromptEditorEvent::CancelRequested)),
+                            cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)),
                         )
                         .into_any_element(),
                     IconButton::new("restart", IconName::RotateCw)
@@ -1471,7 +1471,7 @@ impl Render for PromptEditor {
                                 cx,
                             )
                         })
-                        .on_click(cx.listener(|_, _, cx| {
+                        .on_click(cx.listener(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::StartRequested);
                         }))
                         .into_any_element(),
@@ -1480,7 +1480,7 @@ impl Render for PromptEditor {
                             .icon_color(Color::Info)
                             .shape(IconButtonShape::Square)
                             .tooltip(|cx| Tooltip::for_action("Confirm Assist", &menu::Confirm, cx))
-                            .on_click(cx.listener(|_, _, cx| {
+                            .on_click(cx.listener(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested);
                             }))
                             .into_any_element()
@@ -1993,9 +1993,9 @@ impl PromptEditor {
                             .into()
                         }
                     })
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         this.codegen
-                            .update(cx, |codegen, cx| codegen.cycle_prev(cx))
+                            .update(cx, |codegen, window, cx| codegen.cycle_prev(cx))
                     })),
             )
             .child(
@@ -2035,9 +2035,9 @@ impl PromptEditor {
                             .into()
                         }
                     })
-                    .on_click(cx.listener(|this, _, cx| {
+                    .on_click(cx.listener(|this, _, window, cx| {
                         this.codegen
-                            .update(cx, |codegen, cx| codegen.cycle_next(cx))
+                            .update(cx, |codegen, window, cx| codegen.cycle_next(cx))
                     })),
             )
             .into_any_element()

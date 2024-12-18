@@ -538,7 +538,7 @@ impl CompletionsMenu {
                                     ListItem::new(mat.candidate_id)
                                         .inset(true)
                                         .toggle_state(item_ix == selected_item)
-                                        .on_click(cx.listener(move |editor, _event, cx| {
+                                        .on_click(cx.listener(move |editor, _event, window, cx| {
                                             cx.stop_propagation();
                                             if let Some(task) = editor.confirm_completion(
                                                 &ConfirmCompletion {
@@ -569,7 +569,7 @@ impl CompletionsMenu {
                                         ))
                                         .with_highlights(&style.text, None),
                                     )
-                                    .on_click(cx.listener(move |editor, _event, cx| {
+                                    .on_click(cx.listener(move |editor, _event, window, cx| {
                                         cx.stop_propagation();
                                         editor.accept_inline_completion(
                                             &AcceptInlineCompletion {},
@@ -906,7 +906,7 @@ impl CodeActionsMenu {
                                 .inset(true)
                                 .toggle_state(selected)
                                 .when_some(action.as_code_action(), |this, action| {
-                                    this.on_click(cx.listener(move |editor, _, cx| {
+                                    this.on_click(cx.listener(move |editor, _, window, cx| {
                                         cx.stop_propagation();
                                         if let Some(task) = editor.confirm_code_action(
                                             &ConfirmCodeAction {
@@ -930,7 +930,7 @@ impl CodeActionsMenu {
                                     )
                                 })
                                 .when_some(action.as_task(), |this, task| {
-                                    this.on_click(cx.listener(move |editor, _, cx| {
+                                    this.on_click(cx.listener(move |editor, _, window, cx| {
                                         cx.stop_propagation();
                                         if let Some(task) = editor.confirm_code_action(
                                             &ConfirmCodeAction {

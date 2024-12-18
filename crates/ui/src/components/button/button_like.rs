@@ -33,7 +33,10 @@ pub trait ButtonCommon: Clickable + Disableable {
     ///
     /// Nearly all interactable elements should have a tooltip. Some example
     /// exceptions might a scroll bar, or a slider.
-    fn tooltip(self, tooltip: impl Fn(&mut WindowContext) -> AnyView + 'static) -> Self;
+    fn tooltip(
+        self,
+        tooltip: impl Fn(&mut Window, &mut WindowContext) -> AnyView + 'static,
+    ) -> Self;
 
     fn layer(self, elevation: ElevationIndex) -> Self;
 }
@@ -347,9 +350,9 @@ pub struct ButtonLike {
     pub(super) layer: Option<ElevationIndex>,
     size: ButtonSize,
     rounding: Option<ButtonLikeRounding>,
-    tooltip: Option<Box<dyn Fn(&mut WindowContext) -> AnyView>>,
+    tooltip: Option<Box<dyn Fn(&mut Window, &mut WindowContext) -> AnyView>>,
     cursor_style: CursorStyle,
-    on_click: Option<Box<dyn Fn(&ClickEvent, &mut WindowContext) + 'static>>,
+    on_click: Option<Box<dyn Fn(&ClickEvent, &mut Window, &mut WindowContext) + 'static>>,
     children: SmallVec<[AnyElement; 2]>,
 }
 
@@ -415,7 +418,10 @@ impl SelectableButton for ButtonLike {
 }
 
 impl Clickable for ButtonLike {
-    fn on_click(mut self, handler: impl Fn(&ClickEvent, &mut WindowContext) + 'static) -> Self {
+    fn on_click(
+        mut self,
+        handler: impl Fn(&ClickEvent, &mut Window, &mut WindowContext) + 'static,
+    ) -> Self {
         self.on_click = Some(Box::new(handler));
         self
     }
@@ -453,8 +459,11 @@ impl ButtonCommon for ButtonLike {
         self
     }
 
-    fn tooltip(mut self, tooltip: impl Fn(&mut WindowContext) -> AnyView + 'static) -> Self {
-        self.tooltip = Some(Box::new(tooltip));
+    fn tooltip(
+        mut self,
+        tooltip: impl Fn(&mut Window, &mut WindowContext) -> AnyView + 'static,
+    ) -> Self {
+        self.tooltip = Some(Box::new(move |window, cx| tooltip(window, cx)));
         self
     }
 
@@ -514,15 +523,15 @@ impl RenderOnce for ButtonLike {
             .when_some(
                 self.on_click.filter(|_| !self.disabled),
                 |this, on_click| {
-                    this.on_mouse_down(MouseButton::Left, |_, cx| cx.prevent_default())
-                        .on_click(move |event, cx| {
+                    this.on_mouse_down(MouseButton::Left, |_, window, cx| cx.prevent_default())
+                        .on_click(move |event, window, cx| {
                             cx.stop_propagation();
-                            (on_click)(event, cx)
+                            (on_click)(event, window, cx)
                         })
                 },
             )
             .when_some(self.tooltip, |this, tooltip| {
-                this.tooltip(move |cx| tooltip(cx))
+                this.tooltip(move |window, cx| tooltip(window, cx))
             })
             .children(self.children)
     }

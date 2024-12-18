@@ -125,7 +125,7 @@ impl Render for TitleBar {
                     .w_full()
                     // Note: On Windows the title bar behavior is handled by the platform implementation.
                     .when(self.platform_style != PlatformStyle::Windows, |this| {
-                        this.on_click(|event, cx| {
+                        this.on_click(|event, window, cx| {
                             if event.up.click_count == 2 {
                                 cx.zoom_window();
                             }
@@ -138,14 +138,16 @@ impl Render for TitleBar {
                             .children(self.render_project_host(cx))
                             .child(self.render_project_name(cx))
                             .children(self.render_project_branch(cx))
-                            .on_mouse_down(MouseButton::Left, |_, cx| cx.stop_propagation()),
+                            .on_mouse_down(MouseButton::Left, |_, window, cx| {
+                                cx.stop_propagation()
+                            }),
                     )
                     .child(self.render_collaborator_list(cx))
                     .child(
                         h_flex()
                             .gap_1()
                             .pr_1()
-                            .on_mouse_down(MouseButton::Left, |_, cx| cx.stop_propagation())
+                            .on_mouse_down(MouseButton::Left, |_, window, cx| cx.stop_propagation())
                             .children(self.render_call_controls(cx))
                             .map(|el| {
                                 let status = self.client.status();
@@ -167,28 +169,29 @@ impl Render for TitleBar {
                         title_bar
                             .child(platform_linux::LinuxWindowControls::new(close_action))
                             .when(supported_controls.window_menu, |titlebar| {
-                                titlebar.on_mouse_down(gpui::MouseButton::Right, move |ev, cx| {
-                                    cx.show_window_menu(ev.position)
-                                })
+                                titlebar.on_mouse_down(
+                                    gpui::MouseButton::Right,
+                                    move |ev, window, cx| cx.show_window_menu(ev.position),
+                                )
                             })
-                            .on_mouse_move(cx.listener(move |this, _ev, cx| {
+                            .on_mouse_move(cx.listener(move |this, _ev, window, cx| {
                                 if this.should_move {
                                     this.should_move = false;
                                     cx.start_window_move();
                                 }
                             }))
-                            .on_mouse_down_out(cx.listener(move |this, _ev, _cx| {
+                            .on_mouse_down_out(cx.listener(move |this, _event, _window, _cx| {
                                 this.should_move = false;
                             }))
                             .on_mouse_up(
                                 gpui::MouseButton::Left,
-                                cx.listener(move |this, _ev, _cx| {
+                                cx.listener(move |this, _event, _window, _cx| {
                                     this.should_move = false;
                                 }),
                             )
                             .on_mouse_down(
                                 gpui::MouseButton::Left,
-                                cx.listener(move |this, _ev, _cx| {
+                                cx.listener(move |this, _event, _window, _cx| {
                                     this.should_move = true;
                                 }),
                             )
@@ -319,10 +322,10 @@ impl TitleBar {
                         .text_ellipsis()
                         .child(Label::new(nickname.clone()).size(LabelSize::Small)),
                 )
-                .tooltip(move |cx| {
+                .tooltip(move |window, cx| {
                     Tooltip::with_meta("Remote Project", Some(&OpenRemote), meta.clone(), cx)
                 })
-                .on_click(|_, cx| {
+                .on_click(|_, window, cx| {
                     cx.dispatch_action(OpenRemote.boxed_clone());
                 })
                 .into_any_element(),
@@ -357,7 +360,7 @@ impl TitleBar {
                 .color(Color::Player(participant_index.0))
                 .style(ButtonStyle::Subtle)
                 .label_size(LabelSize::Small)
-                .tooltip(move |cx| {
+                .tooltip(move |window, cx| {
                     Tooltip::text(
                         format!(
                             "{} is sharing this project. Click to follow.",
@@ -368,7 +371,7 @@ impl TitleBar {
                 })
                 .on_click({
                     let host_peer_id = host.peer_id;
-                    cx.listener(move |this, _, cx| {
+                    cx.listener(move |this, _, window, cx| {
                         this.workspace
                             .update(cx, |workspace, cx| {
                                 workspace.follow(host_peer_id, cx);
@@ -400,7 +403,7 @@ impl TitleBar {
             .when(!is_project_selected, |b| b.color(Color::Muted))
             .style(ButtonStyle::Subtle)
             .label_size(LabelSize::Small)
-            .tooltip(move |cx| {
+            .tooltip(move |window, cx| {
                 Tooltip::for_action(
                     "Recent Projects",
                     &zed_actions::OpenRecent {
@@ -409,7 +412,7 @@ impl TitleBar {
                     cx,
                 )
             })
-            .on_click(cx.listener(move |_, _, cx| {
+            .on_click(cx.listener(move |_, _, window, cx| {
                 cx.dispatch_action(
                     OpenRecent {
                         create_new_window: false,
@@ -439,7 +442,7 @@ impl TitleBar {
                 .color(Color::Muted)
                 .style(ButtonStyle::Subtle)
                 .label_size(LabelSize::Small)
-                .tooltip(move |cx| {
+                .tooltip(move |window, cx| {
                     Tooltip::with_meta(
                         "Recent Branches",
                         Some(&zed_actions::branches::OpenRecent),
@@ -447,7 +450,7 @@ impl TitleBar {
                         cx,
                     )
                 })
-                .on_click(move |_, cx| {
+                .on_click(move |_, window, cx| {
                     let _ = workspace.update(cx, |_this, cx| {
                         cx.dispatch_action(zed_actions::branches::OpenRecent.boxed_clone());
                     });
@@ -506,7 +509,7 @@ impl TitleBar {
                 div()
                     .id("disconnected")
                     .child(Icon::new(IconName::Disconnected).size(IconSize::Small))
-                    .tooltip(|cx| Tooltip::text("Disconnected", cx))
+                    .tooltip(|window, cx| Tooltip::text("Disconnected", cx))
                     .into_any_element(),
             ),
             client::Status::UpgradeRequired => {
@@ -524,7 +527,7 @@ impl TitleBar {
                 Some(
                     Button::new("connection-status", label)
                         .label_size(LabelSize::Small)
-                        .on_click(|_, cx| {
+                        .on_click(|_, window, cx| {
                             if let Some(auto_updater) = auto_update::AutoUpdater::get(cx) {
                                 if auto_updater.read(cx).status().is_updated() {
                                     workspace::reload(&Default::default(), cx);
@@ -544,7 +547,7 @@ impl TitleBar {
         let client = self.client.clone();
         Button::new("sign_in", "Sign in")
             .label_size(LabelSize::Small)
-            .on_click(move |_, cx| {
+            .on_click(move |_, window, cx| {
                 let client = client.clone();
                 cx.spawn(move |mut cx| async move {
                     client
@@ -613,7 +616,7 @@ impl TitleBar {
                                 ),
                         )
                         .style(ButtonStyle::Subtle)
-                        .tooltip(move |cx| Tooltip::text("Toggle User Menu", cx)),
+                        .tooltip(move |_window, cx| Tooltip::text("Toggle User Menu", cx)),
                 )
                 .anchor(gpui::Corner::TopRight)
         } else {
@@ -648,7 +651,7 @@ impl TitleBar {
                             ),
                         )
                         .style(ButtonStyle::Subtle)
-                        .tooltip(move |cx| Tooltip::text("Toggle User Menu", cx)),
+                        .tooltip(move |_window, cx| Tooltip::text("Toggle User Menu", cx)),
                 )
         }
     }

@@ -3229,7 +3229,7 @@ impl ProjectPanel {
             })
             .when(is_local, |div| {
                 div.on_drag_move::<ExternalPaths>(cx.listener(
-                    move |this, event: &DragMoveEvent<ExternalPaths>, cx| {
+                    move |this, event: &DragMoveEvent<ExternalPaths>, window, cx| {
                         if event.bounds.contains(&event.event.position) {
                             if this.last_external_paths_drag_over_entry == Some(entry_id) {
                                 return;
@@ -3272,7 +3272,7 @@ impl ProjectPanel {
                     },
                 ))
                 .on_drop(cx.listener(
-                    move |this, external_paths: &ExternalPaths, cx| {
+                    move |this, external_paths: &ExternalPaths, window, cx| {
                         this.hover_scroll_task.take();
                         this.last_external_paths_drag_over_entry = None;
                         this.marked_entries.clear();
@@ -3291,77 +3291,83 @@ impl ProjectPanel {
                 })
             })
             .drag_over::<DraggedSelection>(move |style, _, _| style.bg(item_colors.drag_over))
-            .on_drop(cx.listener(move |this, selections: &DraggedSelection, cx| {
-                this.hover_scroll_task.take();
-                this.drag_onto(selections, entry_id, kind.is_file(), cx);
-            }))
+            .on_drop(
+                cx.listener(move |this, selections: &DraggedSelection, window, cx| {
+                    this.hover_scroll_task.take();
+                    this.drag_onto(selections, entry_id, kind.is_file(), cx);
+                }),
+            )
             .on_mouse_down(
                 MouseButton::Left,
-                cx.listener(move |this, _, cx| {
+                cx.listener(move |this, _, window, cx| {
                     this.mouse_down = true;
                     cx.propagate();
                 }),
             )
-            .on_click(cx.listener(move |this, event: &gpui::ClickEvent, cx| {
-                if event.down.button == MouseButton::Right || event.down.first_mouse || show_editor
-                {
-                    return;
-                }
-                if event.down.button == MouseButton::Left {
-                    this.mouse_down = false;
-                }
-                cx.stop_propagation();
-
-                if let Some(selection) = this.selection.filter(|_| event.down.modifiers.shift) {
-                    let current_selection = this.index_for_selection(selection);
-                    let clicked_entry = SelectedEntry {
-                        entry_id,
-                        worktree_id,
-                    };
-                    let target_selection = this.index_for_selection(clicked_entry);
-                    if let Some(((_, _, source_index), (_, _, target_index))) =
-                        current_selection.zip(target_selection)
+            .on_click(
+                cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
+                    if event.down.button == MouseButton::Right
+                        || event.down.first_mouse
+                        || show_editor
                     {
-                        let range_start = source_index.min(target_index);
-                        let range_end = source_index.max(target_index) + 1; // Make the range inclusive.
-                        let mut new_selections = BTreeSet::new();
-                        this.for_each_visible_entry(
-                            range_start..range_end,
-                            cx,
-                            |entry_id, details, _| {
-                                new_selections.insert(SelectedEntry {
-                                    entry_id,
-                                    worktree_id: details.worktree_id,
-                                });
-                            },
-                        );
-
-                        this.marked_entries = this
-                            .marked_entries
-                            .union(&new_selections)
-                            .cloned()
-                            .collect();
-
-                        this.selection = Some(clicked_entry);
-                        this.marked_entries.insert(clicked_entry);
+                        return;
                     }
-                } else if event.down.modifiers.secondary() {
-                    if event.down.click_count > 1 {
-                        this.split_entry(entry_id, cx);
-                    } else if !this.marked_entries.insert(selection) {
-                        this.marked_entries.remove(&selection);
+                    if event.down.button == MouseButton::Left {
+                        this.mouse_down = false;
                     }
-                } else if kind.is_dir() {
-                    this.marked_entries.clear();
-                    this.toggle_expanded(entry_id, cx);
-                } else {
-                    let preview_tabs_enabled = PreviewTabsSettings::get_global(cx).enabled;
-                    let click_count = event.up.click_count;
-                    let focus_opened_item = !preview_tabs_enabled || click_count > 1;
-                    let allow_preview = preview_tabs_enabled && click_count == 1;
-                    this.open_entry(entry_id, focus_opened_item, allow_preview, cx);
-                }
-            }))
+                    cx.stop_propagation();
+
+                    if let Some(selection) = this.selection.filter(|_| event.down.modifiers.shift) {
+                        let current_selection = this.index_for_selection(selection);
+                        let clicked_entry = SelectedEntry {
+                            entry_id,
+                            worktree_id,
+                        };
+                        let target_selection = this.index_for_selection(clicked_entry);
+                        if let Some(((_, _, source_index), (_, _, target_index))) =
+                            current_selection.zip(target_selection)
+                        {
+                            let range_start = source_index.min(target_index);
+                            let range_end = source_index.max(target_index) + 1; // Make the range inclusive.
+                            let mut new_selections = BTreeSet::new();
+                            this.for_each_visible_entry(
+                                range_start..range_end,
+                                cx,
+                                |entry_id, details, _| {
+                                    new_selections.insert(SelectedEntry {
+                                        entry_id,
+                                        worktree_id: details.worktree_id,
+                                    });
+                                },
+                            );
+
+                            this.marked_entries = this
+                                .marked_entries
+                                .union(&new_selections)
+                                .cloned()
+                                .collect();
+
+                            this.selection = Some(clicked_entry);
+                            this.marked_entries.insert(clicked_entry);
+                        }
+                    } else if event.down.modifiers.secondary() {
+                        if event.down.click_count > 1 {
+                            this.split_entry(entry_id, cx);
+                        } else if !this.marked_entries.insert(selection) {
+                            this.marked_entries.remove(&selection);
+                        }
+                    } else if kind.is_dir() {
+                        this.marked_entries.clear();
+                        this.toggle_expanded(entry_id, cx);
+                    } else {
+                        let preview_tabs_enabled = PreviewTabsSettings::get_global(cx).enabled;
+                        let click_count = event.up.click_count;
+                        let focus_opened_item = !preview_tabs_enabled || click_count > 1;
+                        let allow_preview = preview_tabs_enabled && click_count == 1;
+                        this.open_entry(entry_id, focus_opened_item, allow_preview, cx);
+                    }
+                }),
+            )
             .child(
                 ListItem::new(entry_id.to_proto() as usize)
                     .indent_level(depth)
@@ -3472,7 +3478,7 @@ impl ProjectPanel {
                                         ));
                                         let label = div()
                                             .id(id)
-                                            .on_click(cx.listener(move |this, _, cx| {
+                                            .on_click(cx.listener(move |this, _, window, cx| {
                                                 if index != active_index {
                                                     if let Some(folds) =
                                                         this.ancestors.get_mut(&entry_id)
@@ -3510,7 +3516,7 @@ impl ProjectPanel {
                         .ml_1(),
                     )
                     .on_secondary_mouse_down(cx.listener(
-                        move |this, event: &MouseDownEvent, cx| {
+                        move |this, event: &MouseDownEvent, window, cx| {
                             // Stop propagation to prevent the catch-all context menu for the project
                             // panel from being deployed.
                             cx.stop_propagation();
@@ -3538,7 +3544,7 @@ impl ProjectPanel {
             div()
                 .occlude()
                 .id("project-panel-vertical-scroll")
-                .on_mouse_move(cx.listener(|_, _, cx| {
+                .on_mouse_move(cx.listener(|_, _, window, cx| {
                     cx.notify();
                     cx.stop_propagation()
                 }))
@@ -3550,7 +3556,7 @@ impl ProjectPanel {
                 })
                 .on_mouse_up(
                     MouseButton::Left,
-                    cx.listener(|this, _, cx| {
+                    cx.listener(|this, _, window, cx| {
                         if !this.vertical_scrollbar_state.is_dragging()
                             && !this.focus_handle.contains_focused(cx)
                         {
@@ -3561,7 +3567,7 @@ impl ProjectPanel {
                         cx.stop_propagation();
                     }),
                 )
-                .on_scroll_wheel(cx.listener(|_, _, cx| {
+                .on_scroll_wheel(cx.listener(|_, _, window, cx| {
                     cx.notify();
                 }))
                 .h_full()
@@ -3600,7 +3606,7 @@ impl ProjectPanel {
             div()
                 .occlude()
                 .id("project-panel-horizontal-scroll")
-                .on_mouse_move(cx.listener(|_, _, cx| {
+                .on_mouse_move(cx.listener(|_, _, window, cx| {
                     cx.notify();
                     cx.stop_propagation()
                 }))
@@ -3612,7 +3618,7 @@ impl ProjectPanel {
                 })
                 .on_mouse_up(
                     MouseButton::Left,
-                    cx.listener(|this, _, cx| {
+                    cx.listener(|this, _, window, cx| {
                         if !this.horizontal_scrollbar_state.is_dragging()
                             && !this.focus_handle.contains_focused(cx)
                         {
@@ -3623,7 +3629,7 @@ impl ProjectPanel {
                         cx.stop_propagation();
                     }),
                 )
-                .on_scroll_wheel(cx.listener(|_, _, cx| {
+                .on_scroll_wheel(cx.listener(|_, _, window, cx| {
                     cx.notify();
                 }))
                 .w_full()
@@ -3890,7 +3896,7 @@ impl Render for ProjectPanel {
                 .on_drag_move(cx.listener(handle_drag_move_scroll::<DraggedSelection>))
                 .size_full()
                 .relative()
-                .on_hover(cx.listener(|this, hovered, cx| {
+                .on_hover(cx.listener(|this, hovered, window, cx| {
                     if *hovered {
                         this.show_scrollbar = true;
                         this.hide_scrollbar_task.take();
@@ -3899,7 +3905,7 @@ impl Render for ProjectPanel {
                         this.hide_scrollbar(cx);
                     }
                 }))
-                .on_click(cx.listener(|this, _event, cx| {
+                .on_click(cx.listener(|this, _event, window, cx| {
                     cx.stop_propagation();
                     this.selection = None;
                     this.marked_entries.clear();
@@ -3939,7 +3945,7 @@ impl Render for ProjectPanel {
                         .on_action(cx.listener(Self::copy))
                         .on_action(cx.listener(Self::paste))
                         .on_action(cx.listener(Self::duplicate))
-                        .on_click(cx.listener(|this, event: &gpui::ClickEvent, cx| {
+                        .on_click(cx.listener(|this, event: &gpui::ClickEvent, window, cx| {
                             if event.up.click_count > 1 {
                                 if let Some(entry_id) = this.last_worktree_root_id {
                                     let project = this.project.read(cx);
@@ -3972,7 +3978,7 @@ impl Render for ProjectPanel {
                 })
                 .on_mouse_down(
                     MouseButton::Right,
-                    cx.listener(move |this, event: &MouseDownEvent, cx| {
+                    cx.listener(move |this, event: &MouseDownEvent, window, cx| {
                         // When deploying the context menu anywhere below the last project entry,
                         // act as if the user clicked the root of the last worktree.
                         if let Some(entry_id) = this.last_worktree_root_id {
@@ -4009,7 +4015,7 @@ impl Render for ProjectPanel {
                                 },
                             )
                             .on_click(cx.listener(
-                                |this, active_indent_guide: &IndentGuideLayout, cx| {
+                                |this, active_indent_guide: &IndentGuideLayout, window, cx| {
                                     if cx.modifiers().secondary() {
                                         let ix = active_indent_guide.offset.y;
                                         let Some((target_entry, worktree)) = maybe!({
@@ -4117,9 +4123,11 @@ impl Render for ProjectPanel {
                     Button::new("open_project", "Open a project")
                         .full_width()
                         .key_binding(KeyBinding::for_action(&workspace::Open, cx))
-                        .on_click(cx.listener(|this, _, cx| {
+                        .on_click(cx.listener(|this, _, window, cx| {
                             this.workspace
-                                .update(cx, |_, cx| cx.dispatch_action(Box::new(workspace::Open)))
+                                .update(cx, |_, window, cx| {
+                                    cx.dispatch_action(Box::new(workspace::Open))
+                                })
                                 .log_err();
                         })),
                 )
@@ -4128,7 +4136,7 @@ impl Render for ProjectPanel {
                         style.bg(cx.theme().colors().drop_target_background)
                     })
                     .on_drop(cx.listener(
-                        move |this, external_paths: &ExternalPaths, cx| {
+                        move |this, external_paths: &ExternalPaths, window, cx| {
                             this.last_external_paths_drag_over_entry = None;
                             this.marked_entries.clear();
                             this.hover_scroll_task.take();

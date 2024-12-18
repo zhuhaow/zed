@@ -390,7 +390,7 @@ impl PickerDelegate for TasksModalDelegate {
                                 .icon_color(Color::Muted)
                                 .size(ButtonSize::None)
                                 .icon_size(IconSize::XSmall)
-                                .on_click(cx.listener(move |picker, _event, cx| {
+                                .on_click(cx.listener(move |picker, _event, window, cx| {
                                     cx.stop_propagation();
                                     cx.prevent_default();
 

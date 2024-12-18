@@ -909,7 +909,9 @@ impl Render for ConfigurationView {
                 h_flex().child(
                     Button::new("manage_settings", "Manage Subscription")
                         .style(ButtonStyle::Tinted(TintColor::Accent))
-                        .on_click(cx.listener(|_, _, cx| cx.open_url(&zed_urls::account_url(cx)))),
+                        .on_click(
+                            cx.listener(|_, _, window, cx| cx.open_url(&zed_urls::account_url(cx))),
+                        ),
                 ),
             )
         } else if cx.has_flag::<ZedPro>() {
@@ -919,15 +921,15 @@ impl Render for ConfigurationView {
                     .child(
                         Button::new("learn_more", "Learn more")
                             .style(ButtonStyle::Subtle)
-                            .on_click(cx.listener(|_, _, cx| cx.open_url(ZED_AI_URL))),
+                            .on_click(cx.listener(|_, _, window, cx| cx.open_url(ZED_AI_URL))),
                     )
                     .child(
                         Button::new("upgrade", "Upgrade")
                             .style(ButtonStyle::Subtle)
                             .color(Color::Accent)
-                            .on_click(
-                                cx.listener(|_, _, cx| cx.open_url(&zed_urls::account_url(cx))),
-                            ),
+                            .on_click(cx.listener(|_, _, window, cx| {
+                                cx.open_url(&zed_urls::account_url(cx))
+                            })),
                     ),
             )
         } else {
@@ -952,7 +954,7 @@ impl Render for ConfigurationView {
                         .icon_color(Color::Muted)
                         .icon(IconName::Github)
                         .icon_position(IconPosition::Start)
-                        .on_click(cx.listener(move |this, _, cx| this.authenticate(cx))),
+                        .on_click(cx.listener(move |this, _, window, cx| this.authenticate(cx))),
                 )
         }
     }
