@@ -1732,10 +1732,10 @@ impl Workspace {
         cx: &mut ViewContext<Self>,
     ) {
         let prepare = self.prepare_to_close(CloseIntent::CloseWindow, cx);
-        let window = cx.window_handle();
+        let window_handle = window.handle();
         cx.spawn(|_, mut cx| async move {
             if prepare.await? {
-                window.update(&mut cx, |_, window, cx| {
+                window_handle.update(&mut cx, |_, window, cx| {
                     cx.remove_window();
                 })?;
             }
@@ -2109,12 +2109,7 @@ impl Workspace {
         }
     }
 
-    fn add_folder_to_project(
-        &mut self,
-        _: &AddFolderToProject,
-        window: &mut Window,
-        cx: &mut ViewContext<Self>,
-    ) {
+    fn add_folder_to_project(&mut self, _: &AddFolderToProject, cx: &mut ViewContext<Self>) {
         let project = self.project.read(cx);
         if project.is_via_collab() {
             self.show_error(
@@ -4469,7 +4464,7 @@ impl Workspace {
             .on_action(cx.listener(Self::close_all_items_and_panes))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::send_keystrokes))
-            .on_action(cx.listener(Self::add_folder_to_project))
+            .on_action(cx.listener2(Self::add_folder_to_project))
             .on_action(cx.listener(Self::follow_next_collaborator))
             .on_action(cx.listener(Self::close_window))
             .on_action(cx.listener(Self::activate_pane_at_index))

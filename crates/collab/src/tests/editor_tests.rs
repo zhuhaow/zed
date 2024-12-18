@@ -85,7 +85,7 @@ async fn test_host_disconnect(
     let workspace_b = cx_b
         .add_window(|cx| Workspace::new(None, project_b.clone(), client_b.app_state.clone(), cx));
     let cx_b = &mut VisualTestContext::from_window(*workspace_b, cx_b);
-    let workspace_b_view = workspace_b.root_view(cx_b).unwrap();
+    let workspace_b_view = workspace_b.root_view(cx_b);
 
     let editor_b = workspace_b
         .update(cx_b, |workspace, window, cx| {

@@ -1510,8 +1510,7 @@ mod tests {
         assert_eq!(cx.update(|cx| cx.windows().len()), 2);
         let window2 = cx.update(|cx| cx.active_window().unwrap());
         assert!(window1 != window2);
-        cx.update_window(window1, |_, _, cx| cx.activate_window())
-            .unwrap();
+        cx.update_window(window1, |_, _, cx| cx.activate_window());
 
         cx.update(|cx| {
             open_paths(
@@ -1565,9 +1564,7 @@ mod tests {
         let window_is_edited = |window: WindowHandle<Workspace>, cx: &mut TestAppContext| {
             cx.update(|cx| window.read(cx).unwrap().is_edited())
         };
-        let pane = window
-            .read_with(cx, |workspace, _| workspace.active_pane().clone())
-            .unwrap();
+        let pane = window.read_with(cx, |workspace, _| workspace.active_pane().clone());
         let editor = window
             .read_with(cx, |workspace, cx| {
                 workspace
@@ -2686,9 +2683,7 @@ mod tests {
             project.languages().add(markdown_language())
         });
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
-        let pane = workspace
-            .read_with(cx, |workspace, _| workspace.active_pane().clone())
-            .unwrap();
+        let pane = workspace.read_with(cx, |workspace, _| workspace.active_pane().clone());
 
         let entries = cx.update(|cx| workspace.root(cx).unwrap().file_project_paths(cx));
         let file1 = entries[0].clone();
@@ -3069,9 +3064,7 @@ mod tests {
             project.languages().add(markdown_language())
         });
         let workspace = cx.add_window(|cx| Workspace::test_new(project, cx));
-        let pane = workspace
-            .read_with(cx, |workspace, _| workspace.active_pane().clone())
-            .unwrap();
+        let pane = workspace.read_with(cx, |workspace, _| workspace.active_pane().clone());
 
         let entries = cx.update(|cx| workspace.root(cx).unwrap().file_project_paths(cx));
         let file1 = entries[0].clone();

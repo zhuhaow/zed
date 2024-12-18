@@ -158,6 +158,7 @@ async fn test_basic_following(
     let active_call_c = cx_c.read(ActiveCall::global);
     let project_c = client_c.join_remote_project(project_id, cx_c).await;
     let (workspace_c, cx_c) = client_c.build_workspace(&project_c, cx_c);
+    let window_c = cx_c.window;
     active_call_c
         .update(cx_c, |call, cx| call.set_location(Some(&project_c), cx))
         .await
@@ -235,7 +236,7 @@ async fn test_basic_following(
 
     // Client C closes the project.
     let weak_workspace_c = workspace_c.downgrade();
-    workspace_c.update_in_window(window, cx_c, |workspace, window, cx| {
+    workspace_c.update_in_window(window_c, cx_c, |workspace, window, cx| {
         workspace.close_window(&Default::default(), window, cx);
     });
     executor.run_until_parked();
@@ -737,10 +738,10 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
     executor.run_until_parked();
 
     // Clients A and B return focus to the original files they had open
-    workspace_a.update_in_window(window, cx_a, |workspace, window, cx| {
+    workspace_a.update(cx_a, |workspace, cx| {
         workspace.activate_next_pane(window, cx)
     });
-    workspace_b.update_in_window(window, cx_b, |workspace, window, cx| {
+    workspace_b.update(cx_b, |workspace, cx| {
         workspace.activate_next_pane(window, cx)
     });
     executor.run_until_parked();
@@ -835,7 +836,7 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
     );
 
     // Client A focuses their right pane, in which they're following client B.
-    workspace_a.update_in_window(window, cx_a, |workspace, window, cx| {
+    workspace_a.update(cx_a, |workspace, cx| {
         workspace.activate_next_pane(window, cx)
     });
     executor.run_until_parked();
@@ -883,7 +884,7 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
 
     // Client B focuses their right pane, in which they're following client A,
     // who is following them.
-    workspace_b.update_in_window(window, cx_b, |workspace, window, cx| {
+    workspace_b.update(cx_b, |workspace, cx| {
         workspace.activate_next_pane(window, cx)
     });
     executor.run_until_parked();
@@ -1221,6 +1222,8 @@ async fn test_auto_unfollowing(cx_a: &mut TestAppContext, cx_b: &mut TestAppCont
 
     let (workspace_a, cx_a) = client_a.build_workspace(&project_a, cx_a);
     let (workspace_b, cx_b) = client_b.build_workspace(&project_b, cx_b);
+    let window_a = cx_a.window;
+    let window_b = cx_b.window;
 
     let _editor_a1 = workspace_a
         .update(cx_a, |workspace, cx| {
@@ -1305,12 +1308,11 @@ async fn test_auto_unfollowing(cx_a: &mut TestAppContext, cx_b: &mut TestAppCont
         Some(leader_id)
     );
 
-    workspace_b.update_in_window(window, cx_b, |workspace, window, cx| {
+    workspace_b.update_in_window(window_b, cx_b, |workspace, window, cx| {
         workspace.activate_next_pane(window, cx)
     });
     assert_eq!(
-        workspace_b.update_in_window(window, cx_b, |workspace, window, _| workspace
-            .leader_for_pane(&pane_b)),
+        workspace_b.update(cx_b, |workspace, _| workspace.leader_for_pane(&pane_b)),
         Some(leader_id)
     );
 
@@ -1790,13 +1792,11 @@ fn visible_push_notifications(
 ) -> Vec<gpui::View<ProjectSharedNotification>> {
     let mut ret = Vec::new();
     for window in cx.windows() {
-        window
-            .update(cx, |window, _, _| {
-                if let Ok(handle) = window.downcast::<ProjectSharedNotification>() {
-                    ret.push(handle)
-                }
-            })
-            .unwrap();
+        window.update(cx, |window, _, _| {
+            if let Ok(handle) = window.downcast::<ProjectSharedNotification>() {
+                ret.push(handle)
+            }
+        });
     }
     ret
 }
