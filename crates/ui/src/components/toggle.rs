@@ -27,7 +27,7 @@ pub struct Checkbox {
     id: ElementId,
     toggle_state: ToggleState,
     disabled: bool,
-    on_click: Option<Box<dyn Fn(&ToggleState, &mut WindowContext) + 'static>>,
+    on_click: Option<Box<dyn Fn(&ToggleState, &mut Window, &mut WindowContext) + 'static>>,
 }
 
 impl Checkbox {
@@ -47,7 +47,7 @@ impl Checkbox {
 
     pub fn on_click(
         mut self,
-        handler: impl Fn(&ToggleState, &mut WindowContext) + 'static,
+        handler: impl Fn(&ToggleState, &mut Window, &mut WindowContext) + 'static,
     ) -> Self {
         self.on_click = Some(Box::new(handler));
         self
@@ -124,7 +124,9 @@ impl RenderOnce for Checkbox {
             .when_some(
                 self.on_click.filter(|_| !self.disabled),
                 |this, on_click| {
-                    this.on_click(move |_, window, cx| on_click(&self.toggle_state.inverse(), cx))
+                    this.on_click(move |_, window, cx| {
+                        on_click(&self.toggle_state.inverse(), window, cx)
+                    })
                 },
             )
     }
@@ -161,7 +163,7 @@ impl RenderOnce for CheckboxWithLabel {
             .gap(DynamicSpacing::Base08.rems(cx))
             .child(Checkbox::new(self.id.clone(), self.checked).on_click({
                 let on_click = self.on_click.clone();
-                move |checked, cx| {
+                move |checked, window, cx| {
                     (on_click)(checked, cx);
                 }
             }))

@@ -64,7 +64,12 @@ impl ProjectDiffEditor {
         workspace.register_action(Self::deploy);
     }
 
-    fn deploy(workspace: &mut Workspace, _: &Deploy, cx: &mut ViewContext<Workspace>) {
+    fn deploy(
+        workspace: &mut Workspace,
+        _: &Deploy,
+        window: &mut Window,
+        cx: &mut ViewContext<Workspace>,
+    ) {
         if !cx.is_staff() {
             return;
         }
@@ -1145,7 +1150,7 @@ mod tests {
             .update(cx, |workspace, window, cx| {
                 let file_a_editor =
                     workspace.open_abs_path(PathBuf::from("/root/file_a"), true, cx);
-                ProjectDiffEditor::deploy(workspace, &Deploy, cx);
+                ProjectDiffEditor::deploy(workspace, &Deploy, window, cx);
                 file_a_editor
             })
             .unwrap()

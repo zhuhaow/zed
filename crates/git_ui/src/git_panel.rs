@@ -34,7 +34,7 @@ const GIT_PANEL_KEY: &str = "GitPanel";
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
         |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
-            workspace.register_action(|workspace, _: &ToggleFocus, cx| {
+            workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
                 workspace.toggle_panel_focus::<GitPanel>(cx);
             });
         },
@@ -218,6 +218,7 @@ impl GitPanel {
     fn handle_modifiers_changed(
         &mut self,
         event: &ModifiersChangedEvent,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         self.current_modifiers = event.modifiers;

@@ -6,7 +6,7 @@ use menu::Cancel;
 use release_channel::ReleaseChannel;
 use util::ResultExt;
 use workspace::{
-    ui::{h_flex, v_flex, Icon, IconName, Label, StyledExt},
+    ui::{h_flex, prelude::Window, v_flex, Icon, IconName, Label, StyledExt},
     Workspace,
 };
 
@@ -37,7 +37,9 @@ impl Render for UpdateNotification {
                             .id("cancel")
                             .child(Icon::new(IconName::Close))
                             .cursor_pointer()
-                            .on_click(cx.listener(|this, _, window, cx| this.dismiss(&menu::Cancel, cx))),
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.dismiss(&menu::window, Cancel, cx)
+                            })),
                     ),
             )
             .child(
@@ -47,11 +49,11 @@ impl Render for UpdateNotification {
                     .cursor_pointer()
                     .on_click(cx.listener(|this, _, window, cx| {
                         this.workspace
-                            .update(cx, |workspace, window, cx| {
+                            .update(cx, |workspace, cx| {
                                 crate::view_release_notes_locally(workspace, cx);
                             })
                             .log_err();
-                        this.dismiss(&menu::Cancel, cx)
+                        this.dismiss(&menu::Cancel, window, cx)
                     })),
             )
     }
@@ -62,7 +64,7 @@ impl UpdateNotification {
         Self { version, workspace }
     }
 
-    pub fn dismiss(&mut self, _: &Cancel, cx: &mut ViewContext<Self>) {
+    pub fn dismiss(&mut self, _: &Cancel, window: &mut Window, cx: &mut ViewContext<Self>) {
         cx.emit(DismissEvent);
     }
 }

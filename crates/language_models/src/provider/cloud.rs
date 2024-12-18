@@ -388,7 +388,7 @@ impl LanguageModelProvider for CloudLanguageModelProvider {
                 .icon(IconName::ExternalLink)
                 .icon_size(IconSize::XSmall)
                 .icon_color(Color::Muted)
-                .on_click(move |_, cx| cx.open_url(url))
+                .on_click(move |_, window, cx| cx.open_url(url))
         });
 
         if state.has_accepted_terms_of_service(cx) {
@@ -415,7 +415,7 @@ impl LanguageModelProvider for CloudLanguageModelProvider {
                                 .disabled(disabled)
                                 .on_click({
                                     let state = self.state.downgrade();
-                                    move |_, cx| {
+                                    move |_, window, cx| {
                                         state
                                             .update(cx, |state, cx| {
                                                 state.accept_terms_of_service(cx)
@@ -860,7 +860,7 @@ impl ConfigurationView {
             .style(ButtonStyle::Subtle)
             .icon(IconName::ExternalLink)
             .icon_color(Color::Muted)
-            .on_click(move |_, cx| cx.open_url("https://zed.dev/terms-of-service"));
+            .on_click(move |_, window, cx| cx.open_url("https://zed.dev/terms-of-service"));
 
         let text =
             "In order to use Zed AI, please read and accept our terms and conditions to continue:";
@@ -877,7 +877,7 @@ impl ConfigurationView {
                         .disabled(accept_terms_disabled)
                         .on_click({
                             let state = self.state.downgrade();
-                            move |_, cx| {
+                            move |_, window, cx| {
                                 state
                                     .update(cx, |state, cx| state.accept_terms_of_service(cx))
                                     .ok();

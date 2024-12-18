@@ -46,7 +46,9 @@ struct PendingWork<'a> {
 struct Content {
     icon: Option<gpui::AnyElement>,
     message: String,
-    on_click: Option<Arc<dyn Fn(&mut ActivityIndicator, &mut ViewContext<ActivityIndicator>)>>,
+    on_click: Option<
+        Arc<dyn Fn(&mut ActivityIndicator, &mut Window, &mut ViewContext<ActivityIndicator>)>,
+    >,
 }
 
 impl ActivityIndicator {
@@ -123,7 +125,12 @@ impl ActivityIndicator {
         this
     }
 
-    fn show_error_message(&mut self, _: &ShowErrorMessage, cx: &mut ViewContext<Self>) {
+    fn show_error_message(
+        &mut self,
+        _: &ShowErrorMessage,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.statuses.retain(|status| {
             if let LanguageServerBinaryStatus::Failed { error } = &status.status {
                 cx.emit(Event::ShowError {
@@ -139,7 +146,12 @@ impl ActivityIndicator {
         cx.notify();
     }
 
-    fn dismiss_error_message(&mut self, _: &DismissErrorMessage, cx: &mut ViewContext<Self>) {
+    fn dismiss_error_message(
+        &mut self,
+        _: &DismissErrorMessage,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if let Some(updater) = &self.auto_updater {
             updater.update(cx, |updater, cx| {
                 updater.dismiss_error(cx);
@@ -193,7 +205,7 @@ impl ActivityIndicator {
                         .into_any_element(),
                 ),
                 message: error.0.clone(),
-                on_click: Some(Arc::new(move |this, cx| {
+                on_click: Some(Arc::new(move |this, window, cx| {
                     this.project.update(cx, |project, cx| {
                         project.remove_environment_error(cx, worktree_id);
                     });
@@ -280,10 +292,10 @@ impl ActivityIndicator {
                         }
                     )
                 ),
-                on_click: Some(Arc::new(move |this, cx| {
+                on_click: Some(Arc::new(move |this, window, cx| {
                     this.statuses
                         .retain(|status| !downloading.contains(&status.name));
-                    this.dismiss_error_message(&DismissErrorMessage, cx)
+                    this.dismiss_error_message(&DismissErrorMessage, window, cx)
                 })),
             });
         }
@@ -308,10 +320,10 @@ impl ActivityIndicator {
                         }
                     ),
                 ),
-                on_click: Some(Arc::new(move |this, cx| {
+                on_click: Some(Arc::new(move |this, window, cx| {
                     this.statuses
                         .retain(|status| !checking_for_update.contains(&status.name));
-                    this.dismiss_error_message(&DismissErrorMessage, cx)
+                    this.dismiss_error_message(&DismissErrorMessage, window, cx)
                 })),
             });
         }
@@ -336,8 +348,8 @@ impl ActivityIndicator {
                             acc
                         }),
                 ),
-                on_click: Some(Arc::new(|this, cx| {
-                    this.show_error_message(&Default::default(), cx)
+                on_click: Some(Arc::new(|this, window, cx| {
+                    this.show_error_message(&Default::default(), window, cx)
                 })),
             });
         }
@@ -351,7 +363,7 @@ impl ActivityIndicator {
                         .into_any_element(),
                 ),
                 message: format!("Formatting failed: {}. Click to see logs.", failure),
-                on_click: Some(Arc::new(|indicator, cx| {
+                on_click: Some(Arc::new(|indicator, window, cx| {
                     indicator.project.update(cx, |project, cx| {
                         project.reset_last_formatting_failure(cx);
                     });
@@ -370,8 +382,8 @@ impl ActivityIndicator {
                             .into_any_element(),
                     ),
                     message: "Checking for Zed updates…".to_string(),
-                    on_click: Some(Arc::new(|this, cx| {
-                        this.dismiss_error_message(&DismissErrorMessage, cx)
+                    on_click: Some(Arc::new(|this, window, cx| {
+                        this.dismiss_error_message(&DismissErrorMessage, window, cx)
                     })),
                 }),
                 AutoUpdateStatus::Downloading => Some(Content {
@@ -381,8 +393,8 @@ impl ActivityIndicator {
                             .into_any_element(),
                     ),
                     message: "Downloading Zed update…".to_string(),
-                    on_click: Some(Arc::new(|this, cx| {
-                        this.dismiss_error_message(&DismissErrorMessage, cx)
+                    on_click: Some(Arc::new(|this, window, cx| {
+                        this.dismiss_error_message(&DismissErrorMessage, window, cx)
                     })),
                 }),
                 AutoUpdateStatus::Installing => Some(Content {
@@ -392,8 +404,8 @@ impl ActivityIndicator {
                             .into_any_element(),
                     ),
                     message: "Installing Zed update…".to_string(),
-                    on_click: Some(Arc::new(|this, cx| {
-                        this.dismiss_error_message(&DismissErrorMessage, cx)
+                    on_click: Some(Arc::new(|this, window, cx| {
+                        this.dismiss_error_message(&DismissErrorMessage, window, cx)
                     })),
                 }),
                 AutoUpdateStatus::Updated { binary_path } => Some(Content {
@@ -403,7 +415,7 @@ impl ActivityIndicator {
                         let reload = workspace::Reload {
                             binary_path: Some(binary_path.clone()),
                         };
-                        move |_, cx| workspace::reload(&reload, cx)
+                        move |_, window, cx| workspace::reload(&reload, cx)
                     })),
                 }),
                 AutoUpdateStatus::Errored => Some(Content {
@@ -413,8 +425,8 @@ impl ActivityIndicator {
                             .into_any_element(),
                     ),
                     message: "Auto update failed".to_string(),
-                    on_click: Some(Arc::new(|this, cx| {
-                        this.dismiss_error_message(&DismissErrorMessage, cx)
+                    on_click: Some(Arc::new(|this, window, cx| {
+                        this.dismiss_error_message(&DismissErrorMessage, window, cx)
                     })),
                 }),
                 AutoUpdateStatus::Idle => None,
@@ -432,8 +444,8 @@ impl ActivityIndicator {
                             .into_any_element(),
                     ),
                     message: format!("Updating {extension_id} extension…"),
-                    on_click: Some(Arc::new(|this, cx| {
-                        this.dismiss_error_message(&DismissErrorMessage, cx)
+                    on_click: Some(Arc::new(|this, window, cx| {
+                        this.dismiss_error_message(&DismissErrorMessage, window, cx)
                     })),
                 });
             }
@@ -442,7 +454,11 @@ impl ActivityIndicator {
         None
     }
 
-    fn toggle_language_server_work_context_menu(&mut self, cx: &mut ViewContext<Self>) {
+    fn toggle_language_server_work_context_menu(
+        &mut self,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.context_menu_handle.toggle(cx);
     }
 }
@@ -480,14 +496,16 @@ impl Render for ActivityIndicator {
                                             ))
                                             .size(LabelSize::Small),
                                         )
-                                        .tooltip(move |cx| Tooltip::text(&content.message, cx))
+                                        .tooltip(move |_window, cx| {
+                                            Tooltip::text(&content.message, cx)
+                                        })
                                 } else {
                                     button.child(Label::new(content.message).size(LabelSize::Small))
                                 }
                             })
                             .when_some(content.on_click, |this, handler| {
                                 this.on_click(cx.listener(move |this, _, window, cx| {
-                                    handler(this, cx);
+                                    handler(this, window, cx);
                                 }))
                                 .cursor(CursorStyle::PointingHand)
                             }),

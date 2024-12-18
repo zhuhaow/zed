@@ -178,7 +178,7 @@ impl Render for CursorPosition {
                     .label_size(LabelSize::Small)
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
-                            workspace.update(cx, |workspace, window, cx| {
+                            workspace.update(cx, |workspace, cx| {
                                 if let Some(editor) = workspace
                                     .active_item(cx)
                                     .and_then(|item| item.act_as::<Editor>(cx))
@@ -189,7 +189,7 @@ impl Render for CursorPosition {
                             });
                         }
                     }))
-                    .tooltip(move |cx| match context.as_ref() {
+                    .tooltip(move |window, cx| match context.as_ref() {
                         Some(context) => Tooltip::for_action_in(
                             "Go to Line/Column",
                             &editor::actions::ToggleGoToLine,

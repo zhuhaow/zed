@@ -395,7 +395,7 @@ impl FeedbackModal {
         matches!(self.submission_state, Some(SubmissionState::CanSubmit))
     }
 
-    fn cancel(&mut self, _: &menu::Cancel, cx: &mut ViewContext<Self>) {
+    fn cancel(&mut self, _: &menu::Cancel, window: &mut Window, cx: &mut ViewContext<Self>) {
         cx.emit(DismissEvent)
     }
 }
@@ -410,7 +410,8 @@ impl Render for FeedbackModal {
             "Submit"
         };
 
-        let open_zed_repo = cx.listener(|_, _, window, cx| cx.dispatch_action(Box::new(OpenZedRepo)));
+        let open_zed_repo =
+            cx.listener(|_, _, window, cx| cx.dispatch_action(Box::new(OpenZedRepo)));
 
         v_flex()
             .elevation_3(cx)
@@ -493,7 +494,7 @@ impl Render for FeedbackModal {
                                     .color(Color::Muted)
                                     .on_click(cx.listener(move |_, _, window, cx| {
                                         cx.spawn(|this, mut cx| async move {
-                                            this.update(&mut cx, |_, window, cx| cx.emit(DismissEvent))
+                                            this.update(&mut cx, |_, cx| cx.emit(DismissEvent))
                                                 .ok();
                                         })
                                         .detach();
@@ -506,7 +507,7 @@ impl Render for FeedbackModal {
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.submit(cx).detach();
                                     }))
-                                    .tooltip(move |cx| {
+                                    .tooltip(move |window, cx| {
                                         Tooltip::text("Submit feedback to the Zed team.", cx)
                                     })
                                     .when(!self.can_submit(), |this| this.disabled(true)),

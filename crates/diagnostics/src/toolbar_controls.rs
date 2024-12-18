@@ -47,10 +47,10 @@ impl Render for ToolbarControls {
                         .icon_color(Color::Info)
                         .shape(IconButtonShape::Square)
                         .disabled(is_updating)
-                        .tooltip(move |cx| Tooltip::text("Update excerpts", cx))
+                        .tooltip(move |_window, cx| Tooltip::text("Update excerpts", cx))
                         .on_click(cx.listener(|this, _, window, cx| {
                             if let Some(diagnostics) = this.diagnostics() {
-                                diagnostics.update(cx, |diagnostics, window, cx| {
+                                diagnostics.update(cx, |diagnostics, cx| {
                                     diagnostics.update_all_excerpts(cx);
                                 });
                             }
@@ -61,11 +61,11 @@ impl Render for ToolbarControls {
                 IconButton::new("toggle-warnings", IconName::Warning)
                     .icon_color(warning_color)
                     .shape(IconButtonShape::Square)
-                    .tooltip(move |cx| Tooltip::text(tooltip, cx))
+                    .tooltip(move |_window, cx| Tooltip::text(tooltip, cx))
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(editor) = this.diagnostics() {
-                            editor.update(cx, |editor, window, cx| {
-                                editor.toggle_warnings(&Default::default(), cx);
+                            editor.update(cx, |editor, cx| {
+                                editor.toggle_warnings(&Default::default(), window, cx);
                             });
                         }
                     })),

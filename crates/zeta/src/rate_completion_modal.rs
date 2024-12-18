@@ -66,11 +66,16 @@ impl RateCompletionModal {
         }
     }
 
-    fn dismiss(&mut self, _: &menu::Cancel, cx: &mut ViewContext<Self>) {
+    fn dismiss(&mut self, _: &menu::Cancel, window: &mut Window, cx: &mut ViewContext<Self>) {
         cx.emit(DismissEvent);
     }
 
-    fn select_next(&mut self, _: &menu::SelectNext, cx: &mut ViewContext<Self>) {
+    fn select_next(
+        &mut self,
+        _: &menu::SelectNext,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.selected_index += 1;
         self.selected_index = usize::min(
             self.selected_index,
@@ -79,12 +84,17 @@ impl RateCompletionModal {
         cx.notify();
     }
 
-    fn select_prev(&mut self, _: &menu::SelectPrev, cx: &mut ViewContext<Self>) {
+    fn select_prev(
+        &mut self,
+        _: &menu::SelectPrev,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.selected_index = self.selected_index.saturating_sub(1);
         cx.notify();
     }
 
-    fn select_next_edit(&mut self, _: &NextEdit, cx: &mut ViewContext<Self>) {
+    fn select_next_edit(&mut self, _: &NextEdit, window: &mut Window, cx: &mut ViewContext<Self>) {
         let next_index = self
             .zeta
             .read(cx)
@@ -101,7 +111,12 @@ impl RateCompletionModal {
         }
     }
 
-    fn select_prev_edit(&mut self, _: &PreviousEdit, cx: &mut ViewContext<Self>) {
+    fn select_prev_edit(
+        &mut self,
+        _: &PreviousEdit,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let zeta = self.zeta.read(cx);
         let completions_len = zeta.recent_completions_len();
 
@@ -123,17 +138,27 @@ impl RateCompletionModal {
         cx.notify();
     }
 
-    fn select_first(&mut self, _: &menu::SelectFirst, cx: &mut ViewContext<Self>) {
+    fn select_first(
+        &mut self,
+        _: &menu::SelectFirst,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.selected_index = 0;
         cx.notify();
     }
 
-    fn select_last(&mut self, _: &menu::SelectLast, cx: &mut ViewContext<Self>) {
+    fn select_last(
+        &mut self,
+        _: &menu::SelectLast,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.selected_index = self.zeta.read(cx).recent_completions_len() - 1;
         cx.notify();
     }
 
-    fn thumbs_up(&mut self, _: &ThumbsUp, cx: &mut ViewContext<Self>) {
+    fn thumbs_up(&mut self, _: &ThumbsUp, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.zeta.update(cx, |zeta, cx| {
             let completion = zeta
                 .recent_completions()
@@ -150,11 +175,16 @@ impl RateCompletionModal {
                 );
             }
         });
-        self.select_next_edit(&Default::default(), cx);
+        self.select_next_edit(&Default::default(), window, cx);
         cx.notify();
     }
 
-    fn thumbs_up_active(&mut self, _: &ThumbsUpActiveCompletion, cx: &mut ViewContext<Self>) {
+    fn thumbs_up_active(
+        &mut self,
+        _: &ThumbsUpActiveCompletion,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.zeta.update(cx, |zeta, cx| {
             if let Some(active) = &self.active_completion {
                 zeta.rate_completion(
@@ -171,13 +201,18 @@ impl RateCompletionModal {
             .as_ref()
             .map(|completion| completion.completion.clone());
         self.select_completion(current_completion, false, cx);
-        self.select_next_edit(&Default::default(), cx);
-        self.confirm(&Default::default(), cx);
+        self.select_next_edit(&Default::default(), window, cx);
+        self.confirm(&Default::default(), window, cx);
 
         cx.notify();
     }
 
-    fn thumbs_down_active(&mut self, _: &ThumbsDownActiveCompletion, cx: &mut ViewContext<Self>) {
+    fn thumbs_down_active(
+        &mut self,
+        _: &ThumbsDownActiveCompletion,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if let Some(active) = &self.active_completion {
             if active.feedback_editor.read(cx).text(cx).is_empty() {
                 return;
@@ -198,18 +233,28 @@ impl RateCompletionModal {
             .as_ref()
             .map(|completion| completion.completion.clone());
         self.select_completion(current_completion, false, cx);
-        self.select_next_edit(&Default::default(), cx);
-        self.confirm(&Default::default(), cx);
+        self.select_next_edit(&Default::default(), window, cx);
+        self.confirm(&Default::default(), window, cx);
 
         cx.notify();
     }
 
-    fn focus_completions(&mut self, _: &FocusCompletions, cx: &mut ViewContext<Self>) {
+    fn focus_completions(
+        &mut self,
+        _: &FocusCompletions,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         cx.focus_self();
         cx.notify();
     }
 
-    fn preview_completion(&mut self, _: &PreviewCompletion, cx: &mut ViewContext<Self>) {
+    fn preview_completion(
+        &mut self,
+        _: &PreviewCompletion,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let completion = self
             .zeta
             .read(cx)
@@ -222,7 +267,7 @@ impl RateCompletionModal {
         self.select_completion(completion, false, cx);
     }
 
-    fn confirm(&mut self, _: &menu::Confirm, cx: &mut ViewContext<Self>) {
+    fn confirm(&mut self, _: &menu::Confirm, window: &mut Window, cx: &mut ViewContext<Self>) {
         let completion = self
             .zeta
             .read(cx)
@@ -470,6 +515,7 @@ impl RateCompletionModal {
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.thumbs_down_active(
                                                 &ThumbsDownActiveCompletion,
+                                                window,
                                                 cx,
                                             );
                                         })),
@@ -487,7 +533,7 @@ impl RateCompletionModal {
                                         .icon_position(IconPosition::Start)
                                         .disabled(rated)
                                         .on_click(cx.listener(move |this, _, window, cx| {
-                                            this.thumbs_up_active(&ThumbsUpActiveCompletion, cx);
+                                            this.thumbs_up_active(&ThumbsUpActiveCompletion, window, cx);
                                         })),
                                 ),
                         ),

@@ -1,4 +1,5 @@
 use gpui::{div, Action, Div, InteractiveElement, View, ViewContext};
+use ui::prelude::Window;
 use workspace::Workspace;
 
 use crate::BufferSearchBar;
@@ -8,7 +9,8 @@ pub trait SearchActionsRegistrar {
     fn register_handler<A: Action>(&mut self, callback: impl ActionExecutor<A>);
 }
 
-type SearchBarActionCallback<A> = fn(&mut BufferSearchBar, &A, &mut ViewContext<BufferSearchBar>);
+type SearchBarActionCallback<A> =
+    fn(&mut BufferSearchBar, &A, &mut Window, &mut ViewContext<BufferSearchBar>);
 
 type GetSearchBar<T> =
     for<'a, 'b> fn(&'a T, &'a mut ViewContext<'b, T>) -> Option<View<BufferSearchBar>>;
@@ -44,7 +46,7 @@ impl<T: 'static> SearchActionsRegistrar for DivRegistrar<'_, '_, T> {
                     .clone()
                     .map(|search_bar| {
                         search_bar.update(cx, |search_bar, cx| {
-                            callback.execute(search_bar, action, cx)
+                            callback.execute(search_bar, action, window, cx)
                         })
                     })
                     .unwrap_or(false);
@@ -61,7 +63,7 @@ impl<T: 'static> SearchActionsRegistrar for DivRegistrar<'_, '_, T> {
 /// Register actions for an active pane.
 impl SearchActionsRegistrar for Workspace {
     fn register_handler<A: Action>(&mut self, callback: impl ActionExecutor<A>) {
-        self.register_action(move |workspace, action: &A, cx| {
+        self.register_action(move |workspace, action: &A, window, cx| {
             if workspace.has_active_modal(cx) {
                 cx.propagate();
                 return;
@@ -73,7 +75,7 @@ impl SearchActionsRegistrar for Workspace {
                 this.toolbar().update(cx, move |this, cx| {
                     if let Some(search_bar) = this.item_of_type::<BufferSearchBar>() {
                         let should_notify = search_bar.update(cx, move |search_bar, cx| {
-                            callback.execute(search_bar, action, cx)
+                            callback.execute(search_bar, action, window, cx)
                         });
                         if should_notify {
                             cx.notify();
@@ -94,6 +96,7 @@ pub trait ActionExecutor<A: Action>: 'static + Clone {
         &self,
         search_bar: &mut BufferSearchBar,
         action: &A,
+        window: &mut Window,
         cx: &mut ViewContext<BufferSearchBar>,
     ) -> DidHandleAction;
 }
@@ -111,10 +114,11 @@ impl<A: Action> ActionExecutor<A> for ForDismissed<A> {
         &self,
         search_bar: &mut BufferSearchBar,
         action: &A,
+        window: &mut Window,
         cx: &mut ViewContext<BufferSearchBar>,
     ) -> DidHandleAction {
         if search_bar.is_dismissed() {
-            self.0(search_bar, action, cx);
+            self.0(search_bar, action, window, cx);
             true
         } else {
             false
@@ -135,12 +139,13 @@ impl<A: Action> ActionExecutor<A> for ForDeployed<A> {
         &self,
         search_bar: &mut BufferSearchBar,
         action: &A,
+        window: &mut Window,
         cx: &mut ViewContext<BufferSearchBar>,
     ) -> DidHandleAction {
         if search_bar.is_dismissed() || search_bar.active_searchable_item.is_none() {
             false
         } else {
-            self.0(search_bar, action, cx);
+            self.0(search_bar, action, window, cx);
             true
         }
     }
@@ -160,10 +165,11 @@ impl<A: Action> ActionExecutor<A> for WithResults<A> {
         &self,
         search_bar: &mut BufferSearchBar,
         action: &A,
+        window: &mut Window,
         cx: &mut ViewContext<BufferSearchBar>,
     ) -> DidHandleAction {
         if search_bar.active_match_index.is_some() {
-            self.0(search_bar, action, cx);
+            self.0(search_bar, action, window, cx);
             true
         } else {
             false

@@ -4575,14 +4575,14 @@ impl Workspace {
 
     pub fn register_action<A: Action>(
         &mut self,
-        callback: impl Fn(&mut Self, &A, &mut ViewContext<Self>) + 'static,
+        callback: impl Fn(&mut Self, &A, &mut Window, &mut ViewContext<Self>) + 'static,
     ) -> &mut Self {
         let callback = Arc::new(callback);
 
         self.workspace_actions.push(Box::new(move |div, cx| {
             let callback = callback.clone();
             div.on_action(cx.listener(move |workspace, event, window, cx| {
-                (callback.clone())(workspace, event, cx)
+                (callback.clone())(workspace, event, window, cx)
             }))
         }));
         self
@@ -4660,7 +4660,7 @@ impl Workspace {
 
     pub fn for_window(cx: &mut WindowContext) -> Option<View<Workspace>> {
         let window = cx.window_handle().downcast::<Workspace>()?;
-        cx.read_window(&window, |workspace, _| workspace).ok()
+        cx.read_window(&window, |workspace, _, _| workspace).ok()
     }
 
     pub fn zoomed_item(&self) -> Option<&AnyWeakView> {
@@ -5632,14 +5632,14 @@ pub fn open_new(
     open_options: OpenOptions,
     app_state: Arc<AppState>,
     cx: &mut AppContext,
-    init: impl FnOnce(&mut Workspace, &mut ViewContext<Workspace>) + 'static + Send,
+    init: impl FnOnce(&mut Workspace, &mut Window, &mut ViewContext<Workspace>) + 'static + Send,
 ) -> Task<anyhow::Result<()>> {
     let task = Workspace::new_local(Vec::new(), app_state, None, open_options.env, cx);
     cx.spawn(|mut cx| async move {
         let (workspace, opened_paths) = task.await?;
         workspace.update(&mut cx, |workspace, window, cx| {
             if opened_paths.is_empty() {
-                init(workspace, cx)
+                init(workspace, window, cx)
             }
         })?;
         Ok(())
@@ -7057,8 +7057,7 @@ mod tests {
         });
         pane.update_in_window(cx.window, cx, |pane, window, cx| {
             pane.toggle_zoom(&Default::default(), window, cx)
-        })
-        .unwrap();
+        });
 
         // Opening a dock unzooms the pane.
         workspace.update(cx, |workspace, cx| {

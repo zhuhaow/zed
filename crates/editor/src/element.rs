@@ -2411,7 +2411,7 @@ impl EditorElement {
                                     let jump_data = jump_data.clone();
                                     cx.listener_for(&self.editor, {
                                         let jump_data = jump_data.clone();
-                                        move |editor, e: &ClickEvent, cx| {
+                                        move |editor, e: &ClickEvent, window, cx| {
                                             cx.stop_propagation();
                                             editor.open_excerpts_common(
                                                 Some(jump_data.clone()),
@@ -2649,7 +2649,7 @@ impl EditorElement {
                             })
                             .on_mouse_down(MouseButton::Left, |_, window, cx| cx.stop_propagation())
                             .on_click(cx.listener_for(&self.editor, {
-                                move |editor, e: &ClickEvent, cx| {
+                                move |editor, e: &ClickEvent, window, cx| {
                                     editor.open_excerpts_common(
                                         Some(jump_data.clone()),
                                         e.down.modifiers.secondary(),
@@ -2679,7 +2679,7 @@ impl EditorElement {
                     .hover(|style| style.text_color(cx.theme().colors().editor_active_line_number)),
             )
             .on_click(cx.listener_for(&self.editor, {
-                move |editor, _, cx| {
+                move |editor, _, window, cx| {
                     editor.expand_excerpt(excerpt_id, direction, cx);
                 }
             }))
@@ -4995,7 +4995,7 @@ fn render_inline_blame_entry(
         .child(Icon::new(IconName::FileGit).color(Color::Hint))
         .child(text)
         .gap_2()
-        .hoverable_tooltip(move |_| tooltip.clone().into())
+        .hoverable_tooltip(move |_, _| tooltip.clone().into())
         .into_any()
 }
 
@@ -5079,7 +5079,7 @@ fn render_blame_entry(
                 })
             },
         )
-        .hoverable_tooltip(move |_| tooltip.clone().into())
+        .hoverable_tooltip(move |_, _| tooltip.clone().into())
         .into_any()
 }
 
@@ -7322,18 +7322,16 @@ mod tests {
             .update(cx, |editor, window, cx| editor.snapshot(cx))
             .unwrap();
 
-        let layouts = cx
-            .update_window(*window, |_, _, cx| {
-                element.layout_line_numbers(
-                    DisplayRow(0)..DisplayRow(6),
-                    (0..6).map(MultiBufferRow).map(Some),
-                    &Default::default(),
-                    Some(DisplayPoint::new(DisplayRow(0), 0)),
-                    &snapshot,
-                    cx,
-                )
-            })
-            .unwrap();
+        let layouts = cx.update_window(*window, |_, _, cx| {
+            element.layout_line_numbers(
+                DisplayRow(0)..DisplayRow(6),
+                (0..6).map(MultiBufferRow).map(Some),
+                &Default::default(),
+                Some(DisplayPoint::new(DisplayRow(0), 0)),
+                &snapshot,
+                cx,
+            )
+        });
         assert_eq!(layouts.len(), 6);
 
         let relative_rows = window

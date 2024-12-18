@@ -498,7 +498,9 @@ impl Render for ConfigurationView {
                                                 .icon(IconName::ExternalLink)
                                                 .icon_size(IconSize::XSmall)
                                                 .icon_color(Color::Muted)
-                                                .on_click(move |_, cx| cx.open_url(OLLAMA_SITE))
+                                                .on_click(move |_, window, cx| {
+                                                    cx.open_url(OLLAMA_SITE)
+                                                })
                                                 .into_any_element(),
                                         )
                                     } else {
@@ -511,7 +513,9 @@ impl Render for ConfigurationView {
                                             .icon(IconName::ExternalLink)
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
-                                            .on_click(move |_, cx| cx.open_url(OLLAMA_DOWNLOAD_URL))
+                                            .on_click(move |_, window, cx| {
+                                                cx.open_url(OLLAMA_DOWNLOAD_URL)
+                                            })
                                             .into_any_element(),
                                         )
                                     }
@@ -522,7 +526,9 @@ impl Render for ConfigurationView {
                                         .icon(IconName::ExternalLink)
                                         .icon_size(IconSize::XSmall)
                                         .icon_color(Color::Muted)
-                                        .on_click(move |_, cx| cx.open_url(OLLAMA_LIBRARY_URL)),
+                                        .on_click(move |_, window, cx| {
+                                            cx.open_url(OLLAMA_LIBRARY_URL)
+                                        }),
                                 ),
                         )
                         .child(if is_authenticated {

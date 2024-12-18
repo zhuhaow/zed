@@ -1258,7 +1258,7 @@ impl Render for LspLogToolbarItemView {
                                                     )
                                                     .on_click(cx.listener_for(
                                                         &log_toolbar_view,
-                                                        move |view, selection, cx| {
+                                                        move |view, selection, window, cx| {
                                                             let enabled = matches!(
                                                                 selection,
                                                                 ToggleState::Selected

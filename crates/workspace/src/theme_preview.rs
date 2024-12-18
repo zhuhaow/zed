@@ -15,7 +15,7 @@ actions!(debug, [OpenThemePreview]);
 
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(|workspace: &mut Workspace, _| {
-        workspace.register_action(|workspace, _: &OpenThemePreview, cx| {
+        workspace.register_action(|workspace, _: &OpenThemePreview, window, cx| {
             let theme_preview = cx.new_view(ThemePreview::new);
             workspace.add_item_to_active_pane(Box::new(theme_preview), None, true, cx)
         });

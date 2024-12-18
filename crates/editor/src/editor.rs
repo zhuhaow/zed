@@ -315,18 +315,28 @@ pub fn init(cx: &mut AppContext) {
     cx.on_action(move |_: &workspace::NewFile, cx| {
         let app_state = workspace::AppState::global(cx);
         if let Some(app_state) = app_state.upgrade() {
-            workspace::open_new(Default::default(), app_state, cx, |workspace, cx| {
-                Editor::new_file(workspace, &Default::default(), cx)
-            })
+            workspace::open_new(
+                Default::default(),
+                app_state,
+                cx,
+                |workspace, window, cx| {
+                    Editor::new_file(workspace, &Default::default(), window, cx)
+                },
+            )
             .detach();
         }
     });
     cx.on_action(move |_: &workspace::NewWindow, cx| {
         let app_state = workspace::AppState::global(cx);
         if let Some(app_state) = app_state.upgrade() {
-            workspace::open_new(Default::default(), app_state, cx, |workspace, cx| {
-                Editor::new_file(workspace, &Default::default(), cx)
-            })
+            workspace::open_new(
+                Default::default(),
+                app_state,
+                cx,
+                |workspace, window, cx| {
+                    Editor::new_file(workspace, &Default::default(), window, cx)
+                },
+            )
             .detach();
         }
     });
@@ -1447,6 +1457,7 @@ impl Editor {
     pub fn new_file(
         workspace: &mut Workspace,
         _: &workspace::NewFile,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         Self::new_in_workspace(workspace, cx).detach_and_prompt_err(
@@ -1483,6 +1494,7 @@ impl Editor {
     fn new_file_vertical(
         workspace: &mut Workspace,
         _: &workspace::NewFileSplitVertical,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         Self::new_file_in_direction(workspace, SplitDirection::vertical(cx), cx)
@@ -1491,6 +1503,7 @@ impl Editor {
     fn new_file_horizontal(
         workspace: &mut Workspace,
         _: &workspace::NewFileSplitHorizontal,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         Self::new_file_in_direction(workspace, SplitDirection::horizontal(cx), cx)
@@ -13979,7 +13992,7 @@ impl EditorSnapshot {
             Some(
                 Disclosure::new(("gutter_crease", buffer_row.0), !folded)
                     .toggle_state(folded)
-                    .on_click(cx.listener_for(&editor, move |this, _e, cx| {
+                    .on_click(cx.listener_for(&editor, move |this, _e, window, cx| {
                         if folded {
                             this.unfold_at(&UnfoldAt { buffer_row }, cx);
                         } else {
@@ -14534,7 +14547,7 @@ pub fn diagnostic_block_renderer(
                         .size(ButtonSize::Compact)
                         .style(ButtonStyle::Transparent)
                         .visible_on_hover(group_id.clone())
-                        .on_click(move |_click, cx| cx.dispatch_action(Box::new(Cancel)))
+                        .on_click(move |_click, window, cx| cx.dispatch_action(Box::new(Cancel)))
                         .tooltip(|window, cx| Tooltip::for_action("Close Diagnostics", &Cancel, cx))
                 }))
             })
@@ -14546,7 +14559,7 @@ pub fn diagnostic_block_renderer(
                     .visible_on_hover(group_id.clone())
                     .on_click({
                         let message = diagnostic.message.clone();
-                        move |_click, cx| {
+                        move |_click, window, cx| {
                             cx.write_to_clipboard(ClipboardItem::new_string(message.clone()))
                         }
                     })

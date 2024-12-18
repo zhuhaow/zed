@@ -188,7 +188,7 @@ impl Render for KeyContextView {
             .on_mouse_up_out(
                 MouseButton::Right,
                 cx.listener(|_, _, window, cx| {
-                    cx.defer(|this, window, cx| {
+                    cx.defer(|this, cx| {
                         this.last_keystrokes.take();
                         this.set_context_stack(cx.context_stack(), cx);
                     });
@@ -203,7 +203,7 @@ impl Render for KeyContextView {
                     .child(
                         Button::new("default", "Open Documentation")
                             .style(ButtonStyle::Filled)
-                            .on_click(|_, cx| cx.open_url("https://zed.dev/docs/key-bindings")),
+                            .on_click(|_, window, cx| cx.open_url("https://zed.dev/docs/key-bindings")),
                     )
                     .child(
                         Button::new("default", "View default keymap")
@@ -212,7 +212,7 @@ impl Render for KeyContextView {
                                 &zed_actions::OpenDefaultKeymap,
                                 cx,
                             ))
-                            .on_click(|_, cx| {
+                            .on_click(|_, window, cx| {
                                 cx.dispatch_action(workspace::SplitRight.boxed_clone());
                                 cx.dispatch_action(zed_actions::OpenDefaultKeymap.boxed_clone());
                             }),
@@ -221,7 +221,7 @@ impl Render for KeyContextView {
                         Button::new("default", "Edit your keymap")
                             .style(ButtonStyle::Filled)
                             .key_binding(ui::KeyBinding::for_action(&zed_actions::OpenKeymap, cx))
-                            .on_click(|_, cx| {
+                            .on_click(|_, window, cx| {
                                 cx.dispatch_action(workspace::SplitRight.boxed_clone());
                                 cx.dispatch_action(zed_actions::OpenKeymap.boxed_clone());
                             }),

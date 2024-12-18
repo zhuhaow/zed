@@ -580,7 +580,7 @@ impl Editor {
                                 .on_click({
                                     let editor = editor.clone();
                                     let hunk = hunk.clone();
-                                    move |_event, cx| {
+                                    move |_event, window, cx| {
                                         editor.update(cx, |editor, cx| {
                                             editor.toggle_hovered_hunk(&hunk, cx);
                                         });
@@ -615,7 +615,7 @@ impl Editor {
                                                     .on_click({
                                                         let editor = editor.clone();
                                                         let hunk = hunk.clone();
-                                                        move |_event, cx| {
+                                                        move |_event, window, cx| {
                                                             editor.update(cx, |editor, cx| {
                                                                 editor.go_to_subsequent_hunk(
                                                                     hunk.multi_buffer_range.end,
@@ -644,7 +644,7 @@ impl Editor {
                                                     .on_click({
                                                         let editor = editor.clone();
                                                         let hunk = hunk.clone();
-                                                        move |_event, cx| {
+                                                        move |_event, window, cx| {
                                                             editor.update(cx, |editor, cx| {
                                                                 editor.go_to_preceding_hunk(
                                                                     hunk.multi_buffer_range.start,
@@ -673,7 +673,7 @@ impl Editor {
                                                 .on_click({
                                                     let editor = editor.clone();
                                                     let hunk = hunk.clone();
-                                                    move |_event, cx| {
+                                                    move |_event, window, cx| {
                                                         editor.update(cx, |editor, cx| {
                                                             editor.revert_hunk(hunk.clone(), cx);
                                                         });
@@ -701,7 +701,7 @@ impl Editor {
                                                         .on_click({
                                                             let editor = editor.clone();
                                                             let hunk = hunk.clone();
-                                                            move |_event, cx| {
+                                                            move |_event, window, cx| {
                                                                 editor.update(cx, |editor, cx| {
                                                                     editor
                                                                         .apply_diff_hunks_in_range(
@@ -782,7 +782,7 @@ impl Editor {
                                             .on_click({
                                                 let editor = editor.clone();
                                                 let hunk = hunk.clone();
-                                                move |_event, cx| {
+                                                move |_event, window, cx| {
                                                     editor.update(cx, |editor, cx| {
                                                         editor.toggle_hovered_hunk(&hunk, cx);
                                                     });
@@ -850,7 +850,7 @@ impl Editor {
                                     .on_mouse_down(MouseButton::Left, {
                                         let editor = editor.clone();
                                         let hunk = hunk.clone();
-                                        move |_event, cx| {
+                                        move |_event, window, cx| {
                                             editor.update(cx, |editor, cx| {
                                                 editor.toggle_hovered_hunk(&hunk, cx);
                                             });
@@ -1169,7 +1169,7 @@ fn editor_with_deleted_text(
         editor.set_current_line_highlight(Some(CurrentLineHighlight::None)); //
         editor
             ._subscriptions
-            .extend([cx.on_blur(&editor.focus_handle, |editor, cx| {
+            .extend([cx.on_blur(&editor.focus_handle, |editor, window, cx| {
                 editor.change_selections(None, cx, |s| {
                     s.try_cancel();
                 });

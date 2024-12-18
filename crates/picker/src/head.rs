@@ -29,7 +29,7 @@ impl Head {
     }
 
     pub fn empty<V: 'static>(
-        blur_handler: impl FnMut(&mut V, &mut ViewContext<'_, V>) + 'static,
+        blur_handler: impl FnMut(&mut V, &mut Window, &mut ViewContext<'_, V>) + 'static,
         cx: &mut ViewContext<V>,
     ) -> Self {
         let head = cx.new_view(EmptyHead::new);

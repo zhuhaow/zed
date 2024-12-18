@@ -146,7 +146,7 @@ impl RenderOnce for ThemeModeControl {
                     .style(ButtonStyle::Filled)
                     .size(ButtonSize::Large)
                     .toggle_state(value == ThemeMode::Light)
-                    .on_click(|_, cx| Self::write(ThemeMode::Light, cx))
+                    .on_click(|_, window, cx| Self::write(ThemeMode::Light, cx))
                     .first(),
             )
             .child(
@@ -154,7 +154,7 @@ impl RenderOnce for ThemeModeControl {
                     .style(ButtonStyle::Filled)
                     .size(ButtonSize::Large)
                     .toggle_state(value == ThemeMode::System)
-                    .on_click(|_, cx| Self::write(ThemeMode::System, cx))
+                    .on_click(|_, window, cx| Self::write(ThemeMode::System, cx))
                     .middle(),
             )
             .child(
@@ -162,7 +162,7 @@ impl RenderOnce for ThemeModeControl {
                     .style(ButtonStyle::Filled)
                     .size(ButtonSize::Large)
                     .toggle_state(value == ThemeMode::Dark)
-                    .on_click(|_, cx| Self::write(ThemeMode::Dark, cx))
+                    .on_click(|_, window, cx| Self::write(ThemeMode::Dark, cx))
                     .last(),
             )
     }
@@ -262,10 +262,10 @@ impl RenderOnce for UiFontSizeControl {
             .child(NumericStepper::new(
                 "ui-font-size",
                 value.to_string(),
-                move |_, cx| {
+                move |_, window, cx| {
                     Self::write(value - px(1.), cx);
                 },
-                move |_, cx| {
+                move |_, window, cx| {
                     Self::write(value + px(1.), cx);
                 },
             ))

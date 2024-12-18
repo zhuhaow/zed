@@ -167,7 +167,7 @@ impl TitleBar {
                                     let peer_id = collaborator.peer_id;
                                     cx.listener(move |this, _, window, cx| {
                                         this.workspace
-                                            .update(cx, |workspace, window, cx| {
+                                            .update(cx, |workspace, cx| {
                                                 if is_following {
                                                     workspace.unfollow(peer_id, cx);
                                                 } else {

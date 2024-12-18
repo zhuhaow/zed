@@ -602,7 +602,7 @@ impl ConfigurationView {
         }
     }
 
-    fn save_api_key(&mut self, _: &menu::Confirm, cx: &mut ViewContext<Self>) {
+    fn save_api_key(&mut self, _: &menu::Confirm, window: &mut Window, cx: &mut ViewContext<Self>) {
         let api_key = self.api_key_editor.read(cx).text(cx);
         if api_key.is_empty() {
             return;
@@ -690,7 +690,7 @@ impl Render for ConfigurationView {
                         .icon(IconName::ExternalLink)
                         .icon_size(IconSize::XSmall)
                         .icon_color(Color::Muted)
-                        .on_click(move |_, cx| cx.open_url(ANTHROPIC_CONSOLE_URL))
+                        .on_click(move |_, window, cx| cx.open_url(ANTHROPIC_CONSOLE_URL))
                     )
                 )
                 .child(Label::new(INSTRUCTIONS[2]))
@@ -732,7 +732,7 @@ impl Render for ConfigurationView {
                         .icon_position(IconPosition::Start)
                         .disabled(env_var_set)
                         .when(env_var_set, |this| {
-                            this.tooltip(|cx| Tooltip::text(format!("To reset your API key, unset the {ANTHROPIC_API_KEY_VAR} environment variable."), cx))
+                            this.tooltip(|window, cx| Tooltip::text(format!("To reset your API key, unset the {ANTHROPIC_API_KEY_VAR} environment variable."), cx))
                         })
                         .on_click(cx.listener(|this, _, window, cx| this.reset_api_key(cx))),
                 )

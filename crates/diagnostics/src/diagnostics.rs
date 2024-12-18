@@ -277,7 +277,12 @@ impl ProjectDiagnosticsEditor {
         }
     }
 
-    fn toggle_warnings(&mut self, _: &ToggleWarnings, cx: &mut ViewContext<Self>) {
+    fn toggle_warnings(
+        &mut self,
+        _: &ToggleWarnings,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.include_warnings = !self.include_warnings;
         cx.set_global(IncludeWarnings(self.include_warnings));
         self.update_all_excerpts(cx);

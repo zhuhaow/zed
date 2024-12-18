@@ -152,11 +152,11 @@ impl GoToLine {
         (row, column)
     }
 
-    fn cancel(&mut self, _: &menu::Cancel, cx: &mut ViewContext<Self>) {
+    fn cancel(&mut self, _: &menu::Cancel, window: &mut Window, cx: &mut ViewContext<Self>) {
         cx.emit(DismissEvent);
     }
 
-    fn confirm(&mut self, _: &menu::Confirm, cx: &mut ViewContext<Self>) {
+    fn confirm(&mut self, _: &menu::Confirm, window: &mut Window, cx: &mut ViewContext<Self>) {
         if let Some(point) = self.point_from_query(cx) {
             self.active_editor.update(cx, |editor, cx| {
                 let snapshot = editor.snapshot(cx).display_snapshot;

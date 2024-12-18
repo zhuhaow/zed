@@ -67,7 +67,7 @@ impl Render for DiagnosticIndicator {
             Some(
                 Button::new("diagnostic_message", message)
                     .label_size(LabelSize::Small)
-                    .tooltip(|cx| {
+                    .tooltip(|window, cx| {
                         Tooltip::for_action("Next Diagnostic", &editor::actions::GoToDiagnostic, cx)
                     })
                     .on_click(cx.listener(|this, _, window, cx| {
@@ -87,10 +87,10 @@ impl Render for DiagnosticIndicator {
             .child(
                 ButtonLike::new("diagnostic-indicator")
                     .child(diagnostic_indicator)
-                    .tooltip(|cx| Tooltip::for_action("Project Diagnostics", &Deploy, cx))
+                    .tooltip(|window, cx| Tooltip::for_action("Project Diagnostics", &Deploy, cx))
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
-                            workspace.update(cx, |workspace, window, cx| {
+                            workspace.update(cx, |workspace, cx| {
                                 ProjectDiagnosticsEditor::deploy(workspace, &Default::default(), cx)
                             })
                         }

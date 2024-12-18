@@ -56,37 +56,49 @@ impl Global for ActiveSettings {}
 pub fn init(cx: &mut AppContext) {
     cx.set_global(ActiveSettings::default());
     cx.observe_new_views(|workspace: &mut Workspace, _cx| {
-        register_workspace_action(workspace, move |search_bar, _: &Deploy, cx| {
+        register_workspace_action(workspace, move |search_bar, _: &Deploy, window, cx| {
             search_bar.focus_search(cx);
         });
-        register_workspace_action(workspace, move |search_bar, _: &FocusSearch, cx| {
+        register_workspace_action(workspace, move |search_bar, _: &FocusSearch, window, cx| {
             search_bar.focus_search(cx);
-        });
-        register_workspace_action(workspace, move |search_bar, _: &ToggleFilters, cx| {
-            search_bar.toggle_filters(cx);
-        });
-        register_workspace_action(workspace, move |search_bar, _: &ToggleCaseSensitive, cx| {
-            search_bar.toggle_search_option(SearchOptions::CASE_SENSITIVE, cx);
-        });
-        register_workspace_action(workspace, move |search_bar, _: &ToggleWholeWord, cx| {
-            search_bar.toggle_search_option(SearchOptions::WHOLE_WORD, cx);
-        });
-        register_workspace_action(workspace, move |search_bar, _: &ToggleRegex, cx| {
-            search_bar.toggle_search_option(SearchOptions::REGEX, cx);
-        });
-        register_workspace_action(workspace, move |search_bar, action: &ToggleReplace, cx| {
-            search_bar.toggle_replace(action, cx)
         });
         register_workspace_action(
             workspace,
-            move |search_bar, action: &SelectPrevMatch, cx| {
-                search_bar.select_prev_match(action, cx)
+            move |search_bar, _: &ToggleFilters, window, cx| {
+                search_bar.toggle_filters(cx);
             },
         );
         register_workspace_action(
             workspace,
-            move |search_bar, action: &SelectNextMatch, cx| {
-                search_bar.select_next_match(action, cx)
+            move |search_bar, _: &ToggleCaseSensitive, window, cx| {
+                search_bar.toggle_search_option(SearchOptions::CASE_SENSITIVE, cx);
+            },
+        );
+        register_workspace_action(
+            workspace,
+            move |search_bar, _: &ToggleWholeWord, window, cx| {
+                search_bar.toggle_search_option(SearchOptions::WHOLE_WORD, cx);
+            },
+        );
+        register_workspace_action(workspace, move |search_bar, _: &ToggleRegex, window, cx| {
+            search_bar.toggle_search_option(SearchOptions::REGEX, cx);
+        });
+        register_workspace_action(
+            workspace,
+            move |search_bar, action: &ToggleReplace, window, cx| {
+                search_bar.toggle_replace(action, cx)
+            },
+        );
+        register_workspace_action(
+            workspace,
+            move |search_bar, action: &SelectPrevMatch, window, cx| {
+                search_bar.select_prev_match(action, window, cx)
+            },
+        );
+        register_workspace_action(
+            workspace,
+            move |search_bar, action: &SelectNextMatch, window, cx| {
+                search_bar.select_next_match(action, window, cx)
             },
         );
 
@@ -1184,7 +1196,7 @@ impl ProjectSearchView {
                     .icon_position(IconPosition::Start)
                     .icon_size(IconSize::Small)
                     .key_binding(KeyBinding::for_action_in(&ToggleFilters, &focus_handle, cx))
-                    .on_click(|_event, cx| cx.dispatch_action(ToggleFilters.boxed_clone())),
+                    .on_click(|_event, window, cx| cx.dispatch_action(ToggleFilters.boxed_clone())),
             )
             .child(
                 Button::new("find-replace", "Find and replace")
@@ -1192,7 +1204,7 @@ impl ProjectSearchView {
                     .icon_position(IconPosition::Start)
                     .icon_size(IconSize::Small)
                     .key_binding(KeyBinding::for_action_in(&ToggleReplace, &focus_handle, cx))
-                    .on_click(|_event, cx| cx.dispatch_action(ToggleReplace.boxed_clone())),
+                    .on_click(|_event, window, cx| cx.dispatch_action(ToggleReplace.boxed_clone())),
             )
             .child(
                 Button::new("regex", "Match with regex")
@@ -1200,7 +1212,7 @@ impl ProjectSearchView {
                     .icon_position(IconPosition::Start)
                     .icon_size(IconSize::Small)
                     .key_binding(KeyBinding::for_action_in(&ToggleRegex, &focus_handle, cx))
-                    .on_click(|_event, cx| cx.dispatch_action(ToggleRegex.boxed_clone())),
+                    .on_click(|_event, window, cx| cx.dispatch_action(ToggleRegex.boxed_clone())),
             )
             .child(
                 Button::new("match-case", "Match case")
@@ -1212,7 +1224,9 @@ impl ProjectSearchView {
                         &focus_handle,
                         cx,
                     ))
-                    .on_click(|_event, cx| cx.dispatch_action(ToggleCaseSensitive.boxed_clone())),
+                    .on_click(|_event, window, cx| {
+                        cx.dispatch_action(ToggleCaseSensitive.boxed_clone())
+                    }),
             )
             .child(
                 Button::new("match-whole-words", "Match whole words")
@@ -1224,7 +1238,9 @@ impl ProjectSearchView {
                         &focus_handle,
                         cx,
                     ))
-                    .on_click(|_event, cx| cx.dispatch_action(ToggleWholeWord.boxed_clone())),
+                    .on_click(|_event, window, cx| {
+                        cx.dispatch_action(ToggleWholeWord.boxed_clone())
+                    }),
             )
     }
 
@@ -1535,7 +1551,12 @@ impl ProjectSearchBar {
         }
     }
 
-    fn select_next_match(&mut self, _: &SelectNextMatch, cx: &mut ViewContext<Self>) {
+    fn select_next_match(
+        &mut self,
+        _: &SelectNextMatch,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if let Some(search) = self.active_project_search.as_ref() {
             search.update(cx, |this, cx| {
                 this.select_match(Direction::Next, cx);
@@ -1543,7 +1564,12 @@ impl ProjectSearchBar {
         }
     }
 
-    fn select_prev_match(&mut self, _: &SelectPrevMatch, cx: &mut ViewContext<Self>) {
+    fn select_prev_match(
+        &mut self,
+        _: &SelectPrevMatch,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if let Some(search) = self.active_project_search.as_ref() {
             search.update(cx, |this, cx| {
                 this.select_match(Direction::Prev, cx);
@@ -1641,7 +1667,7 @@ impl Render for ProjectSearchBar {
             .child(
                 IconButton::new("project-search-filter-button", IconName::Filter)
                     .shape(IconButtonShape::Square)
-                    .tooltip(|cx| Tooltip::for_action("Toggle Filters", &ToggleFilters, cx))
+                    .tooltip(|window, cx| Tooltip::for_action("Toggle Filters", &ToggleFilters, cx))
                     .on_click(cx.listener(|this, _, window, cx| {
                         this.toggle_filters(cx);
                     }))
@@ -1653,7 +1679,7 @@ impl Render for ProjectSearchBar {
                     )
                     .tooltip({
                         let focus_handle = focus_handle.clone();
-                        move |cx| {
+                        move |window, cx| {
                             Tooltip::for_action_in(
                                 "Toggle Filters",
                                 &ToggleFilters,
@@ -1677,7 +1703,7 @@ impl Render for ProjectSearchBar {
                     )
                     .tooltip({
                         let focus_handle = focus_handle.clone();
-                        move |cx| {
+                        move |window, cx| {
                             Tooltip::for_action_in(
                                 "Toggle Replace",
                                 &ToggleReplace,
@@ -1726,7 +1752,7 @@ impl Render for ProjectSearchBar {
                     }))
                     .tooltip({
                         let focus_handle = focus_handle.clone();
-                        move |cx| {
+                        move |window, cx| {
                             Tooltip::for_action_in(
                                 "Go To Previous Match",
                                 &SelectPrevMatch,
@@ -1749,7 +1775,7 @@ impl Render for ProjectSearchBar {
                     }))
                     .tooltip({
                         let focus_handle = focus_handle.clone();
-                        move |cx| {
+                        move |window, cx| {
                             Tooltip::for_action_in(
                                 "Go To Next Match",
                                 &SelectNextMatch,
@@ -1771,7 +1797,7 @@ impl Render for ProjectSearchBar {
                         },
                     ))
                     .when(limit_reached, |el| {
-                        el.tooltip(|cx| {
+                        el.tooltip(|window, cx| {
                             Tooltip::text("Search limits reached.\nTry narrowing your search.", cx)
                         })
                     }),
@@ -1800,13 +1826,13 @@ impl Render for ProjectSearchBar {
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     if let Some(search) = this.active_project_search.as_ref() {
                                         search.update(cx, |this, window, cx| {
-                                            this.replace_next(&ReplaceNext, cx);
+                                            this.replace_next(&ReplaceNext, window, cx);
                                         })
                                     }
                                 }))
                                 .tooltip({
                                     let focus_handle = focus_handle.clone();
-                                    move |cx| {
+                                    move |window, cx| {
                                         Tooltip::for_action_in(
                                             "Replace Next Match",
                                             &ReplaceNext,
@@ -1822,13 +1848,13 @@ impl Render for ProjectSearchBar {
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     if let Some(search) = this.active_project_search.as_ref() {
                                         search.update(cx, |this, window, cx| {
-                                            this.replace_all(&ReplaceAll, cx);
+                                            this.replace_all(&ReplaceAll, window, cx);
                                         })
                                     }
                                 }))
                                 .tooltip({
                                     let focus_handle = focus_handle.clone();
-                                    move |cx| {
+                                    move |window, cx| {
                                         Tooltip::for_action_in(
                                             "Replace All Matches",
                                             &ReplaceAll,
@@ -1879,7 +1905,7 @@ impl Render for ProjectSearchBar {
                             IconButton::new("project-search-opened-only", IconName::FileSearch)
                                 .shape(IconButtonShape::Square)
                                 .toggle_state(self.is_opened_only_enabled(cx))
-                                .tooltip(|cx| Tooltip::text("Only Search Open Files", cx))
+                                .tooltip(|window, cx| Tooltip::text("Only Search Open Files", cx))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.toggle_opened_only(cx);
                                 })),
@@ -1935,14 +1961,14 @@ impl Render for ProjectSearchBar {
             .on_action(cx.listener(|this, action, window, cx| {
                 if let Some(search) = this.active_project_search.as_ref() {
                     search.update(cx, |this, window, cx| {
-                        this.replace_next(action, cx);
+                        this.replace_next(action, window, cx);
                     })
                 }
             }))
             .on_action(cx.listener(|this, action, window, cx| {
                 if let Some(search) = this.active_project_search.as_ref() {
                     search.update(cx, |this, window, cx| {
-                        this.replace_all(action, cx);
+                        this.replace_all(action, window, cx);
                     })
                 }
             }))
@@ -1984,7 +2010,7 @@ impl ToolbarItemView for ProjectSearchBar {
 
 fn register_workspace_action<A: Action>(
     workspace: &mut Workspace,
-    callback: fn(&mut ProjectSearchBar, &A, &mut ViewContext<ProjectSearchBar>),
+    callback: fn(&mut ProjectSearchBar, &A, &mut Window, &mut ViewContext<ProjectSearchBar>),
 ) {
     workspace.register_action(move |workspace, action: &A, cx| {
         if workspace.has_active_modal(cx) {
@@ -1997,7 +2023,7 @@ fn register_workspace_action<A: Action>(
                 if let Some(search_bar) = workspace.item_of_type::<ProjectSearchBar>() {
                     search_bar.update(cx, move |search_bar, cx| {
                         if search_bar.active_project_search.is_some() {
-                            callback(search_bar, action, cx);
+                            callback(search_bar, action, window, cx);
                             cx.notify();
                         } else {
                             cx.propagate();

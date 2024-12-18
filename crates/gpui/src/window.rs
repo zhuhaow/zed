@@ -3786,11 +3786,11 @@ impl<'a> WindowContext<'a> {
     pub fn listener_for<V: Render, E>(
         &self,
         view: &View<V>,
-        f: impl Fn(&mut V, &E, &mut ViewContext<V>) + 'static,
-    ) -> impl Fn(&E, &mut WindowContext) + 'static {
+        f: impl Fn(&mut V, &E, &mut Window, &mut ViewContext<V>) + 'static,
+    ) -> impl Fn(&E, &mut Window, &mut WindowContext) + 'static {
         let view = view.downgrade();
-        move |e: &E, cx: &mut WindowContext| {
-            view.update(cx, |view, cx| f(view, e, cx)).ok();
+        move |e: &E, window: &mut Window, cx: &mut WindowContext| {
+            view.update(cx, |view, cx| f(view, e, window, cx)).ok();
         }
     }
 

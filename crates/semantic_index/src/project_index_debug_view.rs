@@ -163,16 +163,16 @@ impl ProjectIndexDebugView {
                             .child(
                                 Button::new(("prev", ix), "prev")
                                     .disabled(ix == 0)
-                                    .on_click(cx.listener(move |this, _, _| {
+                                    .on_click(cx.listener(move |this, _, _, _| {
                                         this.scroll_to_chunk(ix.saturating_sub(1))
                                     })),
                             )
                             .child(
                                 Button::new(("next", ix), "next")
                                     .disabled(ix + 1 == state.chunks.len())
-                                    .on_click(
-                                        cx.listener(move |this, _, _| this.scroll_to_chunk(ix + 1)),
-                                    ),
+                                    .on_click(cx.listener(move |this, _, _, _| {
+                                        this.scroll_to_chunk(ix + 1)
+                                    })),
                             ),
                     ),
             )
@@ -236,17 +236,19 @@ impl Render for ProjectIndexDebugView {
                                 .id(ix)
                                 .pl_8()
                                 .child(Label::new(file_path.to_string_lossy().to_string()))
-                                .on_mouse_move(cx.listener(move |this, _: &MouseMoveEvent, window, cx| {
-                                    if this.hovered_row_ix != Some(ix) {
-                                        this.hovered_row_ix = Some(ix);
-                                        cx.notify();
-                                    }
-                                }))
+                                .on_mouse_move(cx.listener(
+                                    move |this, _: &MouseMoveEvent, window, cx| {
+                                        if this.hovered_row_ix != Some(ix) {
+                                            this.hovered_row_ix = Some(ix);
+                                            cx.notify();
+                                        }
+                                    },
+                                ))
                                 .cursor(CursorStyle::PointingHand)
                                 .on_click(cx.listener({
                                     let worktree_id = *worktree_id;
                                     let file_path = file_path.clone();
-                                    move |this, _, cx| {
+                                    move |this, _, _, cx| {
                                         this.handle_path_click(worktree_id, file_path.clone(), cx);
                                     }
                                 })),

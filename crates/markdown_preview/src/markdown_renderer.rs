@@ -190,7 +190,7 @@ fn render_markdown_list_item(
                     |this, callback| {
                         this.on_click({
                             let range = range.clone();
-                            move |selection, cx| {
+                            move |selection, window, cx| {
                                 let checked = match selection {
                                     ToggleState::Selected => true,
                                     ToggleState::Unselected => false,
@@ -206,7 +206,7 @@ fn render_markdown_list_item(
                 ),
             )
             .hover(|s| s.cursor_pointer())
-            .tooltip(|cx| {
+            .tooltip(|window, cx| {
                 InteractiveMarkdownElementTooltip::new(None, "toggle checkbox", cx).into()
             })
             .into_any_element(),
@@ -381,11 +381,11 @@ fn render_markdown_code_block(
         .icon_size(IconSize::Small)
         .on_click({
             let contents = parsed.contents.clone();
-            move |_, cx| {
+            move |_, window, cx| {
                 cx.write_to_clipboard(ClipboardItem::new_string(contents.to_string()));
             }
         })
-        .tooltip(|cx| Tooltip::text("Copy code block", cx))
+        .tooltip(|window, cx| Tooltip::text("Copy code block", cx))
         .visible_on_hover("markdown-block");
 
     cx.with_common_p(div())
@@ -516,7 +516,7 @@ fn render_markdown_text(parsed_new: &MarkdownParagraph, cx: &mut RenderContext) 
                     }))
                     .tooltip({
                         let link = image.link.clone();
-                        move |cx| {
+                        move |window, cx| {
                             InteractiveMarkdownElementTooltip::new(
                                 Some(link.to_string()),
                                 "open image",
@@ -528,7 +528,7 @@ fn render_markdown_text(parsed_new: &MarkdownParagraph, cx: &mut RenderContext) 
                     .on_click({
                         let workspace = workspace_clone.clone();
                         let link = image.link.clone();
-                        move |_, cx| {
+                        move |_, window, cx| {
                             if cx.modifiers().secondary() {
                                 match &link {
                                     Link::Web { url } => cx.open_url(url),
