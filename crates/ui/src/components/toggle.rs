@@ -138,7 +138,7 @@ pub struct CheckboxWithLabel {
     id: ElementId,
     label: Label,
     checked: ToggleState,
-    on_click: Arc<dyn Fn(&ToggleState, &mut WindowContext) + 'static>,
+    on_click: Arc<dyn Fn(&ToggleState, &mut Window, &mut WindowContext) + 'static>,
 }
 
 impl CheckboxWithLabel {
@@ -146,7 +146,7 @@ impl CheckboxWithLabel {
         id: impl Into<ElementId>,
         label: Label,
         checked: ToggleState,
-        on_click: impl Fn(&ToggleState, &mut WindowContext) + 'static,
+        on_click: impl Fn(&ToggleState, &mut Window, &mut WindowContext) + 'static,
     ) -> Self {
         Self {
             id: id.into(),
@@ -164,14 +164,14 @@ impl RenderOnce for CheckboxWithLabel {
             .child(Checkbox::new(self.id.clone(), self.checked).on_click({
                 let on_click = self.on_click.clone();
                 move |checked, window, cx| {
-                    (on_click)(checked, cx);
+                    (on_click)(checked, window, cx);
                 }
             }))
             .child(
                 div()
                     .id(SharedString::from(format!("{}-label", self.id)))
                     .on_click(move |_event, window, cx| {
-                        (self.on_click)(&self.checked.inverse(), cx);
+                        (self.on_click)(&self.checked.inverse(), window, cx);
                     })
                     .child(self.label),
             )
@@ -385,7 +385,7 @@ impl ComponentPreview for CheckboxWithLabel {
                     "checkbox_with_label_unselected",
                     Label::new("Always save on quit"),
                     ToggleState::Unselected,
-                    |_, _| {},
+                    |_, _, _| {},
                 ),
             ),
             single_example(
@@ -394,7 +394,7 @@ impl ComponentPreview for CheckboxWithLabel {
                     "checkbox_with_label_indeterminate",
                     Label::new("Always save on quit"),
                     ToggleState::Indeterminate,
-                    |_, _| {},
+                    |_, _, _| {},
                 ),
             ),
             single_example(
@@ -403,7 +403,7 @@ impl ComponentPreview for CheckboxWithLabel {
                     "checkbox_with_label_selected",
                     Label::new("Always save on quit"),
                     ToggleState::Selected,
-                    |_, _| {},
+                    |_, _, _| {},
                 ),
             ),
         ])]

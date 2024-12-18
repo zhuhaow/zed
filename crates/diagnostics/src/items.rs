@@ -91,7 +91,12 @@ impl Render for DiagnosticIndicator {
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
                             workspace.update(cx, |workspace, cx| {
-                                ProjectDiagnosticsEditor::deploy(workspace, &Default::default(), cx)
+                                ProjectDiagnosticsEditor::deploy(
+                                    workspace,
+                                    &Default::default(),
+                                    todo!(),
+                                    cx,
+                                )
                             })
                         }
                     })),

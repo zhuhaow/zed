@@ -254,7 +254,7 @@ impl ChannelView {
         ));
     }
 
-    fn copy_link(&mut self, _: &CopyLink, cx: &mut ViewContext<Self>) {
+    fn copy_link(&mut self, _: &CopyLink, window: &mut Window, cx: &mut ViewContext<Self>) {
         let position = self
             .editor
             .update(cx, |editor, cx| editor.selections.newest_display(cx).start);

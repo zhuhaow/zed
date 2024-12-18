@@ -1392,6 +1392,7 @@ mod tests {
     #[gpui::test]
     async fn test_search_simple(cx: &mut TestAppContext) {
         let (editor, search_bar, cx) = init_test(cx);
+        let window = cx.window;
         let display_points_of = |background_highlights: Vec<(Range<DisplayPoint>, Hsla)>| {
             background_highlights
                 .into_iter()
@@ -1415,7 +1416,7 @@ mod tests {
         });
 
         // Switch to a case sensitive search.
-        search_bar.update_in_window(window, cx, |search_bar, window, cx| {
+        search_bar.update(cx, |search_bar, cx| {
             search_bar.toggle_search_option(SearchOptions::CASE_SENSITIVE, cx);
         });
         let mut editor_notifications = cx.notifications(&editor);
@@ -1685,7 +1686,7 @@ mod tests {
         });
 
         // search_suggested should restore default options
-        search_bar.update_in_window(window, cx, |search_bar, window, cx| {
+        search_bar.update(cx, |search_bar, cx| {
             search_bar.search_suggested(cx);
             assert_eq!(search_bar.search_options, SearchOptions::NONE)
         });
@@ -1697,7 +1698,7 @@ mod tests {
             })
             .await
             .unwrap();
-        search_bar.update_in_window(window, cx, |search_bar, window, cx| {
+        search_bar.update(cx, |search_bar, cx| {
             search_bar.toggle_search_option(SearchOptions::WHOLE_WORD, cx)
         });
         let mut editor_notifications = cx.notifications(&editor);
@@ -1710,7 +1711,7 @@ mod tests {
         });
 
         // defaults should still include whole word
-        search_bar.update_in_window(window, cx, |search_bar, window, cx| {
+        search_bar.update(cx, |search_bar, cx| {
             search_bar.search_suggested(cx);
             assert_eq!(
                 search_bar.search_options,

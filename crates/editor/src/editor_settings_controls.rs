@@ -262,7 +262,7 @@ impl RenderOnce for BufferFontLigaturesControl {
             "buffer-font-ligatures",
             Label::new(self.name()),
             value.into(),
-            |selection, cx| {
+            |selection, window, cx| {
                 Self::write(
                     match selection {
                         ToggleState::Selected => true,
@@ -315,7 +315,7 @@ impl RenderOnce for InlineGitBlameControl {
             "inline-git-blame",
             Label::new(self.name()),
             value.into(),
-            |selection, cx| {
+            |selection, window, cx| {
                 Self::write(
                     match selection {
                         ToggleState::Selected => true,
@@ -368,7 +368,7 @@ impl RenderOnce for LineNumbersControl {
             "line-numbers",
             Label::new(self.name()),
             value.into(),
-            |selection, cx| {
+            |selection, window, cx| {
                 Self::write(
                     match selection {
                         ToggleState::Selected => true,

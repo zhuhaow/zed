@@ -1768,7 +1768,7 @@ impl Render for ProjectSearchBar {
                     .disabled(search.active_match_index.is_none())
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(search) = this.active_project_search.as_ref() {
-                            search.update(cx, |this, window, cx| {
+                            search.update(cx, |this, cx| {
                                 this.select_match(Direction::Next, cx);
                             })
                         }
@@ -1825,8 +1825,8 @@ impl Render for ProjectSearchBar {
                                 .shape(IconButtonShape::Square)
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     if let Some(search) = this.active_project_search.as_ref() {
-                                        search.update(cx, |this, window, cx| {
-                                            this.replace_next(&ReplaceNext, window, cx);
+                                        search.update(cx, |this, cx| {
+                                            this.replace_next(&ReplaceNext, cx);
                                         })
                                     }
                                 }))
@@ -1847,8 +1847,8 @@ impl Render for ProjectSearchBar {
                                 .shape(IconButtonShape::Square)
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     if let Some(search) = this.active_project_search.as_ref() {
-                                        search.update(cx, |this, window, cx| {
-                                            this.replace_all(&ReplaceAll, window, cx);
+                                        search.update(cx, |this, cx| {
+                                            this.replace_all(&ReplaceAll, cx);
                                         })
                                     }
                                 }))
@@ -1960,15 +1960,15 @@ impl Render for ProjectSearchBar {
             }))
             .on_action(cx.listener(|this, action, window, cx| {
                 if let Some(search) = this.active_project_search.as_ref() {
-                    search.update(cx, |this, window, cx| {
-                        this.replace_next(action, window, cx);
+                    search.update(cx, |this, cx| {
+                        this.replace_next(action, cx);
                     })
                 }
             }))
             .on_action(cx.listener(|this, action, window, cx| {
                 if let Some(search) = this.active_project_search.as_ref() {
-                    search.update(cx, |this, window, cx| {
-                        this.replace_all(action, window, cx);
+                    search.update(cx, |this, cx| {
+                        this.replace_all(action, cx);
                     })
                 }
             }))

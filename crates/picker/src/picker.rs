@@ -173,7 +173,7 @@ impl<D: PickerDelegate> Picker<D> {
     /// A picker, which displays its matches using `gpui::uniform_list`, all matches should have the same height.
     /// The picker allows the user to perform search items by text.
     /// If `PickerDelegate::render_match` can return items with different heights, use `Picker::list`.
-    pub fn uniform_list(delegate: D, cx: &mut ViewContext<Self>) -> Self {
+    pub fn uniform_list(delegate: D, window: &Window, cx: &mut ViewContext<Self>) -> Self {
         let head = Head::editor(
             delegate.placeholder_text(cx),
             Self::on_input_editor_event,
