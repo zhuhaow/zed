@@ -13,8 +13,8 @@ use db::kvp::KEY_VALUE_STORE;
 use futures::future::join_all;
 use gpui::{
     actions, Action, AnyView, AppContext, AsyncWindowContext, Corner, Entity, EventEmitter,
-    ExternalPaths, FocusHandle, FocusableView, IntoElement, Model, ParentElement, Pixels, Render,
-    Styled, Task, Model, ViewContext, VisualContext, WeakView, WindowContext,
+    ExternalPaths, FocusHandle, FocusableView, IntoElement, Model, Model, ParentElement, Pixels,
+    Render, Styled, Task, ViewContext, VisualContext, WeakModel, WindowContext,
 };
 use itertools::Itertools;
 use project::{terminals::TerminalKind, Fs, Project, ProjectEntryId};
@@ -67,7 +67,7 @@ pub struct TerminalPanel {
     pub(crate) active_pane: Model<Pane>,
     pub(crate) center: PaneGroup,
     fs: Arc<dyn Fs>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     pub(crate) width: Option<Pixels>,
     pub(crate) height: Option<Pixels>,
     pending_serialization: Task<Option<()>>,
@@ -216,7 +216,7 @@ impl TerminalPanel {
     }
 
     pub async fn load(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         mut cx: AsyncWindowContext,
     ) -> Result<Model<Self>> {
         let serialized_panel = cx
@@ -942,7 +942,7 @@ fn is_enabled_in_workspace(workspace: &Workspace, cx: &WindowContext) -> bool {
 }
 
 pub fn new_terminal_pane(
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     project: Model<Project>,
     zoomed: bool,
     cx: &mut ViewContext<TerminalPanel>,

@@ -18,7 +18,7 @@ use gpui::{
     actions, div, svg, AnyElement, AnyView, AppContext, Context, EventEmitter, FocusHandle,
     FocusableView, Global, HighlightStyle, InteractiveElement, IntoElement, Model, ParentElement,
     Render, SharedString, Styled, StyledText, Subscription, Task, Model, ViewContext, VisualContext,
-    WeakView, WindowContext,
+    WeakModel, WindowContext,
 };
 use language::{
     Bias, Buffer, Diagnostic, DiagnosticEntry, DiagnosticSeverity, Point, Selection, SelectionGoal,
@@ -58,7 +58,7 @@ pub fn init(cx: &mut AppContext) {
 
 struct ProjectDiagnosticsEditor {
     project: Model<Project>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     focus_handle: FocusHandle,
     editor: Model<Editor>,
     summary: DiagnosticSummary,
@@ -123,7 +123,7 @@ impl ProjectDiagnosticsEditor {
         context: u32,
         include_warnings: bool,
         project_handle: Model<Project>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let project_event_subscription =
@@ -243,7 +243,7 @@ impl ProjectDiagnosticsEditor {
     fn new(
         project_handle: Model<Project>,
         include_warnings: bool,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         Self::new_with_context(

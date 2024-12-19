@@ -10,10 +10,10 @@ use futures::FutureExt;
 use gpui::canvas;
 use gpui::ClipboardItem;
 use gpui::Task;
-use gpui::WeakView;
+use gpui::WeakModel;
 use gpui::{
-    AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Model,
-    PromptLevel, ScrollHandle, Model, ViewContext,
+    AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Model, Model,
+    PromptLevel, ScrollHandle, ViewContext,
 };
 use picker::Picker;
 use project::Project;
@@ -49,7 +49,7 @@ mod navigation_base {}
 pub struct RemoteServerProjects {
     mode: Mode,
     focus_handle: FocusHandle,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     retained_connections: Vec<Model<SshRemoteClient>>,
 }
 
@@ -120,7 +120,7 @@ impl ProjectPicker {
         ix: usize,
         connection: SshConnectionOptions,
         project: Model<Project>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<RemoteServerProjects>,
     ) -> Model<Self> {
         let (tx, rx) = oneshot::channel();
@@ -328,7 +328,7 @@ impl RemoteServerProjects {
         })
     }
 
-    pub fn new(cx: &mut ViewContext<Self>, workspace: WeakView<Workspace>) -> Self {
+    pub fn new(cx: &mut ViewContext<Self>, workspace: WeakModel<Workspace>) -> Self {
         let focus_handle = cx.focus_handle();
 
         let mut base_style = cx.text_style();
@@ -350,7 +350,7 @@ impl RemoteServerProjects {
         connection_options: remote::SshConnectionOptions,
         project: Model<Project>,
         cx: &mut ViewContext<Self>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
     ) -> Self {
         let mut this = Self::new(cx, workspace.clone());
         this.mode = Mode::ProjectPicker(ProjectPicker::new(
@@ -1001,7 +1001,7 @@ impl RemoteServerProjects {
                         .child({
                             let workspace = self.workspace.clone();
                             fn callback(
-                                workspace: WeakView<Workspace>,
+                                workspace: WeakModel<Workspace>,
                                 connection_string: SharedString,
                                 cx: &mut WindowContext<'_>,
                             ) {

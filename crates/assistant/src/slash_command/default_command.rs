@@ -4,7 +4,7 @@ use assistant_slash_command::{
     ArgumentCompletion, SlashCommand, SlashCommandOutput, SlashCommandOutputSection,
     SlashCommandResult,
 };
-use gpui::{Task, WeakView};
+use gpui::{Task, WeakModel};
 use language::{BufferSnapshot, LspAdapterDelegate};
 use std::{
     fmt::Write,
@@ -36,7 +36,7 @@ impl SlashCommand for DefaultSlashCommand {
         self: Arc<Self>,
         _arguments: &[String],
         _cancellation_flag: Arc<AtomicBool>,
-        _workspace: Option<WeakView<Workspace>>,
+        _workspace: Option<WeakModel<Workspace>>,
         _cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         Task::ready(Err(anyhow!("this command does not require argument")))
@@ -47,7 +47,7 @@ impl SlashCommand for DefaultSlashCommand {
         _arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: BufferSnapshot,
-        _workspace: WeakView<Workspace>,
+        _workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {

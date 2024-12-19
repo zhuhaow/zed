@@ -25,8 +25,8 @@ use futures::{
 };
 use gpui::{
     anchored, deferred, point, AnyElement, AppContext, ClickEvent, CursorStyle, EventEmitter,
-    FocusHandle, FocusableView, FontWeight, Global, HighlightStyle, Model, ModelContext,
-    Subscription, Task, TextStyle, UpdateGlobal, Model, ViewContext, WeakView, WindowContext,
+    FocusHandle, FocusableView, FontWeight, Global, HighlightStyle, Model, Model, ModelContext,
+    Subscription, Task, TextStyle, UpdateGlobal, ViewContext, WeakModel, WindowContext,
 };
 use language::{Buffer, IndentKind, Point, Selection, TransactionId};
 use language_model::{
@@ -84,7 +84,7 @@ pub struct InlineAssistant {
     next_assist_id: InlineAssistId,
     next_assist_group_id: InlineAssistGroupId,
     assists: HashMap<InlineAssistId, InlineAssist>,
-    assists_by_editor: HashMap<WeakView<Editor>, EditorInlineAssists>,
+    assists_by_editor: HashMap<WeakModel<Editor>, EditorInlineAssists>,
     assist_groups: HashMap<InlineAssistGroupId, InlineAssistGroup>,
     confirmed_assists: HashMap<InlineAssistId, Model<CodegenAlternative>>,
     prompt_history: VecDeque<String>,
@@ -188,7 +188,7 @@ impl InlineAssistant {
     pub fn assist(
         &mut self,
         editor: &Model<Editor>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         assistant_panel: Option<&Model<AssistantPanel>>,
         initial_prompt: Option<String>,
         cx: &mut WindowContext,
@@ -359,7 +359,7 @@ impl InlineAssistant {
         initial_prompt: String,
         initial_transaction_id: Option<TransactionId>,
         focus: bool,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         assistant_panel: Option<&Model<AssistantPanel>>,
         cx: &mut WindowContext,
     ) -> InlineAssistId {
@@ -654,7 +654,7 @@ impl InlineAssistant {
         cx.propagate();
     }
 
-    fn handle_editor_release(&mut self, editor: WeakView<Editor>, cx: &mut WindowContext) {
+    fn handle_editor_release(&mut self, editor: WeakModel<Editor>, cx: &mut WindowContext) {
         if let Some(editor_assists) = self.assists_by_editor.get_mut(&editor) {
             for assist_id in editor_assists.assist_ids.clone() {
                 self.finish_assist(assist_id, true, cx);
@@ -1372,7 +1372,7 @@ struct PromptEditor {
     pending_token_count: Task<Result<()>>,
     token_counts: Option<TokenCounts>,
     _token_count_subscriptions: Vec<Subscription>,
-    workspace: Option<WeakView<Workspace>>,
+    workspace: Option<WeakModel<Workspace>>,
     show_rate_limit_notice: bool,
 }
 
@@ -1604,7 +1604,7 @@ impl PromptEditor {
         codegen: Model<Codegen>,
         parent_editor: &Model<Editor>,
         assistant_panel: Option<&Model<AssistantPanel>>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         fs: Arc<dyn Fs>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
@@ -2210,11 +2210,11 @@ fn set_rate_limit_notice_dismissed(is_dismissed: bool, cx: &mut AppContext) {
 struct InlineAssist {
     group_id: InlineAssistGroupId,
     range: Range<Anchor>,
-    editor: WeakView<Editor>,
+    editor: WeakModel<Editor>,
     decorations: Option<InlineAssistDecorations>,
     codegen: Model<Codegen>,
     _subscriptions: Vec<Subscription>,
-    workspace: Option<WeakView<Workspace>>,
+    workspace: Option<WeakModel<Workspace>>,
     include_context: bool,
 }
 
@@ -2230,7 +2230,7 @@ impl InlineAssist {
         end_block_id: CustomBlockId,
         range: Range<Anchor>,
         codegen: Model<Codegen>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         cx: &mut WindowContext,
     ) -> Self {
         let prompt_editor_focus_handle = prompt_editor.focus_handle(cx);
@@ -3417,8 +3417,8 @@ where
 }
 
 struct AssistantCodeActionProvider {
-    editor: WeakView<Editor>,
-    workspace: WeakView<Workspace>,
+    editor: WeakModel<Editor>,
+    workspace: WeakModel<Workspace>,
 }
 
 impl CodeActionProvider for AssistantCodeActionProvider {

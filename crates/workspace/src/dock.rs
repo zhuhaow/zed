@@ -4,9 +4,9 @@ use crate::{DraggedDock, Event, Pane};
 use client::proto;
 use gpui::{
     deferred, div, px, Action, AnyView, AppContext, Axis, Corner, Entity, EntityId, EventEmitter,
-    FocusHandle, FocusableView, IntoElement, KeyContext, MouseButton, MouseDownEvent, MouseUpEvent,
-    ParentElement, Render, SharedString, StyleRefinement, Styled, Subscription, Model, ViewContext,
-    VisualContext, WeakView, WindowContext,
+    FocusHandle, FocusableView, IntoElement, KeyContext, Model, MouseButton, MouseDownEvent,
+    MouseUpEvent, ParentElement, Render, SharedString, StyleRefinement, Styled, Subscription,
+    ViewContext, VisualContext, WeakModel, WindowContext,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -361,7 +361,7 @@ impl Dock {
     pub(crate) fn add_panel<T: Panel>(
         &mut self,
         panel: Model<T>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<Self>,
     ) {
         let subscriptions = [

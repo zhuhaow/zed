@@ -6,7 +6,7 @@ use client::{telemetry::Telemetry, TelemetrySettings};
 use db::kvp::KEY_VALUE_STORE;
 use gpui::{
     actions, svg, Action, AppContext, EventEmitter, FocusHandle, FocusableView, InteractiveElement,
-    ParentElement, Render, Styled, Subscription, Task, Model, ViewContext, VisualContext, WeakView,
+    ParentElement, Render, Styled, Subscription, Task, Model, ViewContext, VisualContext, WeakModel,
     WindowContext,
 };
 use settings::{Settings, SettingsStore};
@@ -62,7 +62,7 @@ pub fn show_welcome_view(
 }
 
 pub struct WelcomePage {
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     focus_handle: FocusHandle,
     telemetry: Arc<Telemetry>,
     _settings_subscription: Subscription,

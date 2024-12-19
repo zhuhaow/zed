@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fuzzy::StringMatchCandidate;
-use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, Model, WeakModel, WeakView};
+use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, Model, WeakModel, WeakModel};
 use picker::{Picker, PickerDelegate};
 use ui::{prelude::*, ListItem};
 
@@ -18,7 +18,7 @@ pub struct ThreadContextPicker {
 impl ThreadContextPicker {
     pub fn new(
         thread_store: WeakModel<ThreadStore>,
-        context_picker: WeakView<ContextPicker>,
+        context_picker: WeakModel<ContextPicker>,
         context_store: WeakModel<context_store::ContextStore>,
         confirm_behavior: ConfirmBehavior,
         cx: &mut ViewContext<Self>,
@@ -55,7 +55,7 @@ struct ThreadContextEntry {
 
 pub struct ThreadContextPickerDelegate {
     thread_store: WeakModel<ThreadStore>,
-    context_picker: WeakView<ContextPicker>,
+    context_picker: WeakModel<ContextPicker>,
     context_store: WeakModel<context_store::ContextStore>,
     confirm_behavior: ConfirmBehavior,
     matches: Vec<ThreadContextEntry>,
@@ -65,7 +65,7 @@ pub struct ThreadContextPickerDelegate {
 impl ThreadContextPickerDelegate {
     pub fn new(
         thread_store: WeakModel<ThreadStore>,
-        context_picker: WeakView<ContextPicker>,
+        context_picker: WeakModel<ContextPicker>,
         context_store: WeakModel<context_store::ContextStore>,
         confirm_behavior: ConfirmBehavior,
     ) -> Self {

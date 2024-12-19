@@ -12,8 +12,8 @@ use futures::future::try_join_all;
 use git::repository::GitFileStatus;
 use gpui::{
     point, AnyElement, AppContext, AsyncWindowContext, Context, Entity, EntityId, EventEmitter,
-    IntoElement, Model, ParentElement, Pixels, SharedString, Styled, Task, Model, ViewContext,
-    VisualContext, WeakView, WindowContext,
+    IntoElement, Model, Model, ParentElement, Pixels, SharedString, Styled, Task, ViewContext,
+    VisualContext, WeakModel, WindowContext,
 };
 use language::{
     proto::serialize_anchor as serialize_text_anchor, Bias, Buffer, CharKind, DiskState, Point,
@@ -329,7 +329,7 @@ impl FollowableItem for Editor {
 }
 
 async fn update_editor_from_message(
-    this: WeakView<Editor>,
+    this: WeakModel<Editor>,
     project: Model<Project>,
     message: proto::update_view::Editor,
     cx: &mut AsyncWindowContext,
@@ -951,7 +951,7 @@ impl SerializableItem for Editor {
 
     fn deserialize(
         project: Model<Project>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         workspace_id: workspace::WorkspaceId,
         item_id: ItemId,
         cx: &mut WindowContext,

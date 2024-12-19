@@ -6,7 +6,7 @@ use assistant_slash_command::{
 use futures::channel::mpsc;
 use futures::Stream;
 use fuzzy::PathMatch;
-use gpui::{AppContext, Model, Task, Model, WeakView};
+use gpui::{AppContext, Model, Model, Task, WeakModel};
 use language::{BufferSnapshot, CodeLabel, HighlightId, LineEnding, LspAdapterDelegate};
 use project::{PathMatchCandidateSet, Project};
 use serde::{Deserialize, Serialize};
@@ -134,7 +134,7 @@ impl SlashCommand for FileSlashCommand {
         self: Arc<Self>,
         arguments: &[String],
         cancellation_flag: Arc<AtomicBool>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         let Some(workspace) = workspace.and_then(|workspace| workspace.upgrade()) else {
@@ -187,7 +187,7 @@ impl SlashCommand for FileSlashCommand {
         arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: BufferSnapshot,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {

@@ -11,8 +11,8 @@ use command_palette_hooks::{
 };
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
-    Action, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Global,
-    ParentElement, Render, Styled, Task, UpdateGlobal, Model, ViewContext, VisualContext, WeakView,
+    Action, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Global, Model,
+    ParentElement, Render, Styled, Task, UpdateGlobal, ViewContext, VisualContext, WeakModel,
 };
 use picker::{Picker, PickerDelegate};
 
@@ -123,7 +123,7 @@ impl Render for CommandPalette {
 }
 
 pub struct CommandPaletteDelegate {
-    command_palette: WeakView<CommandPalette>,
+    command_palette: WeakModel<CommandPalette>,
     all_commands: Vec<Command>,
     commands: Vec<Command>,
     matches: Vec<StringMatch>,
@@ -159,7 +159,7 @@ impl Global for HitCounts {}
 
 impl CommandPaletteDelegate {
     fn new(
-        command_palette: WeakView<CommandPalette>,
+        command_palette: WeakModel<CommandPalette>,
         commands: Vec<Command>,
         previous_focus_handle: FocusHandle,
     ) -> Self {

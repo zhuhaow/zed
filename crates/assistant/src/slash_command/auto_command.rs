@@ -5,7 +5,7 @@ use assistant_slash_command::{
 };
 use feature_flags::FeatureFlag;
 use futures::StreamExt;
-use gpui::{AppContext, AsyncAppContext, Task, WeakView};
+use gpui::{AppContext, AsyncAppContext, Task, WeakModel};
 use language::{CodeLabel, LspAdapterDelegate};
 use language_model::{
     LanguageModelCompletionEvent, LanguageModelRegistry, LanguageModelRequest,
@@ -53,7 +53,7 @@ impl SlashCommand for AutoCommand {
         self: Arc<Self>,
         _arguments: &[String],
         _cancel: Arc<AtomicBool>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         // There's no autocomplete for a prompt, since it's arbitrary text.
@@ -96,7 +96,7 @@ impl SlashCommand for AutoCommand {
         arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: language::BufferSnapshot,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {

@@ -7,8 +7,8 @@ use editor::scroll::{Autoscroll, AutoscrollStrategy};
 use editor::{Editor, EditorEvent};
 use gpui::{
     list, AppContext, ClickEvent, EventEmitter, FocusHandle, FocusableView, InteractiveElement,
-    IntoElement, ListState, ParentElement, Render, Styled, Subscription, Task, Model, ViewContext,
-    WeakView,
+    IntoElement, ListState, Model, ParentElement, Render, Styled, Subscription, Task, ViewContext,
+    WeakModel,
 };
 use language::LanguageRegistry;
 use ui::prelude::*;
@@ -27,7 +27,7 @@ use crate::{
 const REPARSE_DEBOUNCE: Duration = Duration::from_millis(200);
 
 pub struct MarkdownPreviewView {
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     active_editor: Option<EditorState>,
     focus_handle: FocusHandle,
     contents: Option<ParsedMarkdown>,
@@ -134,7 +134,7 @@ impl MarkdownPreviewView {
     pub fn new(
         mode: MarkdownPreviewMode,
         active_editor: Model<Editor>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         language_registry: Arc<LanguageRegistry>,
         fallback_description: Option<SharedString>,
         cx: &mut ViewContext<Workspace>,

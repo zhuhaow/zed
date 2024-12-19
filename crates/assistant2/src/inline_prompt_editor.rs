@@ -19,7 +19,7 @@ use fs::Fs;
 use gpui::{
     anchored, deferred, point, AnyElement, AppContext, ClickEvent, CursorStyle, EventEmitter,
     FocusHandle, FocusableView, FontWeight, Model, Subscription, TextStyle, Model, ViewContext,
-    WeakModel, WeakView, WindowContext,
+    WeakModel, WeakModel, WindowContext,
 };
 use language_model::{LanguageModel, LanguageModelRegistry};
 use language_model_selector::{LanguageModelSelector, LanguageModelSelectorPopoverMenu};
@@ -765,7 +765,7 @@ impl PromptEditor<BufferCodegen> {
         codegen: Model<BufferCodegen>,
         fs: Arc<dyn Fs>,
         context_store: Model<ContextStore>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         thread_store: Option<WeakModel<ThreadStore>>,
         cx: &mut ViewContext<PromptEditor<BufferCodegen>>,
     ) -> PromptEditor<BufferCodegen> {
@@ -916,7 +916,7 @@ impl PromptEditor<TerminalCodegen> {
         codegen: Model<TerminalCodegen>,
         fs: Arc<dyn Fs>,
         context_store: Model<ContextStore>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         thread_store: Option<WeakModel<ThreadStore>>,
         cx: &mut ViewContext<Self>,
     ) -> Self {

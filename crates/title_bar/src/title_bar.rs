@@ -15,7 +15,7 @@ use feature_flags::{FeatureFlagAppExt, ZedPro};
 use gpui::{
     actions, div, px, Action, AnyElement, AppContext, Decorations, Element, InteractiveElement,
     Interactivity, IntoElement, Model, MouseButton, ParentElement, Render, Stateful,
-    StatefulInteractiveElement, Styled, Subscription, Model, ViewContext, VisualContext, WeakView,
+    StatefulInteractiveElement, Styled, Subscription, Model, ViewContext, VisualContext, WeakModel,
 };
 use project::{Project, RepositoryEntry};
 use rpc::proto;
@@ -65,7 +65,7 @@ pub struct TitleBar {
     project: Model<Project>,
     user_store: Model<UserStore>,
     client: Arc<Client>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     should_move: bool,
     application_menu: Option<Model<ApplicationMenu>>,
     _subscriptions: Vec<Subscription>,

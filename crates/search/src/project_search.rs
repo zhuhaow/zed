@@ -14,7 +14,7 @@ use gpui::{
     EventEmitter, FocusHandle, FocusableView, Global, Hsla, InteractiveElement, IntoElement,
     KeyContext, Model, ModelContext, ParentElement, Point, Render, SharedString, Styled,
     Subscription, Task, TextStyle, UpdateGlobal, Model, ViewContext, VisualContext, WeakModel,
-    WeakView, WindowContext,
+    WeakModel, WindowContext,
 };
 use language::Buffer;
 use menu::Confirm;
@@ -143,7 +143,7 @@ enum InputPanel {
 }
 
 pub struct ProjectSearchView {
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     focus_handle: FocusHandle,
     model: Model<ProjectSearch>,
     query_editor: Model<Editor>,
@@ -637,7 +637,7 @@ impl ProjectSearchView {
     }
 
     pub fn new(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         model: Model<ProjectSearch>,
         cx: &mut ViewContext<Self>,
         settings: Option<ProjectSearchSettings>,

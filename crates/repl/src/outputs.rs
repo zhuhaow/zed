@@ -37,8 +37,8 @@ use std::time::Duration;
 
 use editor::{Editor, MultiBuffer};
 use gpui::{
-    percentage, Animation, AnimationExt, AnyElement, ClipboardItem, Model, Render, Transformation,
-    Model, WeakView,
+    percentage, Animation, AnimationExt, AnyElement, ClipboardItem, Model, Model, Render,
+    Transformation, WeakModel,
 };
 use language::Buffer;
 use runtimelib::{ExecutionState, JupyterMessageContent, MimeBundle, MimeType};
@@ -132,7 +132,7 @@ pub enum Output {
 impl Output {
     fn render_output_controls<V: OutputContent + 'static>(
         v: Model<V>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<ExecutionView>,
     ) -> Option<AnyElement> {
         if !v.has_clipboard_content(cx) && !v.has_buffer_content(cx) {
@@ -204,7 +204,7 @@ impl Output {
     pub fn render(
         &self,
 
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<ExecutionView>,
     ) -> impl IntoElement {
         let content = match self {
@@ -308,7 +308,7 @@ pub enum ExecutionStatus {
 /// sees as "the output" for a single execution.
 pub struct ExecutionView {
     #[allow(unused)]
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     pub outputs: Vec<Output>,
     pub status: ExecutionStatus,
 }
@@ -316,7 +316,7 @@ pub struct ExecutionView {
 impl ExecutionView {
     pub fn new(
         status: ExecutionStatus,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         _cx: &mut ViewContext<Self>,
     ) -> Self {
         Self {

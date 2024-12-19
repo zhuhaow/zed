@@ -12,7 +12,7 @@ use editor::{
 };
 use gpui::{
     actions, AnyView, AppContext, ClipboardItem, Entity as _, EventEmitter, FocusableView, Model,
-    Pixels, Point, Render, Subscription, Task, Model, ViewContext, VisualContext as _, WeakView,
+    Pixels, Point, Render, Subscription, Task, Model, ViewContext, VisualContext as _, WeakModel,
     WindowContext,
 };
 use project::Project;
@@ -39,7 +39,7 @@ pub fn init(cx: &mut AppContext) {
 
 pub struct ChannelView {
     pub editor: Model<Editor>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     project: Model<Project>,
     channel_store: Model<ChannelStore>,
     channel_buffer: Model<ChannelBuffer>,
@@ -171,7 +171,7 @@ impl ChannelView {
 
     pub fn new(
         project: Model<Project>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         channel_store: Model<ChannelStore>,
         channel_buffer: Model<ChannelBuffer>,
         cx: &mut ViewContext<Self>,

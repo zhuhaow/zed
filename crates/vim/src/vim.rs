@@ -27,7 +27,7 @@ use editor::{
 };
 use gpui::{
     actions, impl_actions, Action, AppContext, Axis, Entity, EventEmitter, KeyContext,
-    KeystrokeEvent, Render, Subscription, Model, ViewContext, WeakView,
+    KeystrokeEvent, Render, Subscription, Model, ViewContext, WeakModel,
 };
 use insert::{NormalBefore, TemporaryNormal};
 use language::{CursorShape, Point, Selection, SelectionGoal, TransactionId};
@@ -217,7 +217,7 @@ pub(crate) struct Vim {
     selected_register: Option<char>,
     pub search: SearchState,
 
-    editor: WeakView<Editor>,
+    editor: WeakModel<Editor>,
 
     _subscriptions: Vec<Subscription>,
 }

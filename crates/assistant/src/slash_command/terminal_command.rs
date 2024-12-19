@@ -6,7 +6,7 @@ use assistant_slash_command::{
     ArgumentCompletion, SlashCommand, SlashCommandOutput, SlashCommandOutputSection,
     SlashCommandResult,
 };
-use gpui::{AppContext, Task, Model, WeakView};
+use gpui::{AppContext, Task, Model, WeakModel};
 use language::{BufferSnapshot, CodeLabel, LspAdapterDelegate};
 use terminal_view::{terminal_panel::TerminalPanel, TerminalView};
 use ui::prelude::*;
@@ -53,7 +53,7 @@ impl SlashCommand for TerminalSlashCommand {
         self: Arc<Self>,
         _arguments: &[String],
         _cancel: Arc<AtomicBool>,
-        _workspace: Option<WeakView<Workspace>>,
+        _workspace: Option<WeakModel<Workspace>>,
         _cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         Task::ready(Ok(Vec::new()))
@@ -64,7 +64,7 @@ impl SlashCommand for TerminalSlashCommand {
         arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: BufferSnapshot,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {

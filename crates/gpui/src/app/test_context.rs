@@ -4,8 +4,8 @@ use crate::{
     Element, Empty, Entity, EventEmitter, ForegroundExecutor, Global, InputEvent, Keystroke, Model,
     ModelContext, Modifiers, ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent,
     MouseUpEvent, Pixels, Platform, Point, Render, Result, Size, Task, TestDispatcher,
-    TestPlatform, TestScreenCaptureSource, TestWindow, TextSystem, Model, ViewContext,
-    VisualContext, WindowBounds, WindowContext, WindowHandle, WindowOptions,
+    TestPlatform, TestScreenCaptureSource, TestWindow, TextSystem, ViewContext, VisualContext,
+    WindowBounds, WindowContext, WindowHandle, WindowOptions,
 };
 use anyhow::{anyhow, bail};
 use futures::{channel::oneshot, Stream, StreamExt};
@@ -31,6 +31,7 @@ pub struct TestAppContext {
 
 impl Context for TestAppContext {
     type Result<T> = T;
+    type EntityContext<'a, T: 'static> = ModelContext<'a, T>;
 
     fn new_model<T: 'static>(
         &mut self,
@@ -218,7 +219,10 @@ impl TestAppContext {
     /// Adds a new window, and returns its root view and a `VisualTestContext` which can be used
     /// as a `WindowContext` for the rest of the test. Typically you would shadow this context with
     /// the returned one. `let (view, cx) = cx.add_window_view(...);`
-    pub fn add_window_view<F, V>(&mut self, build_root_view: F) -> (Model<V>, &mut VisualTestContext)
+    pub fn add_window_view<F, V>(
+        &mut self,
+        build_root_view: F,
+    ) -> (Model<V>, &mut VisualTestContext)
     where
         F: FnOnce(&mut ViewContext<V>) -> V,
         V: 'static + Render,
@@ -542,37 +546,38 @@ impl<T: 'static> Model<T> {
     }
 }
 
-impl<V: 'static> Model<V> {
-    /// Returns a future that resolves when the view is next updated.
-    pub fn next_notification(
-        &self,
-        advance_clock_by: Duration,
-        cx: &TestAppContext,
-    ) -> impl Future<Output = ()> {
-        use postage::prelude::{Sink as _, Stream as _};
+// todo! remove this commented code
+// impl<V: 'static> Model<V> {
+//     /// Returns a future that resolves when the view is next updated.
+//     pub fn next_notification(
+//         &self,
+//         advance_clock_by: Duration,
+//         cx: &TestAppContext,
+//     ) -> impl Future<Output = ()> {
+//         use postage::prelude::{Sink as _, Stream as _};
 
-        let (mut tx, mut rx) = postage::mpsc::channel(1);
-        let subscription = cx.app.app.borrow_mut().observe(self, move |_, _| {
-            tx.try_send(()).ok();
-        });
+//         let (mut tx, mut rx) = postage::mpsc::channel(1);
+//         let subscription = cx.app.app.borrow_mut().observe(self, move |_, _| {
+//             tx.try_send(()).ok();
+//         });
 
-        let duration = if std::env::var("CI").is_ok() {
-            Duration::from_secs(5)
-        } else {
-            Duration::from_secs(1)
-        };
+//         let duration = if std::env::var("CI").is_ok() {
+//             Duration::from_secs(5)
+//         } else {
+//             Duration::from_secs(1)
+//         };
 
-        cx.executor().advance_clock(advance_clock_by);
+//         cx.executor().advance_clock(advance_clock_by);
 
-        async move {
-            let notification = crate::util::timeout(duration, rx.recv())
-                .await
-                .expect("next notification timed out");
-            drop(subscription);
-            notification.expect("model dropped while test was waiting for its next notification")
-        }
-    }
-}
+//         async move {
+//             let notification = crate::util::timeout(duration, rx.recv())
+//                 .await
+//                 .expect("next notification timed out");
+//             drop(subscription);
+//             notification.expect("model dropped while test was waiting for its next notification")
+//         }
+//     }
+// }
 
 impl<V> Model<V> {
     /// Returns a future that resolves when the condition becomes true.
@@ -872,12 +877,15 @@ impl VisualTestContext {
 
 impl Context for VisualTestContext {
     type Result<T> = <TestAppContext as Context>::Result<T>;
+    type EntityContext<'a, T: 'static> = ViewContext<'a, T>;
 
     fn new_model<T: 'static>(
         &mut self,
-        build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T,
+        build_model: impl FnOnce(&mut ViewContext<'_, T>) -> T,
     ) -> Self::Result<Model<T>> {
-        self.cx.new_model(build_model)
+        self.cx
+            .update_window(self.window, |_, cx| cx.new_model(build_model))
+            .unwrap()
     }
 
     fn reserve_model<T: 'static>(&mut self) -> Self::Result<crate::Reservation<T>> {
@@ -887,20 +895,26 @@ impl Context for VisualTestContext {
     fn insert_model<T: 'static>(
         &mut self,
         reservation: crate::Reservation<T>,
-        build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T,
+        build_model: impl FnOnce(&mut ViewContext<'_, T>) -> T,
     ) -> Self::Result<Model<T>> {
-        self.cx.insert_model(reservation, build_model)
+        self.cx
+            .update_window(self.window, |_, cx| {
+                cx.insert_model(reservation, build_model)
+            })
+            .unwrap()
     }
 
     fn update_model<T, R>(
         &mut self,
         handle: &Model<T>,
-        update: impl FnOnce(&mut T, &mut ModelContext<'_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut ViewContext<'_, T>) -> R,
     ) -> Self::Result<R>
     where
         T: 'static,
     {
-        self.cx.update_model(handle, update)
+        self.cx
+            .update_window(self.window, |_, cx| cx.update_model(handle, update))
+            .unwrap()
     }
 
     fn read_model<T, R>(

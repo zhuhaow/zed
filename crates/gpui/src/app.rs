@@ -38,7 +38,7 @@ use crate::{
     Keystroke, LayoutId, Menu, MenuItem, OwnedMenu, PathPromptOptions, Pixels, Platform,
     PlatformDisplay, Point, PromptBuilder, PromptHandle, PromptLevel, Render,
     RenderablePromptHandle, Reservation, ScreenCaptureSource, SharedString, SubscriberSet,
-    Subscription, SvgRenderer, Task, TextSystem, Model, ViewContext, Window, WindowAppearance,
+    Subscription, SvgRenderer, Task, TextSystem, ViewContext, Window, WindowAppearance,
     WindowContext, WindowHandle, WindowId,
 };
 
@@ -1417,6 +1417,7 @@ impl AppContext {
 
 impl Context for AppContext {
     type Result<T> = T;
+    type EntityContext<'a, T: 'static> = ModelContext<'a, T>;
 
     /// Build an entity that is owned by the application. The given function will be invoked with
     /// a `ModelContext` and must return an object representing the entity. A `Model` handle will be returned,

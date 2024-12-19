@@ -1,4 +1,4 @@
-use gpui::{div, Element, Render, Subscription, Model, ViewContext, WeakView};
+use gpui::{div, Element, Render, Subscription, Model, ViewContext, WeakModel};
 use itertools::Itertools;
 use workspace::{item::ItemHandle, ui::prelude::*, StatusItemView};
 
@@ -6,7 +6,7 @@ use crate::{Vim, VimEvent, VimGlobals};
 
 /// The ModeIndicator displays the current mode in the status bar.
 pub struct ModeIndicator {
-    vim: Option<WeakView<Vim>>,
+    vim: Option<WeakModel<Vim>>,
     pending_keys: Option<String>,
     vim_subscription: Option<Subscription>,
 }

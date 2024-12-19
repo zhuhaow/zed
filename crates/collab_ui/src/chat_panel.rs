@@ -10,7 +10,7 @@ use gpui::{
     actions, div, list, prelude::*, px, Action, AppContext, AsyncWindowContext, ClipboardItem,
     CursorStyle, DismissEvent, ElementId, EventEmitter, FocusHandle, FocusableView, FontWeight,
     HighlightStyle, ListOffset, ListScrollEvent, ListState, Model, Render, Stateful, Subscription,
-    Task, Model, ViewContext, VisualContext, WeakView,
+    Task, Model, ViewContext, VisualContext, WeakModel,
 };
 use language::LanguageRegistry;
 use menu::Confirm;
@@ -187,7 +187,7 @@ impl ChatPanel {
     }
 
     pub fn load(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: AsyncWindowContext,
     ) -> Task<Result<Model<Self>>> {
         cx.spawn(|mut cx| async move {

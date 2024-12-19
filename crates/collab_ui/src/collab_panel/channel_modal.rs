@@ -6,8 +6,8 @@ use client::{
 use fuzzy::{match_strings, StringMatchCandidate};
 use gpui::{
     actions, anchored, deferred, div, AppContext, ClipboardItem, DismissEvent, EventEmitter,
-    FocusableView, Model, ParentElement, Render, Styled, Subscription, Task, Model, ViewContext,
-    VisualContext, WeakView,
+    FocusableView, Model, Model, ParentElement, Render, Styled, Subscription, Task, ViewContext,
+    VisualContext, WeakModel,
 };
 use picker::{Picker, PickerDelegate};
 use std::sync::Arc;
@@ -229,7 +229,7 @@ pub enum Mode {
 }
 
 pub struct ChannelModalDelegate {
-    channel_modal: WeakView<ChannelModal>,
+    channel_modal: WeakModel<ChannelModal>,
     matching_users: Vec<Arc<User>>,
     matching_member_indices: Vec<usize>,
     user_store: Model<UserStore>,

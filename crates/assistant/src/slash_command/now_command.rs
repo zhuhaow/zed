@@ -7,7 +7,7 @@ use assistant_slash_command::{
     SlashCommandResult,
 };
 use chrono::Local;
-use gpui::{Task, WeakView};
+use gpui::{Task, WeakModel};
 use language::{BufferSnapshot, LspAdapterDelegate};
 use ui::prelude::*;
 use workspace::Workspace;
@@ -35,7 +35,7 @@ impl SlashCommand for NowSlashCommand {
         self: Arc<Self>,
         _arguments: &[String],
         _cancel: Arc<AtomicBool>,
-        _workspace: Option<WeakView<Workspace>>,
+        _workspace: Option<WeakModel<Workspace>>,
         _cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         Task::ready(Ok(Vec::new()))
@@ -46,7 +46,7 @@ impl SlashCommand for NowSlashCommand {
         _arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: BufferSnapshot,
-        _workspace: WeakView<Workspace>,
+        _workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         _cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {

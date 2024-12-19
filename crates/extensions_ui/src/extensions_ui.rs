@@ -15,7 +15,7 @@ use fuzzy::{match_strings, StringMatchCandidate};
 use gpui::{
     actions, uniform_list, Action, AppContext, ClipboardItem, EventEmitter, Flatten, FocusableView,
     InteractiveElement, KeyContext, ParentElement, Render, Styled, Task, TextStyle,
-    UniformListScrollHandle, Model, ViewContext, VisualContext, WeakView, WindowContext,
+    UniformListScrollHandle, Model, ViewContext, VisualContext, WeakModel, WindowContext,
 };
 use num_format::{Locale, ToFormattedString};
 use project::DirectoryLister;
@@ -179,7 +179,7 @@ fn keywords_by_feature() -> &'static BTreeMap<Feature, Vec<&'static str>> {
 }
 
 pub struct ExtensionsPage {
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     list: UniformListScrollHandle,
     is_fetching_extensions: bool,
     filter: ExtensionFilter,
@@ -237,7 +237,7 @@ impl ExtensionsPage {
 
     fn on_extension_installed(
         &mut self,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         extension_id: &str,
         cx: &mut ViewContext<Self>,
     ) {

@@ -5,7 +5,7 @@ use feature_flags::{FeatureFlagAppExt, ZetaFeatureFlag};
 use fs::Fs;
 use gpui::{
     actions, div, Action, AppContext, AsyncWindowContext, Corner, Entity, IntoElement,
-    ParentElement, Render, Subscription, Model, ViewContext, WeakView, WindowContext,
+    ParentElement, Render, Subscription, Model, ViewContext, WeakModel, WindowContext,
 };
 use language::{
     language_settings::{
@@ -40,7 +40,7 @@ pub struct InlineCompletionButton {
     language: Option<Arc<Language>>,
     file: Option<Arc<dyn File>>,
     fs: Arc<dyn Fs>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
 }
 
 enum SupermavenButtonStatus {
@@ -229,7 +229,7 @@ impl Render for InlineCompletionButton {
 
 impl InlineCompletionButton {
     pub fn new(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         fs: Arc<dyn Fs>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
@@ -422,7 +422,7 @@ impl SupermavenButtonStatus {
 }
 
 async fn configure_disabled_globs(
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     path_to_disable: Option<Arc<Path>>,
     mut cx: AsyncWindowContext,
 ) -> Result<()> {

@@ -5,7 +5,7 @@ use assistant_slash_command::{
     SlashCommandOutputSection, SlashCommandResult,
 };
 use futures::StreamExt;
-use gpui::{AppContext, Task, WeakView};
+use gpui::{AppContext, Task, WeakModel};
 use language::{BufferSnapshot, CodeLabel, LspAdapterDelegate};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -47,7 +47,7 @@ impl SlashCommand for SelectionCommand {
         self: Arc<Self>,
         _arguments: &[String],
         _cancel: Arc<AtomicBool>,
-        _workspace: Option<WeakView<Workspace>>,
+        _workspace: Option<WeakModel<Workspace>>,
         _cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         Task::ready(Err(anyhow!("this command does not require argument")))
@@ -58,7 +58,7 @@ impl SlashCommand for SelectionCommand {
         _arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: BufferSnapshot,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {

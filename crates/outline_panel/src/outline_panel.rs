@@ -26,10 +26,10 @@ use gpui::{
     actions, anchored, deferred, div, point, px, size, uniform_list, Action, AnyElement,
     AppContext, AssetSource, AsyncWindowContext, Bounds, ClipboardItem, DismissEvent, Div,
     ElementId, EventEmitter, FocusHandle, FocusableView, HighlightStyle, InteractiveElement,
-    IntoElement, KeyContext, ListHorizontalSizingBehavior, ListSizingBehavior, Model, MouseButton,
-    MouseDownEvent, ParentElement, Pixels, Point, Render, ScrollStrategy, SharedString, Stateful,
-    StatefulInteractiveElement as _, Styled, Subscription, Task, UniformListScrollHandle, Model,
-    ViewContext, VisualContext, WeakView, WindowContext,
+    IntoElement, KeyContext, ListHorizontalSizingBehavior, ListSizingBehavior, Model, Model,
+    MouseButton, MouseDownEvent, ParentElement, Pixels, Point, Render, ScrollStrategy,
+    SharedString, Stateful, StatefulInteractiveElement as _, Styled, Subscription, Task,
+    UniformListScrollHandle, ViewContext, VisualContext, WeakModel, WindowContext,
 };
 use itertools::Itertools;
 use language::{BufferId, BufferSnapshot, OffsetRangeExt, OutlineItem};
@@ -87,7 +87,7 @@ pub struct OutlinePanel {
     fs: Arc<dyn Fs>,
     width: Option<Pixels>,
     project: Model<Project>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     active: bool,
     pinned: bool,
     scroll_handle: UniformListScrollHandle,
@@ -555,7 +555,7 @@ impl Hash for FsEntry {
 
 struct ActiveItem {
     item_handle: Box<dyn WeakItemHandle>,
-    active_editor: WeakView<Editor>,
+    active_editor: WeakModel<Editor>,
     _buffer_search_subscription: Subscription,
     _editor_subscrpiption: Subscription,
 }
@@ -589,7 +589,7 @@ pub fn init(assets: impl AssetSource, cx: &mut AppContext) {
 
 impl OutlinePanel {
     pub async fn load(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         mut cx: AsyncWindowContext,
     ) -> anyhow::Result<Model<Self>> {
         let serialized_panel = cx
@@ -1661,7 +1661,11 @@ impl OutlinePanel {
         }
     }
 
-    fn reveal_entry_for_selection(&mut self, editor: Model<Editor>, cx: &mut ViewContext<'_, Self>) {
+    fn reveal_entry_for_selection(
+        &mut self,
+        editor: Model<Editor>,
+        cx: &mut ViewContext<'_, Self>,
+    ) {
         if !self.active || !OutlinePanelSettings::get_global(cx).auto_reveal_entries {
             return;
         }

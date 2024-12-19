@@ -5,7 +5,7 @@ use gpui::{
     HighlightStyle, Hitbox, Hsla, InputHandler, InteractiveElement, Interactivity, IntoElement,
     LayoutId, Model, ModelContext, ModifiersChangedEvent, MouseButton, MouseMoveEvent, Pixels,
     Point, ShapedLine, StatefulInteractiveElement, StrikethroughStyle, Styled, TextRun, TextStyle,
-    UTF16Selection, UnderlineStyle, Model, WeakView, WhiteSpace, WindowContext, WindowTextSystem,
+    UTF16Selection, UnderlineStyle, Model, WeakModel, WhiteSpace, WindowContext, WindowTextSystem,
 };
 use itertools::Itertools;
 use language::CursorShape;
@@ -150,7 +150,7 @@ impl LayoutRect {
 pub struct TerminalElement {
     terminal: Model<Terminal>,
     terminal_view: Model<TerminalView>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     focus: FocusHandle,
     focused: bool,
     cursor_visible: bool,
@@ -172,7 +172,7 @@ impl TerminalElement {
     pub fn new(
         terminal: Model<Terminal>,
         terminal_view: Model<TerminalView>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         focus: FocusHandle,
         focused: bool,
         cursor_visible: bool,
@@ -968,7 +968,7 @@ impl IntoElement for TerminalElement {
 
 struct TerminalInputHandler {
     terminal: Model<Terminal>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     cursor_bounds: Option<Bounds<Pixels>>,
 }
 

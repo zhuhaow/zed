@@ -8,7 +8,7 @@ use gpui::{
     div, img, px, rems, AbsoluteLength, AnyElement, ClipboardItem, DefiniteLength, Div, Element,
     ElementId, HighlightStyle, Hsla, ImageSource, InteractiveText, IntoElement, Keystroke, Length,
     Modifiers, ParentElement, Render, Resource, SharedString, Styled, StyledText, TextStyle, Model,
-    WeakView, WindowContext,
+    WeakModel, WindowContext,
 };
 use settings::Settings;
 use std::{
@@ -29,7 +29,7 @@ type CheckboxClickedCallback = Arc<Box<dyn Fn(bool, Range<usize>, &mut WindowCon
 
 #[derive(Clone)]
 pub struct RenderContext {
-    workspace: Option<WeakView<Workspace>>,
+    workspace: Option<WeakModel<Workspace>>,
     next_id: usize,
     buffer_font_family: SharedString,
     buffer_text_style: TextStyle,
@@ -45,7 +45,7 @@ pub struct RenderContext {
 }
 
 impl RenderContext {
-    pub fn new(workspace: Option<WeakView<Workspace>>, cx: &WindowContext) -> RenderContext {
+    pub fn new(workspace: Option<WeakModel<Workspace>>, cx: &WindowContext) -> RenderContext {
         let theme = cx.theme().clone();
 
         let settings = ThemeSettings::get_global(cx);
@@ -108,7 +108,7 @@ impl RenderContext {
 
 pub fn render_parsed_markdown(
     parsed: &ParsedMarkdown,
-    workspace: Option<WeakView<Workspace>>,
+    workspace: Option<WeakModel<Workspace>>,
     cx: &WindowContext,
 ) -> Vec<AnyElement> {
     let mut cx = RenderContext::new(workspace, cx);

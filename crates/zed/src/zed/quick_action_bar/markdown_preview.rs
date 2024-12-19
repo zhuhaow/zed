@@ -1,4 +1,4 @@
-use gpui::{AnyElement, Modifiers, WeakView};
+use gpui::{AnyElement, Modifiers, WeakModel};
 use markdown_preview::{
     markdown_preview_view::MarkdownPreviewView, OpenPreview, OpenPreviewToTheSide,
 };
@@ -10,7 +10,7 @@ use super::QuickActionBar;
 impl QuickActionBar {
     pub fn render_toggle_markdown_preview(
         &self,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<Self>,
     ) -> Option<AnyElement> {
         let mut active_editor_is_markdown = false;

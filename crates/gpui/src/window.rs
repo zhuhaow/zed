@@ -5,16 +5,15 @@ use crate::{
     DispatchNodeId, DispatchTree, DisplayId, Edges, Effect, Entity, EntityId, EventEmitter,
     FileDropEvent, Flatten, FontId, Global, GlobalElementId, GlyphId, GpuSpecs, Hsla, InputHandler,
     IsZero, KeyBinding, KeyContext, KeyDownEvent, KeyEvent, Keystroke, KeystrokeEvent,
-    KeystrokeObserver, LayoutId, LineLayoutIndex, Model, ModelContext, Modifiers,
-    ModifiersChangedEvent, MonochromeSprite, MouseButton, MouseEvent, MouseMoveEvent, MouseUpEvent,
-    Path, Pixels, PlatformAtlas, PlatformDisplay, PlatformInput, PlatformInputHandler,
-    PlatformWindow, Point, PolychromeSprite, PromptLevel, Quad, Render, RenderGlyphParams,
-    RenderImage, RenderImageParams, RenderSvgParams, Replay, ResizeEdge, ScaledPixels, Scene,
-    Shadow, SharedString, Size, StrikethroughStyle, Style, SubscriberSet, Subscription,
-    TaffyLayoutEngine, Task, TextStyle, TextStyleRefinement, TransformationMatrix, Underline,
-    UnderlineStyle, Model, VisualContext, WeakView, WindowAppearance, WindowBackgroundAppearance,
-    WindowBounds, WindowControls, WindowDecorations, WindowOptions, WindowParams, WindowTextSystem,
-    SUBPIXEL_VARIANTS,
+    KeystrokeObserver, LayoutId, LineLayoutIndex, Model, Modifiers, ModifiersChangedEvent,
+    MonochromeSprite, MouseButton, MouseEvent, MouseMoveEvent, MouseUpEvent, Path, Pixels,
+    PlatformAtlas, PlatformDisplay, PlatformInput, PlatformInputHandler, PlatformWindow, Point,
+    PolychromeSprite, PromptLevel, Quad, Render, RenderGlyphParams, RenderImage, RenderImageParams,
+    RenderSvgParams, Replay, ResizeEdge, ScaledPixels, Scene, Shadow, SharedString, Size,
+    StrikethroughStyle, Style, SubscriberSet, Subscription, TaffyLayoutEngine, Task, TextStyle,
+    TextStyleRefinement, TransformationMatrix, Underline, UnderlineStyle, VisualContext, WeakModel,
+    WindowAppearance, WindowBackgroundAppearance, WindowBounds, WindowControls, WindowDecorations,
+    WindowOptions, WindowParams, WindowTextSystem, SUBPIXEL_VARIANTS,
 };
 use anyhow::{anyhow, Context as _, Result};
 use collections::{FxHashMap, FxHashSet};
@@ -299,6 +298,13 @@ impl PartialEq<WeakFocusHandle> for FocusHandle {
 pub trait FocusableView: 'static + Render {
     /// Returns the focus handle associated with this view.
     fn focus_handle(&self, cx: &AppContext) -> FocusHandle;
+}
+
+impl<V: FocusableView> Model<V> {
+    /// Returns the focus handle associated with this model if it implements FocusableView.
+    pub fn focus_handle(&self, cx: &AppContext) -> FocusHandle {
+        self.read(cx).focus_handle(cx)
+    }
 }
 
 /// ManagedView is a view (like a Modal, Popover, Menu, etc.)
@@ -3823,14 +3829,15 @@ impl WindowContext<'_> {
 
 impl Context for WindowContext<'_> {
     type Result<T> = T;
+    type EntityContext<'a, T: 'static> = ViewContext<'a, T>;
 
-    fn new_model<T>(&mut self, build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T) -> Model<T>
+    fn new_model<T>(&mut self, build_model: impl FnOnce(&mut ViewContext<'_, T>) -> T) -> Model<T>
     where
         T: 'static,
     {
         let slot = self.app.entities.reserve();
-        let model = build_model(&mut ModelContext::new(&mut *self.app, slot.downgrade()));
-        self.entities.insert(slot, model)
+        let model = build_model(&mut ViewContext::new(self.app, self.window, &*slot));
+        self.app.entities.insert(slot, model)
     }
 
     fn reserve_model<T: 'static>(&mut self) -> Self::Result<crate::Reservation<T>> {
@@ -3840,20 +3847,24 @@ impl Context for WindowContext<'_> {
     fn insert_model<T: 'static>(
         &mut self,
         reservation: crate::Reservation<T>,
-        build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T,
+        build_model: impl FnOnce(&mut ViewContext<'_, T>) -> T,
     ) -> Self::Result<Model<T>> {
-        self.app.insert_model(reservation, build_model)
+        self.app.update(|cx| {
+            let slot = reservation.0;
+            let entity = build_model(&mut ViewContext::new(cx, self.window, &slot));
+            cx.entities.insert(slot, entity)
+        })
     }
 
     fn update_model<T: 'static, R>(
         &mut self,
         model: &Model<T>,
-        update: impl FnOnce(&mut T, &mut ModelContext<'_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut ViewContext<'_, T>) -> R,
     ) -> R {
         let mut entity = self.entities.lease(model);
         let result = update(
             &mut *entity,
-            &mut ModelContext::new(&mut *self.app, model.downgrade()),
+            &mut ViewContext::new(self.app, self.window, model),
         );
         self.entities.end_lease(entity);
         result
@@ -3915,9 +3926,7 @@ impl VisualContext for WindowContext<'_> {
         V: 'static + Render,
     {
         let slot = self.app.entities.reserve();
-        let view = Model {
-            model: slot.clone(),
-        };
+        let view = slot.clone();
         let mut cx = ViewContext::new(&mut *self.app, &mut *self.window, &view);
         let entity = build_view_state(&mut cx);
         cx.entities.insert(slot, entity);
@@ -3941,7 +3950,7 @@ impl VisualContext for WindowContext<'_> {
         view: &Model<T>,
         update: impl FnOnce(&mut T, &mut ViewContext<'_, T>) -> R,
     ) -> Self::Result<R> {
-        let mut lease = self.app.entities.lease(&view.model);
+        let mut lease = self.app.entities.lease(view);
         let mut cx = ViewContext::new(&mut *self.app, &mut *self.window, view);
         let result = update(&mut *lease, &mut cx);
         cx.app.entities.end_lease(lease);
@@ -4044,7 +4053,7 @@ impl<T> BorrowWindow for T where T: BorrowMut<AppContext> + BorrowMut<Window> {}
 /// When you call [`View::update`], you're passed a `&mut V` and an `&mut ViewContext<V>`.
 pub struct ViewContext<'a, V> {
     window_cx: WindowContext<'a>,
-    view: &'a Model<V>,
+    entity: &'a Model<V>,
 }
 
 impl<V> Borrow<AppContext> for ViewContext<'_, V> {
@@ -4075,23 +4084,25 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     pub(crate) fn new(app: &'a mut AppContext, window: &'a mut Window, view: &'a Model<V>) -> Self {
         Self {
             window_cx: WindowContext::new(app, window),
-            view,
+            entity: view,
         }
     }
 
     /// Get the entity_id of this view.
     pub fn entity_id(&self) -> EntityId {
-        self.view.entity_id()
+        self.entity.entity_id()
     }
 
+    // todo! unify with model method
     /// Get the view pointer underlying this context.
     pub fn view(&self) -> &Model<V> {
-        self.view
+        self.entity
     }
 
+    // todo! unify with view method
     /// Get the model underlying this view.
     pub fn model(&self) -> &Model<V> {
-        &self.view.model
+        self.entity
     }
 
     /// Access the underlying window context.
@@ -4197,7 +4208,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     ) -> Subscription {
         let window_handle = self.window.handle;
         let (subscription, activate) = self.app.release_listeners.insert(
-            self.view.model.entity_id,
+            self.entity.entity_id,
             Box::new(move |this, cx| {
                 let this = this.downcast_mut().expect("invalid entity type");
                 on_release(this, window_handle, cx)
@@ -4237,7 +4248,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     /// Indicate that this view has changed, which will invoke any observers and also mark the window as dirty.
     /// If this view or any of its ancestors are *cached*, notifying it will cause it or its ancestors to be redrawn.
     pub fn notify(&mut self) {
-        self.window_cx.notify(Some(self.view.entity_id()));
+        self.window_cx.notify(Some(self.entity.entity_id()));
     }
 
     /// Register a callback to be invoked when the window is resized.
@@ -4245,7 +4256,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         &self,
         mut callback: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let (subscription, activate) = self.window.bounds_observers.insert(
             (),
             Box::new(move |cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
@@ -4259,7 +4270,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         &self,
         mut callback: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let (subscription, activate) = self.window.activation_observers.insert(
             (),
             Box::new(move |cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
@@ -4273,7 +4284,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         &self,
         mut callback: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let (subscription, activate) = self.window.appearance_observers.insert(
             (),
             Box::new(move |cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
@@ -4298,7 +4309,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
             subscription
         }
 
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         inner(
             &mut self.keystroke_observers,
             Box::new(move |event, cx| {
@@ -4317,7 +4328,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         &self,
         mut callback: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let (subscription, activate) = self.window.pending_input_observers.insert(
             (),
             Box::new(move |cx| view.update(cx, |view, cx| callback(view, cx)).is_ok()),
@@ -4333,7 +4344,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         handle: &FocusHandle,
         mut listener: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let focus_id = handle.id;
         let (subscription, activate) =
             self.window.new_focus_listener(Box::new(move |event, cx| {
@@ -4358,7 +4369,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         handle: &FocusHandle,
         mut listener: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let focus_id = handle.id;
         let (subscription, activate) =
             self.window.new_focus_listener(Box::new(move |event, cx| {
@@ -4380,7 +4391,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         handle: &FocusHandle,
         mut listener: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let focus_id = handle.id;
         let (subscription, activate) =
             self.window.new_focus_listener(Box::new(move |event, cx| {
@@ -4405,7 +4416,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         &self,
         mut listener: impl FnMut(&mut V, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let (subscription, activate) = self.window.focus_lost_listeners.insert(
             (),
             Box::new(move |cx| view.update(cx, |view, cx| listener(view, cx)).is_ok()),
@@ -4421,7 +4432,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         handle: &FocusHandle,
         mut listener: impl FnMut(&mut V, FocusOutEvent, &mut ViewContext<V>) + 'static,
     ) -> Subscription {
-        let view = self.view.downgrade();
+        let view = self.entity.downgrade();
         let focus_id = handle.id;
         let (subscription, activate) =
             self.window.new_focus_listener(Box::new(move |event, cx| {
@@ -4448,7 +4459,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     /// The given callback is invoked with a [`WeakView<V>`] to avoid leaking the view for a long-running process.
     /// It's also given an [`AsyncWindowContext`], which can be used to access the state of the view across await points.
     /// The returned future will be polled on the main thread.
-    pub fn spawn<Fut, R>(&self, f: impl FnOnce(WeakView<V>, AsyncWindowContext) -> Fut) -> Task<R>
+    pub fn spawn<Fut, R>(&self, f: impl FnOnce(WeakModel<V>, AsyncWindowContext) -> Fut) -> Task<R>
     where
         R: 'static,
         Fut: Future<Output = R> + 'static,
@@ -4497,7 +4508,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         Evt: 'static,
         V: EventEmitter<Evt>,
     {
-        let emitter = self.view.model.entity_id;
+        let emitter = self.entity.entity_id;
         self.app.push_effect(Effect::Emit {
             emitter,
             event_type: TypeId::of::<Evt>(),
@@ -4531,10 +4542,11 @@ impl<'a, V: 'static> ViewContext<'a, V> {
 
 impl<V> Context for ViewContext<'_, V> {
     type Result<U> = U;
+    type EntityContext<'a, T: 'static> = ViewContext<'a, T>;
 
     fn new_model<T: 'static>(
         &mut self,
-        build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T,
+        build_model: impl FnOnce(&mut ViewContext<'_, T>) -> T,
     ) -> Model<T> {
         self.window_cx.new_model(build_model)
     }
@@ -4546,7 +4558,7 @@ impl<V> Context for ViewContext<'_, V> {
     fn insert_model<T: 'static>(
         &mut self,
         reservation: crate::Reservation<T>,
-        build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T,
+        build_model: impl FnOnce(&mut ViewContext<'_, T>) -> T,
     ) -> Self::Result<Model<T>> {
         self.window_cx.insert_model(reservation, build_model)
     }
@@ -4554,7 +4566,7 @@ impl<V> Context for ViewContext<'_, V> {
     fn update_model<T: 'static, R>(
         &mut self,
         model: &Model<T>,
-        update: impl FnOnce(&mut T, &mut ModelContext<'_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut ViewContext<'_, T>) -> R,
     ) -> R {
         self.window_cx.update_model(model, update)
     }

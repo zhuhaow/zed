@@ -6,7 +6,7 @@ use assistant_slash_command::{
 use collections::{HashMap, HashSet};
 use editor::Editor;
 use futures::future::join_all;
-use gpui::{Entity, Task, WeakView};
+use gpui::{Entity, Task, WeakModel};
 use language::{BufferSnapshot, CodeLabel, HighlightId, LspAdapterDelegate};
 use std::{
     path::PathBuf,
@@ -51,7 +51,7 @@ impl SlashCommand for TabSlashCommand {
         self: Arc<Self>,
         arguments: &[String],
         cancel: Arc<AtomicBool>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         let mut has_all_tabs_completion_item = false;
@@ -137,7 +137,7 @@ impl SlashCommand for TabSlashCommand {
         arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: BufferSnapshot,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {
@@ -160,7 +160,7 @@ impl SlashCommand for TabSlashCommand {
 }
 
 fn tab_items_for_queries(
-    workspace: Option<WeakView<Workspace>>,
+    workspace: Option<WeakModel<Workspace>>,
     queries: &[String],
     cancel: Arc<AtomicBool>,
     strict_match: bool,

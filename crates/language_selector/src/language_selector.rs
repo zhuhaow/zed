@@ -8,7 +8,7 @@ use file_icons::FileIcons;
 use fuzzy::{match_strings, StringMatch, StringMatchCandidate};
 use gpui::{
     actions, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Model,
-    ParentElement, Render, Styled, Model, ViewContext, VisualContext, WeakView,
+    ParentElement, Render, Styled, Model, ViewContext, VisualContext, WeakModel,
 };
 use language::{Buffer, LanguageMatcher, LanguageName, LanguageRegistry};
 use picker::{Picker, PickerDelegate};
@@ -85,7 +85,7 @@ impl EventEmitter<DismissEvent> for LanguageSelector {}
 impl ModalView for LanguageSelector {}
 
 pub struct LanguageSelectorDelegate {
-    language_selector: WeakView<LanguageSelector>,
+    language_selector: WeakModel<LanguageSelector>,
     buffer: Model<Buffer>,
     project: Model<Project>,
     language_registry: Arc<LanguageRegistry>,
@@ -96,7 +96,7 @@ pub struct LanguageSelectorDelegate {
 
 impl LanguageSelectorDelegate {
     fn new(
-        language_selector: WeakView<LanguageSelector>,
+        language_selector: WeakModel<LanguageSelector>,
         buffer: Model<Buffer>,
         project: Model<Project>,
         language_registry: Arc<LanguageRegistry>,

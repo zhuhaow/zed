@@ -3,7 +3,7 @@ use std::sync::Arc;
 use feature_flags::ZedPro;
 use gpui::{
     Action, AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Task,
-    Model, WeakView,
+    Model, WeakModel,
 };
 use language_model::{LanguageModel, LanguageModelAvailability, LanguageModelRegistry};
 use picker::{Picker, PickerDelegate};
@@ -120,7 +120,7 @@ struct ModelInfo {
 }
 
 pub struct LanguageModelPickerDelegate {
-    language_model_selector: WeakView<LanguageModelSelector>,
+    language_model_selector: WeakModel<LanguageModelSelector>,
     on_model_changed: OnModelChanged,
     all_models: Vec<ModelInfo>,
     filtered_models: Vec<ModelInfo>,

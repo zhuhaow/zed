@@ -13,8 +13,8 @@ use editor::{
 use fs::Fs;
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use gpui::{
-    AppContext, Context, EventEmitter, FocusHandle, FocusableView, Global, Model, ModelContext,
-    Subscription, Task, TextStyle, UpdateGlobal, Model, WeakView,
+    AppContext, Context, EventEmitter, FocusHandle, FocusableView, Global, Model, Model,
+    ModelContext, Subscription, Task, TextStyle, UpdateGlobal, WeakModel,
 };
 use language::Buffer;
 use language_model::{
@@ -88,7 +88,7 @@ impl TerminalInlineAssistant {
     pub fn assist(
         &mut self,
         terminal_view: &Model<TerminalView>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         assistant_panel: Option<&Model<AssistantPanel>>,
         initial_prompt: Option<String>,
         cx: &mut WindowContext,
@@ -392,10 +392,10 @@ impl TerminalInlineAssistant {
 }
 
 struct TerminalInlineAssist {
-    terminal: WeakView<TerminalView>,
+    terminal: WeakModel<TerminalView>,
     prompt_editor: Option<Model<PromptEditor>>,
     codegen: Model<Codegen>,
-    workspace: Option<WeakView<Workspace>>,
+    workspace: Option<WeakModel<Workspace>>,
     include_context: bool,
     _subscriptions: Vec<Subscription>,
 }
@@ -406,7 +406,7 @@ impl TerminalInlineAssist {
         terminal: &Model<TerminalView>,
         include_context: bool,
         prompt_editor: Model<PromptEditor>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         cx: &mut WindowContext,
     ) -> Self {
         let codegen = prompt_editor.read(cx).codegen.clone();
@@ -489,7 +489,7 @@ struct PromptEditor {
     pending_token_count: Task<Result<()>>,
     token_count: Option<usize>,
     _token_count_subscriptions: Vec<Subscription>,
-    workspace: Option<WeakView<Workspace>>,
+    workspace: Option<WeakModel<Workspace>>,
 }
 
 impl EventEmitter<PromptEditorEvent> for PromptEditor {}
@@ -680,7 +680,7 @@ impl PromptEditor {
         prompt_buffer: Model<MultiBuffer>,
         codegen: Model<Codegen>,
         assistant_panel: Option<&Model<AssistantPanel>>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         fs: Arc<dyn Fs>,
         cx: &mut ViewContext<Self>,
     ) -> Self {

@@ -14,7 +14,7 @@ use client::{
 use futures::{channel::mpsc, StreamExt};
 use gpui::{
     AnyElement, AnyView, AppContext, Entity, EntityId, EventEmitter, FocusHandle, FocusableView,
-    Font, HighlightStyle, Model, Pixels, Point, SharedString, Task, Model, ViewContext, WeakView,
+    Font, HighlightStyle, Model, Pixels, Point, SharedString, Task, ViewContext, WeakModel,
     WindowContext,
 };
 use project::{Project, ProjectEntryId, ProjectPath};
@@ -333,7 +333,7 @@ pub trait SerializableItem: Item {
 
     fn deserialize(
         _project: Model<Project>,
-        _workspace: WeakView<Workspace>,
+        _workspace: WeakModel<Workspace>,
         _workspace_id: WorkspaceId,
         _item_id: ItemId,
         _cx: &mut WindowContext,
@@ -897,7 +897,7 @@ impl Clone for Box<dyn ItemHandle> {
     }
 }
 
-impl<T: Item> WeakItemHandle for WeakView<T> {
+impl<T: Item> WeakItemHandle for WeakModel<T> {
     fn id(&self) -> EntityId {
         self.entity_id()
     }
@@ -1044,7 +1044,7 @@ pub trait WeakFollowableItemHandle: Send + Sync {
     fn upgrade(&self) -> Option<Box<dyn FollowableItemHandle>>;
 }
 
-impl<T: FollowableItem> WeakFollowableItemHandle for WeakView<T> {
+impl<T: FollowableItem> WeakFollowableItemHandle for WeakModel<T> {
     fn upgrade(&self) -> Option<Box<dyn FollowableItemHandle>> {
         Some(Box::new(self.upgrade()?))
     }
@@ -1056,8 +1056,8 @@ pub mod test {
     use crate::{ItemId, ItemNavHistory, Workspace, WorkspaceId};
     use gpui::{
         AnyElement, AppContext, Context as _, EntityId, EventEmitter, FocusableView,
-        InteractiveElement, IntoElement, Model, Render, SharedString, Task, Model, ViewContext,
-        VisualContext, WeakView,
+        InteractiveElement, IntoElement, Model, Render, SharedString, Task, ViewContext,
+        VisualContext, WeakModel,
     };
     use project::{Project, ProjectEntryId, ProjectPath, WorktreeId};
     use std::{any::Any, cell::Cell, path::Path};
@@ -1364,7 +1364,7 @@ pub mod test {
 
         fn deserialize(
             _project: Model<Project>,
-            _workspace: WeakView<Workspace>,
+            _workspace: WeakModel<Workspace>,
             workspace_id: WorkspaceId,
             _item_id: ItemId,
             cx: &mut WindowContext,

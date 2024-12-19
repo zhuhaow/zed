@@ -1,7 +1,6 @@
 use crate::{
     AnyView, AnyWindowHandle, AppContext, AsyncAppContext, Context, Effect, Entity, EntityId,
-    EventEmitter, Model, Reservation, Subscription, Task, Model, WeakModel, WindowContext,
-    WindowHandle,
+    EventEmitter, Model, Reservation, Subscription, Task, WeakModel, WindowContext, WindowHandle,
 };
 use anyhow::Result;
 use derive_more::{Deref, DerefMut};
@@ -222,6 +221,7 @@ impl<'a, T> ModelContext<'a, T> {
 
 impl<'a, T> Context for ModelContext<'a, T> {
     type Result<U> = U;
+    type EntityContext<'b, U: 'static> = ModelContext<'b, U>;
 
     fn new_model<U: 'static>(
         &mut self,

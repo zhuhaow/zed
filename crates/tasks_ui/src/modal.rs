@@ -5,7 +5,7 @@ use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     rems, Action, AnyElement, AppContext, DismissEvent, EventEmitter, FocusableView,
     InteractiveElement, Model, ParentElement, Render, SharedString, Styled, Subscription, Task,
-    Model, ViewContext, VisualContext, WeakView,
+    Model, ViewContext, VisualContext, WeakModel,
 };
 use picker::{highlighted_match_with_paths::HighlightedText, Picker, PickerDelegate};
 use project::{task_store::TaskStore, TaskSourceKind};
@@ -29,7 +29,7 @@ pub(crate) struct TasksModalDelegate {
     divider_index: Option<usize>,
     matches: Vec<StringMatch>,
     selected_index: usize,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     prompt: String,
     task_context: TaskContext,
     placeholder_text: Arc<str>,
@@ -47,7 +47,7 @@ impl TasksModalDelegate {
         task_store: Model<TaskStore>,
         task_context: TaskContext,
         task_overrides: Option<TaskOverrides>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
     ) -> Self {
         let placeholder_text = if let Some(TaskOverrides {
             reveal_target: Some(RevealTarget::Center),
@@ -125,7 +125,7 @@ impl TasksModal {
         task_store: Model<TaskStore>,
         task_context: TaskContext,
         task_overrides: Option<TaskOverrides>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let picker = cx.new_view(|cx| {

@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::{bail, Context as _, Result};
 use futures::AsyncReadExt as _;
-use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, Model, WeakModel, WeakView};
+use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, Model, WeakModel, WeakModel};
 use html_to_markdown::{convert_html_to_markdown, markdown, TagHandler};
 use http_client::{AsyncBody, HttpClientWithUrl};
 use picker::{Picker, PickerDelegate};
@@ -21,8 +21,8 @@ pub struct FetchContextPicker {
 
 impl FetchContextPicker {
     pub fn new(
-        context_picker: WeakView<ContextPicker>,
-        workspace: WeakView<Workspace>,
+        context_picker: WeakModel<ContextPicker>,
+        workspace: WeakModel<Workspace>,
         context_store: WeakModel<ContextStore>,
         confirm_behavior: ConfirmBehavior,
         cx: &mut ViewContext<Self>,
@@ -59,8 +59,8 @@ enum ContentType {
 }
 
 pub struct FetchContextPickerDelegate {
-    context_picker: WeakView<ContextPicker>,
-    workspace: WeakView<Workspace>,
+    context_picker: WeakModel<ContextPicker>,
+    workspace: WeakModel<Workspace>,
     context_store: WeakModel<ContextStore>,
     confirm_behavior: ConfirmBehavior,
     url: String,
@@ -68,8 +68,8 @@ pub struct FetchContextPickerDelegate {
 
 impl FetchContextPickerDelegate {
     pub fn new(
-        context_picker: WeakView<ContextPicker>,
-        workspace: WeakView<Workspace>,
+        context_picker: WeakModel<ContextPicker>,
+        workspace: WeakModel<Workspace>,
         context_store: WeakModel<ContextStore>,
         confirm_behavior: ConfirmBehavior,
     ) -> Self {

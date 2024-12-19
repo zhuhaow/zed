@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use editor::Editor;
 use gpui::{
-    EventEmitter, IntoElement, ParentElement, Render, Styled, Subscription, Task, Model,
-    ViewContext, WeakView,
+    EventEmitter, IntoElement, Model, ParentElement, Render, Styled, Subscription, Task,
+    ViewContext, WeakModel,
 };
 use language::Diagnostic;
 use ui::{h_flex, prelude::*, Button, ButtonLike, Color, Icon, IconName, Label, Tooltip};
@@ -13,8 +13,8 @@ use crate::{Deploy, ProjectDiagnosticsEditor};
 
 pub struct DiagnosticIndicator {
     summary: project::DiagnosticSummary,
-    active_editor: Option<WeakView<Editor>>,
-    workspace: WeakView<Workspace>,
+    active_editor: Option<WeakModel<Editor>>,
+    workspace: WeakModel<Workspace>,
     current_diagnostic: Option<Diagnostic>,
     _observe_active_editor: Option<Subscription>,
     diagnostics_update: Task<()>,

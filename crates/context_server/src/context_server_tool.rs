@@ -51,7 +51,7 @@ impl Tool for ContextServerTool {
     fn run(
         self: std::sync::Arc<Self>,
         input: serde_json::Value,
-        _workspace: gpui::WeakView<workspace::Workspace>,
+        _workspace: gpui::WeakModel<workspace::Workspace>,
         cx: &mut ui::WindowContext,
     ) -> gpui::Task<gpui::Result<String>> {
         if let Some(server) = self.server_manager.read(cx).get_server(&self.server_id) {

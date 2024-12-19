@@ -8,8 +8,8 @@ use extension_host::ExtensionStore;
 use futures::channel::oneshot;
 use gpui::{
     percentage, Animation, AnimationExt, AnyWindowHandle, AsyncAppContext, DismissEvent,
-    EventEmitter, FocusableView, FontFeatures, ParentElement as _, PromptLevel, Render,
-    SemanticVersion, SharedString, Task, TextStyleRefinement, Transformation, Model, WeakView,
+    EventEmitter, FocusableView, FontFeatures, Model, ParentElement as _, PromptLevel, Render,
+    SemanticVersion, SharedString, Task, TextStyleRefinement, Transformation, WeakModel,
 };
 use gpui::{AppContext, Model};
 
@@ -414,7 +414,7 @@ impl ModalView for SshConnectionModal {
 #[derive(Clone)]
 pub struct SshClientDelegate {
     window: AnyWindowHandle,
-    ui: WeakView<SshPrompt>,
+    ui: WeakModel<SshPrompt>,
     known_password: Option<String>,
 }
 

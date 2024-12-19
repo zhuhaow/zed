@@ -36,8 +36,8 @@ use gpui::{
     AsyncWindowContext, Bounds, CursorStyle, Decorations, DragMoveEvent, Entity as _, EntityId,
     EventEmitter, Flatten, FocusHandle, FocusableView, Global, Hsla, KeyContext, Keystroke,
     ManagedView, Model, ModelContext, MouseButton, PathPromptOptions, Point, PromptLevel, Render,
-    ResizeEdge, Size, Stateful, Subscription, Task, Tiling, Model, WeakView, WindowBounds,
-    WindowHandle, WindowId, WindowOptions,
+    ResizeEdge, Size, Stateful, Subscription, Task, Tiling, WeakModel, WindowBounds, WindowHandle,
+    WindowId, WindowOptions,
 };
 pub use item::{
     FollowableItem, FollowableItemHandle, Item, ItemHandle, ItemSettings, PreviewTabsSettings,
@@ -477,7 +477,7 @@ impl FollowableViewRegistry {
 struct SerializableItemDescriptor {
     deserialize: fn(
         Model<Project>,
-        WeakView<Workspace>,
+        WeakModel<Workspace>,
         WorkspaceId,
         ItemId,
         &mut ViewContext<Pane>,
@@ -498,7 +498,7 @@ impl SerializableItemRegistry {
     fn deserialize(
         item_kind: &str,
         project: Model<Project>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         workspace_id: WorkspaceId,
         item_item: ItemId,
         cx: &mut ViewContext<Pane>,
@@ -696,12 +696,12 @@ pub enum Event {
     ItemRemoved,
     ActiveItemChanged,
     UserSavedItem {
-        pane: WeakView<Pane>,
+        pane: WeakModel<Pane>,
         item: Box<dyn WeakItemHandle>,
         save_intent: SaveIntent,
     },
     ContactRequestedJoin(u64),
-    WorkspaceCreated(WeakView<Workspace>),
+    WorkspaceCreated(WeakModel<Workspace>),
     SpawnTask {
         action: Box<SpawnInTerminal>,
     },
@@ -740,7 +740,7 @@ type PromptForOpenPath = Box<
 /// The `Workspace` owns everybody's state and serves as a default, "global context",
 /// that can be used to register a global action to be triggered from any place in the window.
 pub struct Workspace {
-    weak_self: WeakView<Self>,
+    weak_self: WeakModel<Self>,
     workspace_actions: Vec<Box<dyn Fn(Div, &mut ViewContext<Self>) -> Div>>,
     zoomed: Option<AnyWeakView>,
     zoomed_position: Option<DockPosition>,
@@ -749,9 +749,9 @@ pub struct Workspace {
     bottom_dock: Model<Dock>,
     right_dock: Model<Dock>,
     panes: Vec<Model<Pane>>,
-    panes_by_item: HashMap<EntityId, WeakView<Pane>>,
+    panes_by_item: HashMap<EntityId, WeakModel<Pane>>,
     active_pane: Model<Pane>,
-    last_active_center_pane: Option<WeakView<Pane>>,
+    last_active_center_pane: Option<WeakModel<Pane>>,
     last_active_view_id: Option<proto::ViewId>,
     status_bar: Model<StatusBar>,
     modal_layer: Model<ModalLayer>,
@@ -759,7 +759,7 @@ pub struct Workspace {
     notifications: Vec<(NotificationId, Box<dyn NotificationHandle>)>,
     project: Model<Project>,
     follower_states: HashMap<PeerId, FollowerState>,
-    last_leaders_by_pane: HashMap<WeakView<Pane>, PeerId>,
+    last_leaders_by_pane: HashMap<WeakModel<Pane>, PeerId>,
     window_edited: bool,
     active_call: Option<(Model<ActiveCall>, Vec<Subscription>)>,
     leader_updates_tx: mpsc::UnboundedSender<(PeerId, proto::UpdateFollowers)>,
@@ -1253,7 +1253,7 @@ impl Workspace {
         })
     }
 
-    pub fn weak_handle(&self) -> WeakView<Self> {
+    pub fn weak_handle(&self) -> WeakModel<Self> {
         self.weak_self.clone()
     }
 
@@ -1363,7 +1363,7 @@ impl Workspace {
 
     fn navigate_history(
         &mut self,
-        pane: WeakView<Pane>,
+        pane: WeakModel<Pane>,
         mode: NavigationMode,
         cx: &mut ViewContext<Workspace>,
     ) -> Task<Result<()>> {
@@ -1488,7 +1488,7 @@ impl Workspace {
 
     pub fn go_back(
         &mut self,
-        pane: WeakView<Pane>,
+        pane: WeakModel<Pane>,
         cx: &mut ViewContext<Workspace>,
     ) -> Task<Result<()>> {
         self.navigate_history(pane, NavigationMode::GoingBack, cx)
@@ -1496,7 +1496,7 @@ impl Workspace {
 
     pub fn go_forward(
         &mut self,
-        pane: WeakView<Pane>,
+        pane: WeakModel<Pane>,
         cx: &mut ViewContext<Workspace>,
     ) -> Task<Result<()>> {
         self.navigate_history(pane, NavigationMode::GoingForward, cx)
@@ -1991,7 +1991,7 @@ impl Workspace {
         &mut self,
         mut abs_paths: Vec<PathBuf>,
         visible: OpenVisible,
-        pane: Option<WeakView<Pane>>,
+        pane: Option<WeakModel<Pane>>,
         cx: &mut ViewContext<Self>,
     ) -> Task<Vec<Option<Result<Box<dyn ItemHandle>, anyhow::Error>>>> {
         log::info!("open paths {abs_paths:?}");
@@ -2618,7 +2618,7 @@ impl Workspace {
     pub fn open_path(
         &mut self,
         path: impl Into<ProjectPath>,
-        pane: Option<WeakView<Pane>>,
+        pane: Option<WeakModel<Pane>>,
         focus_item: bool,
         cx: &mut WindowContext,
     ) -> Task<Result<Box<dyn ItemHandle>, anyhow::Error>> {
@@ -2628,7 +2628,7 @@ impl Workspace {
     pub fn open_path_preview(
         &mut self,
         path: impl Into<ProjectPath>,
-        pane: Option<WeakView<Pane>>,
+        pane: Option<WeakModel<Pane>>,
         focus_item: bool,
         allow_preview: bool,
         cx: &mut WindowContext,
@@ -3191,9 +3191,9 @@ impl Workspace {
 
     pub fn split_pane_with_item(
         &mut self,
-        pane_to_split: WeakView<Pane>,
+        pane_to_split: WeakModel<Pane>,
         split_direction: SplitDirection,
-        from: WeakView<Pane>,
+        from: WeakModel<Pane>,
         item_id_to_move: EntityId,
         cx: &mut ViewContext<Self>,
     ) {
@@ -3214,7 +3214,7 @@ impl Workspace {
 
     pub fn split_pane_with_project_entry(
         &mut self,
-        pane_to_split: WeakView<Pane>,
+        pane_to_split: WeakModel<Pane>,
         split_direction: SplitDirection,
         project_entry: ProjectEntryId,
         cx: &mut ViewContext<Self>,
@@ -3632,7 +3632,7 @@ impl Workspace {
     }
 
     async fn process_leader_update(
-        this: &WeakView<Self>,
+        this: &WeakModel<Self>,
         leader_id: PeerId,
         update: proto::UpdateFollowers,
         cx: &mut AsyncWindowContext,
@@ -3704,7 +3704,7 @@ impl Workspace {
     }
 
     async fn add_view_from_leader(
-        this: WeakView<Self>,
+        this: WeakModel<Self>,
         leader_id: PeerId,
         view: &proto::View,
         cx: &mut AsyncWindowContext,
@@ -4266,7 +4266,7 @@ impl Workspace {
     }
 
     async fn serialize_items(
-        this: &WeakView<Self>,
+        this: &WeakModel<Self>,
         items_rx: UnboundedReceiver<Box<dyn SerializableItemHandle>>,
         cx: &mut AsyncWindowContext,
     ) -> Result<()> {
@@ -6149,7 +6149,11 @@ fn resize_edge(
     }
 }
 
-fn join_pane_into_active(active_pane: &Model<Pane>, pane: &Model<Pane>, cx: &mut WindowContext<'_>) {
+fn join_pane_into_active(
+    active_pane: &Model<Pane>,
+    pane: &Model<Pane>,
+    cx: &mut WindowContext<'_>,
+) {
     if pane == active_pane {
         return;
     } else if pane.read(cx).items_len() == 0 {

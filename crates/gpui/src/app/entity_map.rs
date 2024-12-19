@@ -1,4 +1,4 @@
-use crate::{seal::Sealed, AppContext, Context, Entity, ModelContext};
+use crate::{seal::Sealed, AppContext, Context, Entity};
 use anyhow::{anyhow, Result};
 use derive_more::{Deref, DerefMut};
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
@@ -414,7 +414,7 @@ impl<T: 'static> Model<T> {
     pub fn update<C, R>(
         &self,
         cx: &mut C,
-        update: impl FnOnce(&mut T, &mut ModelContext<'_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut C::EntityContext<'_, T>) -> R,
     ) -> C::Result<R>
     where
         C: Context,
@@ -608,7 +608,7 @@ impl<T: 'static> WeakModel<T> {
     pub fn update<C, R>(
         &self,
         cx: &mut C,
-        update: impl FnOnce(&mut T, &mut ModelContext<'_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut C::EntityContext<'_, T>) -> R,
     ) -> Result<R>
     where
         C: Context,

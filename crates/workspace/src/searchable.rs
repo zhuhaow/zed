@@ -3,7 +3,7 @@ use std::{any::Any, sync::Arc};
 use any_vec::AnyVec;
 use gpui::{
     AnyView, AnyWeakView, AppContext, EventEmitter, Subscription, Task, Model, ViewContext,
-    WeakView, WindowContext,
+    WeakModel, WindowContext,
 };
 use project::search::SearchQuery;
 
@@ -310,7 +310,7 @@ pub trait WeakSearchableItemHandle: WeakItemHandle {
     fn into_any(self) -> AnyWeakView;
 }
 
-impl<T: SearchableItem> WeakSearchableItemHandle for WeakView<T> {
+impl<T: SearchableItem> WeakSearchableItemHandle for WeakModel<T> {
     fn upgrade(&self, _cx: &AppContext) -> Option<Box<dyn SearchableItemHandle>> {
         Some(Box::new(self.upgrade()?))
     }

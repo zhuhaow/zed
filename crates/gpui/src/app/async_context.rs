@@ -1,8 +1,7 @@
 use crate::{
     AnyView, AnyWindowHandle, AppCell, AppContext, BackgroundExecutor, BorrowAppContext, Context,
     DismissEvent, FocusableView, ForegroundExecutor, Global, Model, ModelContext, PromptLevel,
-    Render, Reservation, Result, Task, Model, ViewContext, VisualContext, WindowContext,
-    WindowHandle,
+    Render, Reservation, Result, Task, ViewContext, VisualContext, WindowContext, WindowHandle,
 };
 use anyhow::{anyhow, Context as _};
 use derive_more::{Deref, DerefMut};
@@ -21,6 +20,7 @@ pub struct AsyncAppContext {
 
 impl Context for AsyncAppContext {
     type Result<T> = Result<T>;
+    type EntityContext<'a, T: 'static> = ModelContext<'a, T>;
 
     fn new_model<T: 'static>(
         &mut self,
@@ -303,10 +303,11 @@ impl AsyncWindowContext {
 
 impl Context for AsyncWindowContext {
     type Result<T> = Result<T>;
+    type EntityContext<'a, T: 'static> = ViewContext<'a, T>;
 
     fn new_model<T>(
         &mut self,
-        build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T,
+        build_model: impl FnOnce(&mut ViewContext<'_, T>) -> T,
     ) -> Result<Model<T>>
     where
         T: 'static,
@@ -321,7 +322,7 @@ impl Context for AsyncWindowContext {
     fn insert_model<T: 'static>(
         &mut self,
         reservation: Reservation<T>,
-        build_model: impl FnOnce(&mut ModelContext<'_, T>) -> T,
+        build_model: impl FnOnce(&mut ViewContext<'_, T>) -> T,
     ) -> Self::Result<Model<T>> {
         self.window
             .update(self, |_, cx| cx.insert_model(reservation, build_model))
@@ -330,7 +331,7 @@ impl Context for AsyncWindowContext {
     fn update_model<T: 'static, R>(
         &mut self,
         handle: &Model<T>,
-        update: impl FnOnce(&mut T, &mut ModelContext<'_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut ViewContext<'_, T>) -> R,
     ) -> Result<R> {
         self.window
             .update(self, |_, cx| cx.update_model(handle, update))

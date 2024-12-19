@@ -72,7 +72,7 @@ struct SerializedGitPanel {
 }
 
 pub struct GitPanel {
-    _workspace: WeakView<Workspace>,
+    _workspace: WeakModel<Workspace>,
     current_modifiers: Modifiers,
     focus_handle: FocusHandle,
     fs: Arc<dyn Fs>,
@@ -93,7 +93,7 @@ pub struct GitPanel {
 
 impl GitPanel {
     pub fn load(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: AsyncWindowContext,
     ) -> Task<Result<Model<Self>>> {
         cx.spawn(|mut cx| async move {

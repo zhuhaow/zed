@@ -6,7 +6,7 @@ pub use crate::slash_command_registry::*;
 use anyhow::Result;
 use futures::stream::{self, BoxStream};
 use futures::StreamExt;
-use gpui::{AnyElement, AppContext, ElementId, SharedString, Task, WeakView, WindowContext};
+use gpui::{AnyElement, AppContext, ElementId, SharedString, Task, WeakModel, WindowContext};
 use language::{BufferSnapshot, CodeLabel, LspAdapterDelegate, OffsetRangeExt};
 pub use language_model::Role;
 use serde::{Deserialize, Serialize};
@@ -78,7 +78,7 @@ pub trait SlashCommand: 'static + Send + Sync {
         self: Arc<Self>,
         arguments: &[String],
         cancel: Arc<AtomicBool>,
-        workspace: Option<WeakView<Workspace>>,
+        workspace: Option<WeakModel<Workspace>>,
         cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>>;
     fn requires_argument(&self) -> bool;
@@ -90,7 +90,7 @@ pub trait SlashCommand: 'static + Send + Sync {
         arguments: &[String],
         context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         context_buffer: BufferSnapshot,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         // TODO: We're just using the `LspAdapterDelegate` here because that is
         // what the extension API is already expecting.
         //

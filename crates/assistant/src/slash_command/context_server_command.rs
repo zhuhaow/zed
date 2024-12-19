@@ -8,7 +8,7 @@ use context_server::{
     manager::{ContextServer, ContextServerManager},
     types::Prompt,
 };
-use gpui::{AppContext, Model, Task, WeakView, WindowContext};
+use gpui::{AppContext, Model, Task, WeakModel, WindowContext};
 use language::{BufferSnapshot, CodeLabel, LspAdapterDelegate};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -77,7 +77,7 @@ impl SlashCommand for ContextServerSlashCommand {
         self: Arc<Self>,
         arguments: &[String],
         _cancel: Arc<AtomicBool>,
-        _workspace: Option<WeakView<Workspace>>,
+        _workspace: Option<WeakModel<Workspace>>,
         cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         let Ok((arg_name, arg_value)) = completion_argument(&self.prompt, arguments) else {
@@ -128,7 +128,7 @@ impl SlashCommand for ContextServerSlashCommand {
         arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: BufferSnapshot,
-        _workspace: WeakView<Workspace>,
+        _workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {

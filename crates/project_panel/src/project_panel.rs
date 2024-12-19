@@ -24,10 +24,10 @@ use gpui::{
     actions, anchored, deferred, div, impl_actions, point, px, size, uniform_list, Action,
     AnyElement, AppContext, AssetSource, AsyncWindowContext, Bounds, ClipboardItem, DismissEvent,
     Div, DragMoveEvent, EventEmitter, ExternalPaths, FocusHandle, FocusableView, Hsla,
-    InteractiveElement, KeyContext, ListHorizontalSizingBehavior, ListSizingBehavior, Model,
+    InteractiveElement, KeyContext, ListHorizontalSizingBehavior, ListSizingBehavior, Model, Model,
     MouseButton, MouseDownEvent, ParentElement, Pixels, Point, PromptLevel, Render, ScrollStrategy,
-    Stateful, Styled, Subscription, Task, UniformListScrollHandle, Model, ViewContext,
-    VisualContext as _, WeakView, WindowContext,
+    Stateful, Styled, Subscription, Task, UniformListScrollHandle, ViewContext, VisualContext as _,
+    WeakModel, WindowContext,
 };
 use indexmap::IndexMap;
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrev};
@@ -93,7 +93,7 @@ pub struct ProjectPanel {
     filename_editor: Model<Editor>,
     clipboard: Option<ClipboardEntry>,
     _dragged_entry_destination: Option<Arc<Path>>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     width: Option<Pixels>,
     pending_serialization: Task<Option<()>>,
     show_scrollbar: bool,
@@ -489,7 +489,7 @@ impl ProjectPanel {
     }
 
     pub async fn load(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         mut cx: AsyncWindowContext,
     ) -> Result<Model<Self>> {
         let serialized_panel = cx
@@ -4278,7 +4278,7 @@ impl ClipboardEntry {
 mod tests {
     use super::*;
     use collections::HashSet;
-    use gpui::{Empty, TestAppContext, Model, VisualTestContext, WindowHandle};
+    use gpui::{Empty, Model, TestAppContext, VisualTestContext, WindowHandle};
     use pretty_assertions::assert_eq;
     use project::{FakeFs, WorktreeSettings};
     use serde_json::json;
@@ -7788,7 +7788,11 @@ mod tests {
         });
     }
 
-    fn select_path(panel: &Model<ProjectPanel>, path: impl AsRef<Path>, cx: &mut VisualTestContext) {
+    fn select_path(
+        panel: &Model<ProjectPanel>,
+        path: impl AsRef<Path>,
+        cx: &mut VisualTestContext,
+    ) {
         let path = path.as_ref();
         panel.update(cx, |panel, cx| {
             for worktree in panel.project.read(cx).worktrees(cx).collect::<Vec<_>>() {

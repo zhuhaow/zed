@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_recursion::async_recursion;
 use collections::HashSet;
 use futures::{stream::FuturesUnordered, StreamExt as _};
-use gpui::{AsyncWindowContext, Axis, Model, Task, Model, WeakView};
+use gpui::{AsyncWindowContext, Axis, Model, Model, Task, WeakModel};
 use project::{terminals::TerminalKind, Project};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -83,7 +83,7 @@ fn serialize_pane(pane: &Model<Pane>, active: bool, cx: &WindowContext) -> Seria
 }
 
 pub(crate) fn deserialize_terminal_panel(
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     project: Model<Project>,
     database_id: WorkspaceId,
     serialized_panel: SerializedTerminalPanel,
@@ -158,7 +158,7 @@ fn populate_pane_items(
 
 #[async_recursion(?Send)]
 async fn deserialize_pane_group(
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     project: Model<Project>,
     panel: Model<TerminalPanel>,
     workspace_id: WorkspaceId,
@@ -271,7 +271,7 @@ async fn deserialize_pane_group(
 async fn deserialize_terminal_views(
     workspace_id: WorkspaceId,
     project: Model<Project>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     item_ids: &[u64],
     cx: &mut AsyncWindowContext,
 ) -> Vec<Model<TerminalView>> {

@@ -16,7 +16,7 @@ use gpui::{
     EventEmitter, FocusHandle, FocusableView, FontStyle, InteractiveElement, IntoElement,
     ListOffset, ListState, Model, MouseDownEvent, ParentElement, Pixels, Point, PromptLevel,
     Render, SharedString, Styled, Subscription, Task, TextStyle, Model, ViewContext, VisualContext,
-    WeakView,
+    WeakModel,
 };
 use menu::{Cancel, Confirm, SecondaryConfirm, SelectNext, SelectPrev};
 use project::{Fs, Project};
@@ -126,7 +126,7 @@ pub struct CollabPanel {
     subscriptions: Vec<Subscription>,
     collapsed_sections: Vec<Section>,
     collapsed_channels: Vec<ChannelId>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -302,7 +302,7 @@ impl CollabPanel {
     }
 
     pub async fn load(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         mut cx: AsyncWindowContext,
     ) -> anyhow::Result<Model<Self>> {
         let serialized_panel = cx

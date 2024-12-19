@@ -1,9 +1,9 @@
 use editor::{scroll::Autoscroll, Anchor, Editor, ExcerptId};
 use gpui::{
     actions, div, rems, uniform_list, AppContext, Div, EventEmitter, FocusHandle, FocusableView,
-    Hsla, InteractiveElement, IntoElement, Model, MouseButton, MouseDownEvent, MouseMoveEvent,
-    ParentElement, Render, ScrollStrategy, SharedString, Styled, UniformListScrollHandle, Model,
-    ViewContext, VisualContext, WeakView, WindowContext,
+    Hsla, InteractiveElement, IntoElement, Model, Model, MouseButton, MouseDownEvent,
+    MouseMoveEvent, ParentElement, Render, ScrollStrategy, SharedString, Styled,
+    UniformListScrollHandle, ViewContext, VisualContext, WeakModel, WindowContext,
 };
 use language::{Buffer, OwnedSyntaxLayer};
 use std::{mem, ops::Range};
@@ -31,7 +31,7 @@ pub fn init(cx: &mut AppContext) {
 }
 
 pub struct SyntaxTreeView {
-    workspace_handle: WeakView<Workspace>,
+    workspace_handle: WeakModel<Workspace>,
     editor: Option<EditorState>,
     list_scroll_handle: UniformListScrollHandle,
     selected_descendant_ix: Option<usize>,
@@ -59,7 +59,7 @@ struct BufferState {
 
 impl SyntaxTreeView {
     pub fn new(
-        workspace_handle: WeakView<Workspace>,
+        workspace_handle: WeakModel<Workspace>,
         active_item: Option<Box<dyn ItemHandle>>,
         cx: &mut ViewContext<Self>,
     ) -> Self {

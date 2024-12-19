@@ -4,7 +4,7 @@ use assistant_slash_command::{
     SlashCommandResult,
 };
 use fs::Fs;
-use gpui::{AppContext, Model, Task, WeakView};
+use gpui::{AppContext, Model, Task, WeakModel};
 use language::{BufferSnapshot, LspAdapterDelegate};
 use project::{Project, ProjectPath};
 use std::{
@@ -107,7 +107,7 @@ impl SlashCommand for CargoWorkspaceSlashCommand {
         self: Arc<Self>,
         _arguments: &[String],
         _cancel: Arc<AtomicBool>,
-        _workspace: Option<WeakView<Workspace>>,
+        _workspace: Option<WeakModel<Workspace>>,
         _cx: &mut WindowContext,
     ) -> Task<Result<Vec<ArgumentCompletion>>> {
         Task::ready(Err(anyhow!("this command does not require argument")))
@@ -122,7 +122,7 @@ impl SlashCommand for CargoWorkspaceSlashCommand {
         _arguments: &[String],
         _context_slash_command_output_sections: &[SlashCommandOutputSection<language::Anchor>],
         _context_buffer: BufferSnapshot,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         _delegate: Option<Arc<dyn LspAdapterDelegate>>,
         cx: &mut WindowContext,
     ) -> Task<SlashCommandResult> {

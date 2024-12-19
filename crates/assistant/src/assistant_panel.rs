@@ -42,9 +42,9 @@ use gpui::{
     canvas, div, img, percentage, point, prelude::*, pulsating_between, size, Action, Animation,
     AnimationExt, AnyElement, AnyView, AppContext, AsyncWindowContext, ClipboardEntry,
     ClipboardItem, CursorStyle, Empty, Entity, EventEmitter, ExternalPaths, FocusHandle,
-    FocusableView, FontWeight, InteractiveElement, IntoElement, Model, ParentElement, Pixels,
-    Render, RenderImage, SharedString, Size, StatefulInteractiveElement, Styled, Subscription,
-    Task, Transformation, UpdateGlobal, Model, WeakModel, WeakView,
+    FocusableView, FontWeight, InteractiveElement, IntoElement, Model, Model, ParentElement,
+    Pixels, Render, RenderImage, SharedString, Size, StatefulInteractiveElement, Styled,
+    Subscription, Task, Transformation, UpdateGlobal, WeakModel, WeakModel,
 };
 use indexed_docs::IndexedDocsStore;
 use language::{
@@ -134,7 +134,7 @@ pub enum AssistantPanelEvent {
 
 pub struct AssistantPanel {
     pane: Model<Pane>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     width: Option<Pixels>,
     height: Option<Pixels>,
     project: Model<Project>,
@@ -312,7 +312,7 @@ impl PickerDelegate for SavedContextPickerDelegate {
 
 impl AssistantPanel {
     pub fn load(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         prompt_builder: Arc<PromptBuilder>,
         cx: AsyncWindowContext,
     ) -> Task<Result<Model<Self>>> {
@@ -1487,7 +1487,7 @@ struct PatchViewState {
 }
 
 struct PatchEditorState {
-    editor: WeakView<ProposedChangesEditor>,
+    editor: WeakModel<ProposedChangesEditor>,
     opened_patch: AssistantPatch,
 }
 
@@ -1506,7 +1506,7 @@ pub struct ContextEditor {
     fs: Arc<dyn Fs>,
     slash_commands: Arc<SlashCommandWorkingSet>,
     tools: Arc<ToolWorkingSet>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     project: Model<Project>,
     lsp_adapter_delegate: Option<Arc<dyn LspAdapterDelegate>>,
     editor: Model<Editor>,
@@ -1520,7 +1520,7 @@ pub struct ContextEditor {
     _subscriptions: Vec<Subscription>,
     patches: HashMap<Range<language::Anchor>, PatchViewState>,
     active_patch: Option<Range<language::Anchor>>,
-    assistant_panel: WeakView<AssistantPanel>,
+    assistant_panel: WeakModel<AssistantPanel>,
     last_error: Option<AssistError>,
     show_accept_terms: bool,
     pub(crate) slash_menu_handle:
@@ -1540,10 +1540,10 @@ impl ContextEditor {
     fn for_context(
         context: Model<Context>,
         fs: Arc<dyn Fs>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         project: Model<Project>,
         lsp_adapter_delegate: Option<Arc<dyn LspAdapterDelegate>>,
-        assistant_panel: WeakView<AssistantPanel>,
+        assistant_panel: WeakModel<AssistantPanel>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let completion_provider = SlashCommandCompletionProvider::new(
@@ -1810,7 +1810,7 @@ impl ContextEditor {
         name: &str,
         arguments: &[String],
         ensure_trailing_newline: bool,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<Self>,
     ) {
         if let Some(command) = self.slash_commands.command(name, cx) {
@@ -2494,7 +2494,7 @@ impl ContextEditor {
     }
 
     async fn open_patch_editor(
-        this: WeakView<Self>,
+        this: WeakModel<Self>,
         patch: AssistantPatch,
         mut cx: AsyncWindowContext,
     ) -> Result<()> {
@@ -2542,7 +2542,7 @@ impl ContextEditor {
     }
 
     async fn update_patch_editor(
-        this: WeakView<Self>,
+        this: WeakModel<Self>,
         patch: AssistantPatch,
         mut cx: AsyncWindowContext,
     ) -> Result<()> {
@@ -4084,7 +4084,7 @@ pub fn selections_creases(
 }
 
 fn render_fold_icon_button(
-    editor: WeakView<Editor>,
+    editor: WeakModel<Editor>,
     icon: IconName,
     label: SharedString,
 ) -> Arc<dyn Send + Sync + Fn(FoldId, Range<Anchor>, &mut WindowContext) -> AnyElement> {
@@ -4455,7 +4455,7 @@ impl FollowableItem for ContextEditor {
 }
 
 pub struct ContextEditorToolbarItem {
-    active_context_editor: Option<WeakView<ContextEditor>>,
+    active_context_editor: Option<WeakModel<ContextEditor>>,
     model_summary_editor: Model<Editor>,
     language_model_selector: Model<LanguageModelSelector>,
     language_model_selector_menu_handle: PopoverMenuHandle<LanguageModelSelector>,
@@ -4666,14 +4666,14 @@ impl EventEmitter<ContextEditorToolbarItemEvent> for ContextEditorToolbarItem {}
 pub struct ContextHistory {
     picker: Model<Picker<SavedContextPickerDelegate>>,
     _subscriptions: Vec<Subscription>,
-    assistant_panel: WeakView<AssistantPanel>,
+    assistant_panel: WeakModel<AssistantPanel>,
 }
 
 impl ContextHistory {
     fn new(
         project: Model<Project>,
         context_store: Model<ContextStore>,
-        assistant_panel: WeakView<AssistantPanel>,
+        assistant_panel: WeakModel<AssistantPanel>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let picker = cx.new_view(|cx| {
@@ -4976,7 +4976,7 @@ fn fold_toggle(
     }
 }
 
-fn quote_selection_fold_placeholder(title: String, editor: WeakView<Editor>) -> FoldPlaceholder {
+fn quote_selection_fold_placeholder(title: String, editor: WeakModel<Editor>) -> FoldPlaceholder {
     FoldPlaceholder {
         render: Arc::new({
             move |fold_id, fold_range, _cx| {

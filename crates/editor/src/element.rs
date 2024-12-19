@@ -33,11 +33,11 @@ use gpui::{
     anchored, deferred, div, fill, outline, point, px, quad, relative, size, svg,
     transparent_black, Action, AnyElement, AvailableSpace, Axis, Bounds, ClickEvent, ClipboardItem,
     ContentMask, Corner, Corners, CursorStyle, DispatchPhase, Edges, Element, ElementInputHandler,
-    Entity, FontId, GlobalElementId, Hitbox, Hsla, InteractiveElement, IntoElement, Length,
+    Entity, FontId, GlobalElementId, Hitbox, Hsla, InteractiveElement, IntoElement, Length, Model,
     ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad,
     ParentElement, Pixels, ScrollDelta, ScrollWheelEvent, ShapedLine, SharedString, Size,
-    StatefulInteractiveElement, Style, Styled, Subscription, TextRun, TextStyleRefinement, Model,
-    ViewContext, WeakView, WindowContext,
+    StatefulInteractiveElement, Style, Styled, Subscription, TextRun, TextStyleRefinement,
+    ViewContext, WeakModel, WindowContext,
 };
 use itertools::Itertools;
 use language::{
@@ -4994,7 +4994,7 @@ fn render_inline_blame_entry(
     blame: &gpui::Model<GitBlame>,
     blame_entry: BlameEntry,
     style: &EditorStyle,
-    workspace: Option<WeakView<Workspace>>,
+    workspace: Option<WeakModel<Workspace>>,
     cx: &mut WindowContext<'_>,
 ) -> AnyElement {
     let relative_timestamp = blame_entry_relative_timestamp(&blame_entry);

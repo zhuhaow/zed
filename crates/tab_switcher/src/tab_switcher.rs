@@ -5,8 +5,9 @@ use collections::HashMap;
 use editor::items::entry_git_aware_label_color;
 use gpui::{
     actions, impl_actions, rems, Action, AnyElement, AppContext, DismissEvent, EntityId,
-    EventEmitter, FocusHandle, FocusableView, Model, Modifiers, ModifiersChangedEvent, MouseButton,
-    MouseUpEvent, ParentElement, Render, Styled, Task, Model, ViewContext, VisualContext, WeakView,
+    EventEmitter, FocusHandle, FocusableView, Model, Model, Modifiers, ModifiersChangedEvent,
+    MouseButton, MouseUpEvent, ParentElement, Render, Styled, Task, ViewContext, VisualContext,
+    WeakModel,
 };
 use picker::{Picker, PickerDelegate};
 use project::Project;
@@ -149,9 +150,9 @@ struct TabMatch {
 
 pub struct TabSwitcherDelegate {
     select_last: bool,
-    tab_switcher: WeakView<TabSwitcher>,
+    tab_switcher: WeakModel<TabSwitcher>,
     selected_index: usize,
-    pane: WeakView<Pane>,
+    pane: WeakModel<Pane>,
     project: Model<Project>,
     matches: Vec<TabMatch>,
 }
@@ -160,8 +161,8 @@ impl TabSwitcherDelegate {
     fn new(
         project: Model<Project>,
         action: &Toggle,
-        tab_switcher: WeakView<TabSwitcher>,
-        pane: WeakView<Pane>,
+        tab_switcher: WeakModel<TabSwitcher>,
+        pane: WeakModel<Pane>,
         cx: &mut ViewContext<TabSwitcher>,
     ) -> Self {
         Self::subscribe_to_updates(&pane, cx);
@@ -175,7 +176,7 @@ impl TabSwitcherDelegate {
         }
     }
 
-    fn subscribe_to_updates(pane: &WeakView<Pane>, cx: &mut ViewContext<TabSwitcher>) {
+    fn subscribe_to_updates(pane: &WeakModel<Pane>, cx: &mut ViewContext<TabSwitcher>) {
         let Some(pane) = pane.upgrade() else {
             return;
         };

@@ -18,7 +18,7 @@ use gpui::{
     AsyncWindowContext, ClickEvent, ClipboardItem, Corner, Div, DragMoveEvent, EntityId,
     EventEmitter, ExternalPaths, FocusHandle, FocusOutEvent, FocusableView, KeyContext, Model,
     MouseButton, MouseDownEvent, NavigationDirection, Pixels, Point, PromptLevel, Render,
-    ScrollHandle, Subscription, Task, Model, ViewContext, VisualContext, WeakFocusHandle, WeakView,
+    ScrollHandle, Subscription, Task, ViewContext, VisualContext, WeakFocusHandle, WeakModel,
     WindowContext,
 };
 use itertools::Itertools;
@@ -285,7 +285,7 @@ pub struct Pane {
     last_focus_handle_by_item: HashMap<EntityId, WeakFocusHandle>,
     nav_history: NavHistory,
     toolbar: Model<Toolbar>,
-    pub(crate) workspace: WeakView<Workspace>,
+    pub(crate) workspace: WeakModel<Workspace>,
     project: Model<Project>,
     drag_split_direction: Option<SplitDirection>,
     can_drop_predicate: Option<Arc<dyn Fn(&dyn Any, &mut WindowContext) -> bool>>,
@@ -329,7 +329,7 @@ struct NavHistoryState {
     forward_stack: VecDeque<NavigationEntry>,
     closed_stack: VecDeque<NavigationEntry>,
     paths_by_item: HashMap<EntityId, (ProjectPath, Option<PathBuf>)>,
-    pane: WeakView<Pane>,
+    pane: WeakModel<Pane>,
     next_timestamp: Arc<AtomicUsize>,
 }
 
@@ -369,7 +369,7 @@ impl EventEmitter<Event> for Pane {}
 
 impl Pane {
     pub fn new(
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         project: Model<Project>,
         next_timestamp: Arc<AtomicUsize>,
         can_drop_predicate: Option<Arc<dyn Fn(&dyn Any, &mut WindowContext) -> bool + 'static>>,
@@ -1641,7 +1641,7 @@ impl Pane {
 
     pub async fn save_item(
         project: Model<Project>,
-        pane: &WeakView<Pane>,
+        pane: &WeakModel<Pane>,
         item_ix: usize,
         item: &dyn ItemHandle,
         save_intent: SaveIntent,

@@ -23,8 +23,8 @@ use fs::Fs;
 use util::ResultExt;
 
 use gpui::{
-    point, AppContext, FocusableView, Global, HighlightStyle, Model, Subscription, Task,
-    UpdateGlobal, Model, ViewContext, WeakModel, WeakView, WindowContext,
+    point, AppContext, FocusableView, Global, HighlightStyle, Model, Model, Subscription, Task,
+    UpdateGlobal, ViewContext, WeakModel, WeakModel, WindowContext,
 };
 use language::{Buffer, Point, Selection, TransactionId};
 use language_model::LanguageModelRegistry;
@@ -69,7 +69,7 @@ pub struct InlineAssistant {
     next_assist_id: InlineAssistId,
     next_assist_group_id: InlineAssistGroupId,
     assists: HashMap<InlineAssistId, InlineAssist>,
-    assists_by_editor: HashMap<WeakView<Editor>, EditorInlineAssists>,
+    assists_by_editor: HashMap<WeakModel<Editor>, EditorInlineAssists>,
     assist_groups: HashMap<InlineAssistGroupId, InlineAssistGroup>,
     confirmed_assists: HashMap<InlineAssistId, Model<CodegenAlternative>>,
     prompt_history: VecDeque<String>,
@@ -255,7 +255,7 @@ impl InlineAssistant {
     pub fn assist(
         &mut self,
         editor: &Model<Editor>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         thread_store: Option<WeakModel<ThreadStore>>,
         cx: &mut WindowContext,
     ) {
@@ -428,7 +428,7 @@ impl InlineAssistant {
         initial_prompt: String,
         initial_transaction_id: Option<TransactionId>,
         focus: bool,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         thread_store: Option<WeakModel<ThreadStore>>,
         cx: &mut WindowContext,
     ) -> InlineAssistId {
@@ -728,7 +728,7 @@ impl InlineAssistant {
         cx.propagate();
     }
 
-    fn handle_editor_release(&mut self, editor: WeakView<Editor>, cx: &mut WindowContext) {
+    fn handle_editor_release(&mut self, editor: WeakModel<Editor>, cx: &mut WindowContext) {
         if let Some(editor_assists) = self.assists_by_editor.get_mut(&editor) {
             for assist_id in editor_assists.assist_ids.clone() {
                 self.finish_assist(assist_id, true, cx);
@@ -1449,11 +1449,11 @@ impl InlineAssistGroupId {
 pub struct InlineAssist {
     group_id: InlineAssistGroupId,
     range: Range<Anchor>,
-    editor: WeakView<Editor>,
+    editor: WeakModel<Editor>,
     decorations: Option<InlineAssistDecorations>,
     codegen: Model<BufferCodegen>,
     _subscriptions: Vec<Subscription>,
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
 }
 
 impl InlineAssist {
@@ -1467,7 +1467,7 @@ impl InlineAssist {
         end_block_id: CustomBlockId,
         range: Range<Anchor>,
         codegen: Model<BufferCodegen>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut WindowContext,
     ) -> Self {
         let prompt_editor_focus_handle = prompt_editor.focus_handle(cx);
@@ -1567,8 +1567,8 @@ struct InlineAssistDecorations {
 }
 
 struct AssistantCodeActionProvider {
-    editor: WeakView<Editor>,
-    workspace: WeakView<Workspace>,
+    editor: WeakModel<Editor>,
+    workspace: WeakModel<Workspace>,
     thread_store: Option<WeakModel<ThreadStore>>,
 }
 

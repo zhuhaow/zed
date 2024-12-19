@@ -7,7 +7,7 @@ use disconnected_overlay::DisconnectedOverlay;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     Action, AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView,
-    Subscription, Task, Model, ViewContext, WeakView,
+    Subscription, Task, Model, ViewContext, WeakModel,
 };
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
@@ -132,7 +132,7 @@ impl Render for RecentProjects {
 }
 
 pub struct RecentProjectsDelegate {
-    workspace: WeakView<Workspace>,
+    workspace: WeakModel<Workspace>,
     workspaces: Vec<(WorkspaceId, SerializedWorkspaceLocation)>,
     selected_match_index: usize,
     matches: Vec<StringMatch>,
@@ -144,7 +144,7 @@ pub struct RecentProjectsDelegate {
 }
 
 impl RecentProjectsDelegate {
-    fn new(workspace: WeakView<Workspace>, create_new_window: bool, render_paths: bool) -> Self {
+    fn new(workspace: WeakModel<Workspace>, create_new_window: bool, render_paths: bool) -> Self {
         Self {
             workspace,
             workspaces: Vec::new(),

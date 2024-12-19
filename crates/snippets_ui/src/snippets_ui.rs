@@ -1,7 +1,7 @@
 use fuzzy::{match_strings, StringMatch, StringMatchCandidate};
 use gpui::{
-    actions, AppContext, DismissEvent, EventEmitter, FocusableView, ParentElement, Render, Styled,
-    Model, ViewContext, VisualContext, WeakView,
+    actions, AppContext, DismissEvent, EventEmitter, FocusableView, Model, ParentElement, Render,
+    Styled, ViewContext, VisualContext, WeakModel,
 };
 use language::LanguageRegistry;
 use paths::config_dir;
@@ -47,7 +47,7 @@ pub struct ScopeSelector {
 impl ScopeSelector {
     fn new(
         language_registry: Arc<LanguageRegistry>,
-        workspace: WeakView<Workspace>,
+        workspace: WeakModel<Workspace>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let delegate =
@@ -76,8 +76,8 @@ impl Render for ScopeSelector {
 }
 
 pub struct ScopeSelectorDelegate {
-    workspace: WeakView<Workspace>,
-    scope_selector: WeakView<ScopeSelector>,
+    workspace: WeakModel<Workspace>,
+    scope_selector: WeakModel<ScopeSelector>,
     language_registry: Arc<LanguageRegistry>,
     candidates: Vec<StringMatchCandidate>,
     matches: Vec<StringMatch>,
@@ -86,8 +86,8 @@ pub struct ScopeSelectorDelegate {
 
 impl ScopeSelectorDelegate {
     fn new(
-        workspace: WeakView<Workspace>,
-        scope_selector: WeakView<ScopeSelector>,
+        workspace: WeakModel<Workspace>,
+        scope_selector: WeakModel<ScopeSelector>,
         language_registry: Arc<LanguageRegistry>,
     ) -> Self {
         let candidates = Vec::from(["Global".to_string()]).into_iter();
