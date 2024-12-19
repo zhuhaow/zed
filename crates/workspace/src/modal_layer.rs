@@ -1,4 +1,4 @@
-use gpui::{AnyView, DismissEvent, FocusHandle, ManagedView, Subscription, View};
+use gpui::{AnyView, DismissEvent, FocusHandle, ManagedView, Subscription, Model};
 use ui::prelude::*;
 
 pub enum DismissDecision {
@@ -22,7 +22,7 @@ trait ModalViewHandle {
     fn fade_out_background(&self, cx: &WindowContext) -> bool;
 }
 
-impl<V: ModalView> ModalViewHandle for View<V> {
+impl<V: ModalView> ModalViewHandle for Model<V> {
     fn on_before_dismiss(&mut self, cx: &mut WindowContext) -> DismissDecision {
         self.update(cx, |this, cx| this.on_before_dismiss(cx))
     }
@@ -78,7 +78,7 @@ impl ModalLayer {
         self.show_modal(new_modal, cx);
     }
 
-    fn show_modal<V>(&mut self, new_modal: View<V>, cx: &mut ViewContext<Self>)
+    fn show_modal<V>(&mut self, new_modal: Model<V>, cx: &mut ViewContext<Self>)
     where
         V: ModalView,
     {
@@ -134,7 +134,7 @@ impl ModalLayer {
         true
     }
 
-    pub fn active_modal<V>(&self) -> Option<View<V>>
+    pub fn active_modal<V>(&self) -> Option<Model<V>>
     where
         V: 'static,
     {

@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use fuzzy::PathMatch;
-use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, View, WeakModel, WeakView};
+use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, Model, WeakModel, WeakView};
 use picker::{Picker, PickerDelegate};
 use project::{PathMatchCandidateSet, WorktreeId};
 use ui::{prelude::*, ListItem};
@@ -15,7 +15,7 @@ use crate::context_picker::{ConfirmBehavior, ContextPicker};
 use crate::context_store::ContextStore;
 
 pub struct DirectoryContextPicker {
-    picker: View<Picker<DirectoryContextPickerDelegate>>,
+    picker: Model<Picker<DirectoryContextPickerDelegate>>,
 }
 
 impl DirectoryContextPicker {

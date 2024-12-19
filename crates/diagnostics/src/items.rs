@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use editor::Editor;
 use gpui::{
-    EventEmitter, IntoElement, ParentElement, Render, Styled, Subscription, Task, View,
+    EventEmitter, IntoElement, ParentElement, Render, Styled, Subscription, Task, Model,
     ViewContext, WeakView,
 };
 use language::Diagnostic;
@@ -141,7 +141,7 @@ impl DiagnosticIndicator {
         }
     }
 
-    fn update(&mut self, editor: View<Editor>, cx: &mut ViewContext<Self>) {
+    fn update(&mut self, editor: Model<Editor>, cx: &mut ViewContext<Self>) {
         let (buffer, cursor_position) = editor.update(cx, |editor, cx| {
             let buffer = editor.buffer().read(cx).snapshot(cx);
             let cursor_position = editor.selections.newest::<usize>(cx).head();

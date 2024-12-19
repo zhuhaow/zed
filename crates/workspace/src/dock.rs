@@ -5,7 +5,7 @@ use client::proto;
 use gpui::{
     deferred, div, px, Action, AnyView, AppContext, Axis, Corner, Entity, EntityId, EventEmitter,
     FocusHandle, FocusableView, IntoElement, KeyContext, MouseButton, MouseDownEvent, MouseUpEvent,
-    ParentElement, Render, SharedString, StyleRefinement, Styled, Subscription, View, ViewContext,
+    ParentElement, Render, SharedString, StyleRefinement, Styled, Subscription, Model, ViewContext,
     VisualContext, WeakView, WindowContext,
 };
 use schemars::JsonSchema;
@@ -47,7 +47,7 @@ pub trait Panel: FocusableView + EventEmitter<PanelEvent> {
     }
     fn set_zoomed(&mut self, _zoomed: bool, _cx: &mut ViewContext<Self>) {}
     fn set_active(&mut self, _active: bool, _cx: &mut ViewContext<Self>) {}
-    fn pane(&self) -> Option<View<Pane>> {
+    fn pane(&self) -> Option<Model<Pane>> {
         None
     }
     fn remote_id() -> Option<proto::PanelId> {
@@ -65,7 +65,7 @@ pub trait PanelHandle: Send + Sync {
     fn set_zoomed(&self, zoomed: bool, cx: &mut WindowContext);
     fn set_active(&self, active: bool, cx: &mut WindowContext);
     fn remote_id(&self) -> Option<proto::PanelId>;
-    fn pane(&self, cx: &WindowContext) -> Option<View<Pane>>;
+    fn pane(&self, cx: &WindowContext) -> Option<Model<Pane>>;
     fn size(&self, cx: &WindowContext) -> Pixels;
     fn set_size(&self, size: Option<Pixels>, cx: &mut WindowContext);
     fn icon(&self, cx: &WindowContext) -> Option<ui::IconName>;
@@ -76,7 +76,7 @@ pub trait PanelHandle: Send + Sync {
     fn to_any(&self) -> AnyView;
 }
 
-impl<T> PanelHandle for View<T>
+impl<T> PanelHandle for Model<T>
 where
     T: Panel,
 {
@@ -112,7 +112,7 @@ where
         self.update(cx, |this, cx| this.set_active(active, cx))
     }
 
-    fn pane(&self, cx: &WindowContext) -> Option<View<Pane>> {
+    fn pane(&self, cx: &WindowContext) -> Option<Model<Pane>> {
         self.read(cx).pane()
     }
 
@@ -209,11 +209,11 @@ struct PanelEntry {
 }
 
 pub struct PanelButtons {
-    dock: View<Dock>,
+    dock: Model<Dock>,
 }
 
 impl Dock {
-    pub fn new(position: DockPosition, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(position: DockPosition, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         let focus_handle = cx.focus_handle();
         let workspace = cx.view().clone();
         let dock = cx.new_view(|cx: &mut ViewContext<Self>| {
@@ -293,7 +293,7 @@ impl Dock {
         self.is_open
     }
 
-    pub fn panel<T: Panel>(&self) -> Option<View<T>> {
+    pub fn panel<T: Panel>(&self) -> Option<Model<T>> {
         self.panel_entries
             .iter()
             .find_map(|entry| entry.panel.to_any().clone().downcast().ok())
@@ -360,7 +360,7 @@ impl Dock {
 
     pub(crate) fn add_panel<T: Panel>(
         &mut self,
-        panel: View<T>,
+        panel: Model<T>,
         workspace: WeakView<Workspace>,
         cx: &mut ViewContext<Self>,
     ) {
@@ -488,7 +488,7 @@ impl Dock {
         false
     }
 
-    pub fn remove_panel<T: Panel>(&mut self, panel: &View<T>, cx: &mut ViewContext<Self>) {
+    pub fn remove_panel<T: Panel>(&mut self, panel: &Model<T>, cx: &mut ViewContext<Self>) {
         if let Some(panel_ix) = self
             .panel_entries
             .iter()
@@ -705,7 +705,7 @@ impl Render for Dock {
 }
 
 impl PanelButtons {
-    pub fn new(dock: View<Dock>, cx: &mut ViewContext<Self>) -> Self {
+    pub fn new(dock: Model<Dock>, cx: &mut ViewContext<Self>) -> Self {
         cx.observe(&dock, |_, _, cx| cx.notify()).detach();
         Self { dock }
     }

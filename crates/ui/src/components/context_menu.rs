@@ -5,7 +5,7 @@ use crate::{
 };
 use gpui::{
     px, Action, AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView,
-    IntoElement, Render, Subscription, View, VisualContext,
+    IntoElement, Render, Subscription, Model, VisualContext,
 };
 use menu::{SelectFirst, SelectLast, SelectNext, SelectPrev};
 use settings::Settings;
@@ -56,7 +56,7 @@ impl ContextMenu {
     pub fn build(
         cx: &mut WindowContext,
         f: impl FnOnce(Self, &mut ViewContext<Self>) -> Self,
-    ) -> View<Self> {
+    ) -> Model<Self> {
         cx.new_view(|cx| {
             let focus_handle = cx.focus_handle();
             let _on_blur_subscription = cx.on_blur(&focus_handle, |this: &mut ContextMenu, cx| {

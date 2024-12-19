@@ -157,7 +157,7 @@ impl Item for KeyContextView {
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<gpui::View<Self>>
+    ) -> Option<gpui::Model<Self>>
     where
         Self: Sized,
     {

@@ -1,7 +1,7 @@
 use editor::Editor;
 use gpui::{
     actions, prelude::*, AnyElement, AppContext, EventEmitter, FocusHandle, FocusableView,
-    Subscription, View,
+    Subscription, Model,
 };
 use project::ProjectItem as _;
 use ui::{prelude::*, ButtonLike, ElevationIndex, KeyBinding};
@@ -132,7 +132,7 @@ pub struct ReplSessionsPage {
 }
 
 impl ReplSessionsPage {
-    pub fn new(cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(cx: &mut ViewContext<Workspace>) -> Model<Self> {
         cx.new_view(|cx: &mut ViewContext<Self>| {
             let focus_handle = cx.focus_handle();
 
@@ -176,7 +176,7 @@ impl Item for ReplSessionsPage {
         &self,
         _workspace_id: Option<WorkspaceId>,
         _: &mut ViewContext<Self>,
-    ) -> Option<View<Self>> {
+    ) -> Option<Model<Self>> {
         None
     }
 

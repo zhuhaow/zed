@@ -1,6 +1,6 @@
 use editor::Editor;
 use gpui::{
-    div, AsyncWindowContext, IntoElement, ParentElement, Render, Subscription, Task, View,
+    div, AsyncWindowContext, IntoElement, ParentElement, Render, Subscription, Task, Model,
     ViewContext, WeakModel, WeakView,
 };
 use language::{Buffer, BufferEvent, LanguageName, Toolchain};
@@ -72,7 +72,7 @@ impl ActiveToolchain {
         })
     }
 
-    fn update_lister(&mut self, editor: View<Editor>, cx: &mut ViewContext<Self>) {
+    fn update_lister(&mut self, editor: Model<Editor>, cx: &mut ViewContext<Self>) {
         let editor = editor.read(cx);
         if let Some((_, buffer, _)) = editor.active_excerpt(cx) {
             if let Some(worktree_id) = buffer.read(cx).file().map(|file| file.worktree_id(cx)) {

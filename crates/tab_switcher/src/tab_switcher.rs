@@ -6,7 +6,7 @@ use editor::items::entry_git_aware_label_color;
 use gpui::{
     actions, impl_actions, rems, Action, AnyElement, AppContext, DismissEvent, EntityId,
     EventEmitter, FocusHandle, FocusableView, Model, Modifiers, ModifiersChangedEvent, MouseButton,
-    MouseUpEvent, ParentElement, Render, Styled, Task, View, ViewContext, VisualContext, WeakView,
+    MouseUpEvent, ParentElement, Render, Styled, Task, Model, ViewContext, VisualContext, WeakView,
 };
 use picker::{Picker, PickerDelegate};
 use project::Project;
@@ -33,7 +33,7 @@ impl_actions!(tab_switcher, [Toggle]);
 actions!(tab_switcher, [CloseSelectedItem]);
 
 pub struct TabSwitcher {
-    picker: View<Picker<TabSwitcherDelegate>>,
+    picker: Model<Picker<TabSwitcherDelegate>>,
     init_modifiers: Option<Modifiers>,
 }
 

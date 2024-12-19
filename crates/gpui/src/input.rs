@@ -1,4 +1,4 @@
-use crate::{Bounds, InputHandler, Pixels, UTF16Selection, View, ViewContext, WindowContext};
+use crate::{Bounds, InputHandler, Pixels, UTF16Selection, Model, ViewContext, WindowContext};
 use std::ops::Range;
 
 /// Implement this trait to allow views to handle textual input when implementing an editor, field, etc.
@@ -58,7 +58,7 @@ pub trait ViewInputHandler: 'static + Sized {
 /// The canonical implementation of [`PlatformInputHandler`]. Call [`WindowContext::handle_input`]
 /// with an instance during your element's paint.
 pub struct ElementInputHandler<V> {
-    view: View<V>,
+    view: Model<V>,
     element_bounds: Bounds<Pixels>,
 }
 
@@ -67,7 +67,7 @@ impl<V: 'static> ElementInputHandler<V> {
     /// containing view.
     ///
     /// [element_paint]: crate::Element::paint
-    pub fn new(element_bounds: Bounds<Pixels>, view: View<V>) -> Self {
+    pub fn new(element_bounds: Bounds<Pixels>, view: Model<V>) -> Self {
         ElementInputHandler {
             view,
             element_bounds,

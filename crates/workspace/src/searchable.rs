@@ -2,7 +2,7 @@ use std::{any::Any, sync::Arc};
 
 use any_vec::AnyVec;
 use gpui::{
-    AnyView, AnyWeakView, AppContext, EventEmitter, Subscription, Task, View, ViewContext,
+    AnyView, AnyWeakView, AppContext, EventEmitter, Subscription, Task, Model, ViewContext,
     WeakView, WindowContext,
 };
 use project::search::SearchQuery;
@@ -165,7 +165,7 @@ pub trait SearchableItemHandle: ItemHandle {
     fn toggle_filtered_search_ranges(&mut self, enabled: bool, cx: &mut WindowContext);
 }
 
-impl<T: SearchableItem> SearchableItemHandle for View<T> {
+impl<T: SearchableItem> SearchableItemHandle for Model<T> {
     fn downgrade(&self) -> Box<dyn WeakSearchableItemHandle> {
         Box::new(self.downgrade())
     }

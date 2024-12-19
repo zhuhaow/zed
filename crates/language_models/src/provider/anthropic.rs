@@ -7,7 +7,7 @@ use futures::Stream;
 use futures::{future::BoxFuture, stream::BoxStream, FutureExt, StreamExt, TryStreamExt as _};
 use gpui::{
     AnyView, AppContext, AsyncAppContext, FontStyle, ModelContext, Subscription, Task, TextStyle,
-    View, WhiteSpace,
+    Model, WhiteSpace,
 };
 use http_client::HttpClient;
 use language_model::{
@@ -559,7 +559,7 @@ pub fn map_to_language_model_completion_events(
 }
 
 struct ConfigurationView {
-    api_key_editor: View<Editor>,
+    api_key_editor: Model<Editor>,
     state: gpui::Model<State>,
     load_credentials_task: Option<Task<()>>,
 }

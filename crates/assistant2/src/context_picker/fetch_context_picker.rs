@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::{bail, Context as _, Result};
 use futures::AsyncReadExt as _;
-use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, View, WeakModel, WeakView};
+use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, Model, WeakModel, WeakView};
 use html_to_markdown::{convert_html_to_markdown, markdown, TagHandler};
 use http_client::{AsyncBody, HttpClientWithUrl};
 use picker::{Picker, PickerDelegate};
@@ -16,7 +16,7 @@ use crate::context_picker::{ConfirmBehavior, ContextPicker};
 use crate::context_store::ContextStore;
 
 pub struct FetchContextPicker {
-    picker: View<Picker<FetchContextPickerDelegate>>,
+    picker: Model<Picker<FetchContextPickerDelegate>>,
 }
 
 impl FetchContextPicker {

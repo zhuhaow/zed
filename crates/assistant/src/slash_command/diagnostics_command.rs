@@ -4,7 +4,7 @@ use assistant_slash_command::{
     SlashCommandResult,
 };
 use fuzzy::{PathMatch, StringMatchCandidate};
-use gpui::{AppContext, Model, Task, View, WeakView};
+use gpui::{AppContext, Model, Task, Model, WeakView};
 use language::{
     Anchor, BufferSnapshot, DiagnosticEntry, DiagnosticSeverity, LspAdapterDelegate,
     OffsetRangeExt, ToOffset,
@@ -30,7 +30,7 @@ impl DiagnosticsSlashCommand {
         &self,
         query: String,
         cancellation_flag: Arc<AtomicBool>,
-        workspace: &View<Workspace>,
+        workspace: &Model<Workspace>,
         cx: &mut AppContext,
     ) -> Task<Vec<PathMatch>> {
         if query.is_empty() {

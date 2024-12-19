@@ -5,7 +5,7 @@ use futures::{future::BoxFuture, FutureExt, StreamExt};
 use google_ai::stream_generate_content;
 use gpui::{
     AnyView, AppContext, AsyncAppContext, FontStyle, ModelContext, Subscription, Task, TextStyle,
-    View, WhiteSpace,
+    Model, WhiteSpace,
 };
 use http_client::HttpClient;
 use language_model::LanguageModelCompletionEvent;
@@ -326,7 +326,7 @@ impl LanguageModel for GoogleLanguageModel {
 }
 
 struct ConfigurationView {
-    api_key_editor: View<Editor>,
+    api_key_editor: Model<Editor>,
     state: gpui::Model<State>,
     load_credentials_task: Option<Task<()>>,
 }

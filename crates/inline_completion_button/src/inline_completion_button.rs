@@ -5,7 +5,7 @@ use feature_flags::{FeatureFlagAppExt, ZetaFeatureFlag};
 use fs::Fs;
 use gpui::{
     actions, div, Action, AppContext, AsyncWindowContext, Corner, Entity, IntoElement,
-    ParentElement, Render, Subscription, View, ViewContext, WeakView, WindowContext,
+    ParentElement, Render, Subscription, Model, ViewContext, WeakView, WindowContext,
 };
 use language::{
     language_settings::{
@@ -250,7 +250,7 @@ impl InlineCompletionButton {
         }
     }
 
-    pub fn build_copilot_start_menu(&mut self, cx: &mut ViewContext<Self>) -> View<ContextMenu> {
+    pub fn build_copilot_start_menu(&mut self, cx: &mut ViewContext<Self>) -> Model<ContextMenu> {
         let fs = self.fs.clone();
         ContextMenu::build(cx, |menu, _| {
             menu.entry("Sign In", None, copilot::initiate_sign_in)
@@ -337,7 +337,7 @@ impl InlineCompletionButton {
         )
     }
 
-    fn build_copilot_context_menu(&self, cx: &mut ViewContext<Self>) -> View<ContextMenu> {
+    fn build_copilot_context_menu(&self, cx: &mut ViewContext<Self>) -> Model<ContextMenu> {
         ContextMenu::build(cx, |menu, cx| {
             self.build_language_settings_menu(menu, cx)
                 .separator()
@@ -352,7 +352,7 @@ impl InlineCompletionButton {
         })
     }
 
-    fn build_supermaven_context_menu(&self, cx: &mut ViewContext<Self>) -> View<ContextMenu> {
+    fn build_supermaven_context_menu(&self, cx: &mut ViewContext<Self>) -> Model<ContextMenu> {
         ContextMenu::build(cx, |menu, cx| {
             self.build_language_settings_menu(menu, cx)
                 .separator()
@@ -360,7 +360,7 @@ impl InlineCompletionButton {
         })
     }
 
-    pub fn update_enabled(&mut self, editor: View<Editor>, cx: &mut ViewContext<Self>) {
+    pub fn update_enabled(&mut self, editor: Model<Editor>, cx: &mut ViewContext<Self>) {
         let editor = editor.read(cx);
         let snapshot = editor.buffer().read(cx).snapshot(cx);
         let suggestion_anchor = editor.selections.newest_anchor().start;

@@ -10,7 +10,7 @@ use collections::HashMap;
 use command_palette_hooks::{CommandPaletteFilter, CommandPaletteInterceptor};
 use editor::{Anchor, ClipboardSelection, Editor};
 use gpui::{
-    Action, AppContext, BorrowAppContext, ClipboardEntry, ClipboardItem, Global, View, WeakView,
+    Action, AppContext, BorrowAppContext, ClipboardEntry, ClipboardItem, Global, Model, WeakView,
 };
 use language::Point;
 use serde::{Deserialize, Serialize};
@@ -394,7 +394,7 @@ impl VimGlobals {
         }
     }
 
-    pub fn focused_vim(&self) -> Option<View<Vim>> {
+    pub fn focused_vim(&self) -> Option<Model<Vim>> {
         self.focused_vim.as_ref().and_then(|vim| vim.upgrade())
     }
 }

@@ -6,7 +6,7 @@ mod thread_context_picker;
 use std::sync::Arc;
 
 use gpui::{
-    AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, SharedString, Task, View,
+    AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, SharedString, Task, Model,
     WeakModel, WeakView,
 };
 use picker::{Picker, PickerDelegate};
@@ -31,15 +31,15 @@ pub enum ConfirmBehavior {
 #[derive(Debug, Clone)]
 enum ContextPickerMode {
     Default,
-    File(View<FileContextPicker>),
-    Directory(View<DirectoryContextPicker>),
-    Fetch(View<FetchContextPicker>),
-    Thread(View<ThreadContextPicker>),
+    File(Model<FileContextPicker>),
+    Directory(Model<DirectoryContextPicker>),
+    Fetch(Model<FetchContextPicker>),
+    Thread(Model<ThreadContextPicker>),
 }
 
 pub(super) struct ContextPicker {
     mode: ContextPickerMode,
-    picker: View<Picker<ContextPickerDelegate>>,
+    picker: Model<Picker<ContextPickerDelegate>>,
 }
 
 impl ContextPicker {

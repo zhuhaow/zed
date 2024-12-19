@@ -15,7 +15,7 @@ use gpui::{
     AppContext, AsyncWindowContext, Bounds, ClickEvent, ClipboardItem, DismissEvent, Div,
     EventEmitter, FocusHandle, FocusableView, FontStyle, InteractiveElement, IntoElement,
     ListOffset, ListState, Model, MouseDownEvent, ParentElement, Pixels, Point, PromptLevel,
-    Render, SharedString, Styled, Subscription, Task, TextStyle, View, ViewContext, VisualContext,
+    Render, SharedString, Styled, Subscription, Task, TextStyle, Model, ViewContext, VisualContext,
     WeakView,
 };
 use menu::{Cancel, Confirm, SecondaryConfirm, SelectNext, SelectPrev};
@@ -111,10 +111,10 @@ pub struct CollabPanel {
     focus_handle: FocusHandle,
     channel_clipboard: Option<ChannelMoveClipboard>,
     pending_serialization: Task<Option<()>>,
-    context_menu: Option<(View<ContextMenu>, Point<Pixels>, Subscription)>,
+    context_menu: Option<(Model<ContextMenu>, Point<Pixels>, Subscription)>,
     list_state: ListState,
-    filter_editor: View<Editor>,
-    channel_name_editor: View<Editor>,
+    filter_editor: Model<Editor>,
+    channel_name_editor: Model<Editor>,
     channel_editing_state: Option<ChannelEditingState>,
     entries: Vec<ListEntry>,
     selection: Option<usize>,
@@ -190,7 +190,7 @@ enum ListEntry {
 }
 
 impl CollabPanel {
-    pub fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         cx.new_view(|cx| {
             let filter_editor = cx.new_view(|cx| {
                 let mut editor = Editor::single_line(cx);
@@ -304,7 +304,7 @@ impl CollabPanel {
     pub async fn load(
         workspace: WeakView<Workspace>,
         mut cx: AsyncWindowContext,
-    ) -> anyhow::Result<View<Self>> {
+    ) -> anyhow::Result<Model<Self>> {
         let serialized_panel = cx
             .background_executor()
             .spawn(async move { KEY_VALUE_STORE.read_kvp(COLLABORATION_PANEL_KEY) })
@@ -2102,7 +2102,7 @@ impl CollabPanel {
 
     fn render_filter_input(
         &self,
-        editor: &View<Editor>,
+        editor: &Model<Editor>,
         cx: &mut ViewContext<Self>,
     ) -> impl IntoElement {
         let settings = ThemeSettings::get_global(cx);

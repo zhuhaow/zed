@@ -1,5 +1,5 @@
 use editor::Editor;
-use gpui::{div, IntoElement, ParentElement, Render, Subscription, View, ViewContext, WeakView};
+use gpui::{div, IntoElement, ParentElement, Render, Subscription, Model, ViewContext, WeakView};
 use language::LanguageName;
 use ui::{Button, ButtonCommon, Clickable, FluentBuilder, LabelSize, Tooltip};
 use workspace::{item::ItemHandle, StatusItemView, Workspace};
@@ -21,7 +21,7 @@ impl ActiveBufferLanguage {
         }
     }
 
-    fn update_language(&mut self, editor: View<Editor>, cx: &mut ViewContext<Self>) {
+    fn update_language(&mut self, editor: Model<Editor>, cx: &mut ViewContext<Self>) {
         self.active_language = Some(None);
 
         let editor = editor.read(cx);

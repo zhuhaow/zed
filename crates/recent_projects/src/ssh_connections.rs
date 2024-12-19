@@ -9,7 +9,7 @@ use futures::channel::oneshot;
 use gpui::{
     percentage, Animation, AnimationExt, AnyWindowHandle, AsyncAppContext, DismissEvent,
     EventEmitter, FocusableView, FontFeatures, ParentElement as _, PromptLevel, Render,
-    SemanticVersion, SharedString, Task, TextStyleRefinement, Transformation, View, WeakView,
+    SemanticVersion, SharedString, Task, TextStyleRefinement, Transformation, Model, WeakView,
 };
 use gpui::{AppContext, Model};
 
@@ -127,9 +127,9 @@ pub struct SshPrompt {
     connection_string: SharedString,
     nickname: Option<SharedString>,
     status_message: Option<SharedString>,
-    prompt: Option<(View<Markdown>, oneshot::Sender<Result<String>>)>,
+    prompt: Option<(Model<Markdown>, oneshot::Sender<Result<String>>)>,
     cancellation: Option<oneshot::Sender<()>>,
-    editor: View<Editor>,
+    editor: Model<Editor>,
 }
 
 impl Drop for SshPrompt {
@@ -141,7 +141,7 @@ impl Drop for SshPrompt {
 }
 
 pub struct SshConnectionModal {
-    pub(crate) prompt: View<SshPrompt>,
+    pub(crate) prompt: Model<SshPrompt>,
     paths: Vec<PathBuf>,
     finished: bool,
 }
@@ -514,7 +514,7 @@ pub fn is_connecting_over_ssh(workspace: &Workspace, cx: &AppContext) -> bool {
 pub fn connect_over_ssh(
     unique_identifier: ConnectionIdentifier,
     connection_options: SshConnectionOptions,
-    ui: View<SshPrompt>,
+    ui: Model<SshPrompt>,
     cx: &mut WindowContext,
 ) -> Task<Result<Option<Model<SshRemoteClient>>>> {
     let window = cx.window_handle();

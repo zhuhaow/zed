@@ -6,7 +6,7 @@ use gpui::{
     anchored, deferred, div, point, prelude::FluentBuilder, px, size, AnyElement, Bounds, Corner,
     DismissEvent, DispatchPhase, Element, ElementId, GlobalElementId, HitboxId, InteractiveElement,
     IntoElement, LayoutId, Length, ManagedView, MouseDownEvent, ParentElement, Pixels, Point,
-    Style, View, VisualContext, WindowContext,
+    Style, Model, VisualContext, WindowContext,
 };
 
 use crate::prelude::*;
@@ -30,8 +30,8 @@ impl<M> Default for PopoverMenuHandle<M> {
 }
 
 struct PopoverMenuHandleState<M> {
-    menu_builder: Rc<dyn Fn(&mut WindowContext) -> Option<View<M>>>,
-    menu: Rc<RefCell<Option<View<M>>>>,
+    menu_builder: Rc<dyn Fn(&mut WindowContext) -> Option<Model<M>>>,
+    menu: Rc<RefCell<Option<Model<M>>>>,
 }
 
 impl<M: ManagedView> PopoverMenuHandle<M> {
@@ -82,13 +82,13 @@ pub struct PopoverMenu<M: ManagedView> {
     child_builder: Option<
         Box<
             dyn FnOnce(
-                    Rc<RefCell<Option<View<M>>>>,
-                    Option<Rc<dyn Fn(&mut WindowContext) -> Option<View<M>> + 'static>>,
+                    Rc<RefCell<Option<Model<M>>>>,
+                    Option<Rc<dyn Fn(&mut WindowContext) -> Option<Model<M>> + 'static>>,
                 ) -> AnyElement
                 + 'static,
         >,
     >,
-    menu_builder: Option<Rc<dyn Fn(&mut WindowContext) -> Option<View<M>> + 'static>>,
+    menu_builder: Option<Rc<dyn Fn(&mut WindowContext) -> Option<Model<M>> + 'static>>,
     anchor: Corner,
     attach: Option<Corner>,
     offset: Option<Point<Pixels>>,
@@ -116,7 +116,7 @@ impl<M: ManagedView> PopoverMenu<M> {
         self
     }
 
-    pub fn menu(mut self, f: impl Fn(&mut WindowContext) -> Option<View<M>> + 'static) -> Self {
+    pub fn menu(mut self, f: impl Fn(&mut WindowContext) -> Option<Model<M>> + 'static) -> Self {
         self.menu_builder = Some(Rc::new(f));
         self
     }
@@ -179,8 +179,8 @@ impl<M: ManagedView> PopoverMenu<M> {
 }
 
 fn show_menu<M: ManagedView>(
-    builder: &Rc<dyn Fn(&mut WindowContext) -> Option<View<M>>>,
-    menu: &Rc<RefCell<Option<View<M>>>>,
+    builder: &Rc<dyn Fn(&mut WindowContext) -> Option<Model<M>>>,
+    menu: &Rc<RefCell<Option<Model<M>>>>,
     cx: &mut WindowContext,
 ) {
     let Some(new_menu) = (builder)(cx) else {
@@ -205,7 +205,7 @@ fn show_menu<M: ManagedView>(
 }
 
 pub struct PopoverMenuElementState<M> {
-    menu: Rc<RefCell<Option<View<M>>>>,
+    menu: Rc<RefCell<Option<Model<M>>>>,
     child_bounds: Option<Bounds<Pixels>>,
 }
 
@@ -231,7 +231,7 @@ pub struct PopoverMenuFrameState<M: ManagedView> {
     child_layout_id: Option<LayoutId>,
     child_element: Option<AnyElement>,
     menu_element: Option<AnyElement>,
-    menu_handle: Rc<RefCell<Option<View<M>>>>,
+    menu_handle: Rc<RefCell<Option<Model<M>>>>,
 }
 
 impl<M: ManagedView> Element for PopoverMenu<M> {

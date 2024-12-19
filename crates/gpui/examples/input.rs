@@ -341,7 +341,7 @@ impl ViewInputHandler for TextInput {
 }
 
 struct TextElement {
-    input: View<TextInput>,
+    input: Model<TextInput>,
 }
 
 struct PrepaintState {
@@ -554,7 +554,7 @@ impl FocusableView for TextInput {
 }
 
 struct InputExample {
-    text_input: View<TextInput>,
+    text_input: Model<TextInput>,
     recent_keystrokes: Vec<Keystroke>,
     focus_handle: FocusHandle,
 }

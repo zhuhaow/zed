@@ -3,7 +3,7 @@ use std::sync::Arc;
 use editor::{Editor, EditorElement, EditorEvent, EditorStyle};
 use fs::Fs;
 use gpui::{
-    AppContext, DismissEvent, FocusableView, Model, Subscription, TextStyle, View, WeakModel,
+    AppContext, DismissEvent, FocusableView, Model, Subscription, TextStyle, Model, WeakModel,
     WeakView,
 };
 use language_model::{LanguageModelRegistry, LanguageModelRequestTool};
@@ -27,13 +27,13 @@ use crate::{Chat, ToggleContextPicker, ToggleModelSelector};
 
 pub struct MessageEditor {
     thread: Model<Thread>,
-    editor: View<Editor>,
+    editor: Model<Editor>,
     context_store: Model<ContextStore>,
-    context_strip: View<ContextStrip>,
+    context_strip: Model<ContextStrip>,
     context_picker_menu_handle: PopoverMenuHandle<ContextPicker>,
-    inline_context_picker: View<ContextPicker>,
+    inline_context_picker: Model<ContextPicker>,
     inline_context_picker_menu_handle: PopoverMenuHandle<ContextPicker>,
-    language_model_selector: View<LanguageModelSelector>,
+    language_model_selector: Model<LanguageModelSelector>,
     language_model_selector_menu_handle: PopoverMenuHandle<LanguageModelSelector>,
     use_tools: bool,
     _subscriptions: Vec<Subscription>,
@@ -172,7 +172,7 @@ impl MessageEditor {
 
     fn handle_editor_event(
         &mut self,
-        editor: View<Editor>,
+        editor: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -196,7 +196,7 @@ impl MessageEditor {
 
     fn handle_inline_context_picker_event(
         &mut self,
-        _inline_context_picker: View<ContextPicker>,
+        _inline_context_picker: Model<ContextPicker>,
         _event: &DismissEvent,
         cx: &mut ViewContext<Self>,
     ) {

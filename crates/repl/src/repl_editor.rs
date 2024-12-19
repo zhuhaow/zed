@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use editor::Editor;
-use gpui::{prelude::*, Entity, View, WeakView, WindowContext};
+use gpui::{prelude::*, Entity, Model, WeakView, WindowContext};
 use language::{BufferSnapshot, Language, LanguageName, Point};
 use project::{ProjectItem as _, WorktreeId};
 
@@ -157,7 +157,7 @@ pub fn run(editor: WeakView<Editor>, move_down: bool, cx: &mut WindowContext) ->
 
 #[allow(clippy::large_enum_variant)]
 pub enum SessionSupport {
-    ActiveSession(View<Session>),
+    ActiveSession(Model<Session>),
     Inactive(KernelSpecification),
     RequiresSetup(LanguageName),
     Unsupported,

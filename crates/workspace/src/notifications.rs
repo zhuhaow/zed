@@ -2,7 +2,7 @@ use crate::{Toast, Workspace};
 use collections::HashMap;
 use gpui::{
     svg, AnyView, AppContext, AsyncWindowContext, ClipboardItem, DismissEvent, Entity, EntityId,
-    EventEmitter, Global, PromptLevel, Render, ScrollHandle, Task, View, ViewContext,
+    EventEmitter, Global, PromptLevel, Render, ScrollHandle, Task, Model, ViewContext,
     VisualContext, WindowContext,
 };
 use language::DiagnosticSeverity;
@@ -49,7 +49,7 @@ pub trait NotificationHandle: Send {
     fn to_any(&self) -> AnyView;
 }
 
-impl<T: Notification> NotificationHandle for View<T> {
+impl<T: Notification> NotificationHandle for Model<T> {
     fn id(&self) -> EntityId {
         self.entity_id()
     }
@@ -109,7 +109,7 @@ impl Workspace {
         &mut self,
         id: NotificationId,
         cx: &mut ViewContext<Self>,
-        build_notification: impl FnOnce(&mut ViewContext<Self>) -> View<V>,
+        build_notification: impl FnOnce(&mut ViewContext<Self>) -> Model<V>,
     ) {
         if !self.has_shown_notification_once::<V>(&id, cx) {
             let tracker = cx.global_mut::<NotificationTracker>();
@@ -132,7 +132,7 @@ impl Workspace {
         &mut self,
         id: NotificationId,
         cx: &mut ViewContext<Self>,
-        build_notification: impl FnOnce(&mut ViewContext<Self>) -> View<V>,
+        build_notification: impl FnOnce(&mut ViewContext<Self>) -> Model<V>,
     ) {
         self.dismiss_notification_internal(&id, cx);
 
@@ -240,7 +240,7 @@ impl LanguageServerPrompt {
         }
     }
 
-    async fn select_option(this: View<Self>, ix: usize, mut cx: AsyncWindowContext) {
+    async fn select_option(this: Model<Self>, ix: usize, mut cx: AsyncWindowContext) {
         util::maybe!(async move {
             let potential_future = this.update(&mut cx, |this, _| {
                 this.request.take().map(|request| request.respond(ix))

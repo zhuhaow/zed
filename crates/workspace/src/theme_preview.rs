@@ -93,7 +93,7 @@ impl Item for ThemePreview {
         &self,
         _workspace_id: Option<crate::WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<gpui::View<Self>>
+    ) -> Option<gpui::Model<Self>>
     where
         Self: Sized,
     {

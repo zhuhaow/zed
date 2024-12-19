@@ -12,7 +12,7 @@ use futures::future::try_join_all;
 use git::repository::GitFileStatus;
 use gpui::{
     point, AnyElement, AppContext, AsyncWindowContext, Context, Entity, EntityId, EventEmitter,
-    IntoElement, Model, ParentElement, Pixels, SharedString, Styled, Task, View, ViewContext,
+    IntoElement, Model, ParentElement, Pixels, SharedString, Styled, Task, Model, ViewContext,
     VisualContext, WeakView, WindowContext,
 };
 use language::{
@@ -58,11 +58,11 @@ impl FollowableItem for Editor {
     }
 
     fn from_state_proto(
-        workspace: View<Workspace>,
+        workspace: Model<Workspace>,
         remote_id: ViewId,
         state: &mut Option<proto::view::Variant>,
         cx: &mut WindowContext,
-    ) -> Option<Task<Result<View<Self>>>> {
+    ) -> Option<Task<Result<Model<Self>>>> {
         let project = workspace.read(cx).project().to_owned();
         let Some(proto::view::Variant::Editor(_)) = state else {
             return None;
@@ -680,7 +680,7 @@ impl Item for Editor {
         &self,
         _workspace_id: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Editor>>
+    ) -> Option<Model<Editor>>
     where
         Self: Sized,
     {
@@ -833,7 +833,7 @@ impl Item for Editor {
         })
     }
 
-    fn as_searchable(&self, handle: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, handle: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         Some(Box::new(handle.clone()))
     }
 
@@ -955,7 +955,7 @@ impl SerializableItem for Editor {
         workspace_id: workspace::WorkspaceId,
         item_id: ItemId,
         cx: &mut WindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         let serialized_editor = match DB
             .get_serialized_editor(item_id, workspace_id)
             .context("Failed to query editor state")
@@ -1639,10 +1639,10 @@ mod tests {
     async fn deserialize_editor(
         item_id: ItemId,
         workspace_id: WorkspaceId,
-        workspace: View<Workspace>,
+        workspace: Model<Workspace>,
         project: Model<Project>,
         cx: &mut VisualTestContext,
-    ) -> View<Editor> {
+    ) -> Model<Editor> {
         workspace
             .update(cx, |workspace, cx| {
                 let pane = workspace.active_pane();

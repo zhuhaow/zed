@@ -5,7 +5,7 @@ use std::any::TypeId;
 use command_palette_hooks::CommandPaletteFilter;
 use editor::EditorSettingsControls;
 use feature_flags::{FeatureFlag, FeatureFlagViewExt};
-use gpui::{actions, AppContext, EventEmitter, FocusHandle, FocusableView, View};
+use gpui::{actions, AppContext, EventEmitter, FocusHandle, FocusableView, Model};
 use ui::prelude::*;
 use workspace::item::{Item, ItemEvent};
 use workspace::Workspace;
@@ -64,7 +64,7 @@ pub struct SettingsPage {
 }
 
 impl SettingsPage {
-    pub fn new(_workspace: &Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(_workspace: &Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         cx.new_view(|cx| Self {
             focus_handle: cx.focus_handle(),
         })

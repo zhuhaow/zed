@@ -1,7 +1,7 @@
 use collections::{HashMap, HashSet};
 use git::diff::DiffHunkStatus;
 use gpui::{
-    Action, AppContext, Corner, CursorStyle, Hsla, Model, MouseButton, Subscription, Task, View,
+    Action, AppContext, Corner, CursorStyle, Hsla, Model, MouseButton, Subscription, Task, Model,
 };
 use language::{Buffer, BufferId, Point};
 use multi_buffer::{
@@ -1135,7 +1135,7 @@ fn editor_with_deleted_text(
     deleted_color: Hsla,
     hunk: &HoveredHunk,
     cx: &mut ViewContext<'_, Editor>,
-) -> (u32, View<Editor>) {
+) -> (u32, Model<Editor>) {
     let parent_editor = cx.view().downgrade();
     let editor = cx.new_view(|cx| {
         let multi_buffer =

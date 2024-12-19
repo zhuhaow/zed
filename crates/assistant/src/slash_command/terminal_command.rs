@@ -6,7 +6,7 @@ use assistant_slash_command::{
     ArgumentCompletion, SlashCommand, SlashCommandOutput, SlashCommandOutputSection,
     SlashCommandResult,
 };
-use gpui::{AppContext, Task, View, WeakView};
+use gpui::{AppContext, Task, Model, WeakView};
 use language::{BufferSnapshot, CodeLabel, LspAdapterDelegate};
 use terminal_view::{terminal_panel::TerminalPanel, TerminalView};
 use ui::prelude::*;
@@ -107,9 +107,9 @@ impl SlashCommand for TerminalSlashCommand {
 }
 
 fn resolve_active_terminal(
-    workspace: &View<Workspace>,
+    workspace: &Model<Workspace>,
     cx: &WindowContext,
-) -> Option<View<TerminalView>> {
+) -> Option<Model<TerminalView>> {
     if let Some(terminal_view) = workspace
         .read(cx)
         .active_item(cx)

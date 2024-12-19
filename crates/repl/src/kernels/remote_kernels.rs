@@ -1,5 +1,5 @@
 use futures::{channel::mpsc, SinkExt as _};
-use gpui::{Task, View, WindowContext};
+use gpui::{Task, Model, WindowContext};
 use http_client::{AsyncBody, HttpClient, Request};
 use jupyter_protocol::{ExecutionState, JupyterKernelspec, JupyterMessage, KernelInfoReply};
 
@@ -137,7 +137,7 @@ impl RemoteRunningKernel {
     pub fn new(
         kernelspec: RemoteKernelSpecification,
         working_directory: std::path::PathBuf,
-        session: View<Session>,
+        session: Model<Session>,
         cx: &mut WindowContext,
     ) -> Task<Result<Box<dyn RunningKernel>>> {
         let remote_server = RemoteServer {

@@ -7,7 +7,7 @@
 use crate::{
     point, size, AnyElement, AvailableSpace, Bounds, ContentMask, Element, ElementId,
     GlobalElementId, Hitbox, InteractiveElement, Interactivity, IntoElement, IsZero, LayoutId,
-    ListSizingBehavior, Pixels, Render, ScrollHandle, Size, StyleRefinement, Styled, View,
+    ListSizingBehavior, Pixels, Render, ScrollHandle, Size, StyleRefinement, Styled, Model,
     ViewContext, WindowContext,
 };
 use smallvec::SmallVec;
@@ -21,7 +21,7 @@ use super::ListHorizontalSizingBehavior;
 /// uniform_list will only render the visible subset of items.
 #[track_caller]
 pub fn uniform_list<I, R, V>(
-    view: View<V>,
+    view: Model<V>,
     id: I,
     item_count: usize,
     f: impl 'static + Fn(&mut V, Range<usize>, &mut ViewContext<V>) -> Vec<R>,

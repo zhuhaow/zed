@@ -14,7 +14,7 @@ use futures::future::join_all;
 use gpui::{
     actions, Action, AnyView, AppContext, AsyncWindowContext, Corner, Entity, EventEmitter,
     ExternalPaths, FocusHandle, FocusableView, IntoElement, Model, ParentElement, Pixels, Render,
-    Styled, Task, View, ViewContext, VisualContext, WeakView, WindowContext,
+    Styled, Task, Model, ViewContext, VisualContext, WeakView, WindowContext,
 };
 use itertools::Itertools;
 use project::{terminals::TerminalKind, Fs, Project, ProjectEntryId};
@@ -64,7 +64,7 @@ pub fn init(cx: &mut AppContext) {
 }
 
 pub struct TerminalPanel {
-    pub(crate) active_pane: View<Pane>,
+    pub(crate) active_pane: Model<Pane>,
     pub(crate) center: PaneGroup,
     fs: Arc<dyn Fs>,
     workspace: WeakView<Workspace>,
@@ -121,7 +121,7 @@ impl TerminalPanel {
         }
     }
 
-    fn apply_tab_bar_buttons(&self, terminal_pane: &View<Pane>, cx: &mut ViewContext<Self>) {
+    fn apply_tab_bar_buttons(&self, terminal_pane: &Model<Pane>, cx: &mut ViewContext<Self>) {
         let assistant_tab_bar_button = self.assistant_tab_bar_button.clone();
         terminal_pane.update(cx, |pane, cx| {
             pane.set_render_tab_bar_buttons(cx, move |pane, cx| {
@@ -218,7 +218,7 @@ impl TerminalPanel {
     pub async fn load(
         workspace: WeakView<Workspace>,
         mut cx: AsyncWindowContext,
-    ) -> Result<View<Self>> {
+    ) -> Result<Model<Self>> {
         let serialized_panel = cx
             .background_executor()
             .spawn(async move { KEY_VALUE_STORE.read_kvp(TERMINAL_PANEL_KEY) })
@@ -286,7 +286,7 @@ impl TerminalPanel {
 
     fn handle_pane_event(
         &mut self,
-        pane: View<Pane>,
+        pane: Model<Pane>,
         event: &pane::Event,
         cx: &mut ViewContext<Self>,
     ) {
@@ -355,7 +355,7 @@ impl TerminalPanel {
     fn new_pane_with_cloned_active_terminal(
         &mut self,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Pane>> {
+    ) -> Option<Model<Pane>> {
         let workspace = self.workspace.upgrade()?;
         let workspace = workspace.read(cx);
         let database_id = workspace.database_id();
@@ -632,12 +632,12 @@ impl TerminalPanel {
         &self,
         label: &str,
         cx: &mut AppContext,
-    ) -> Vec<(usize, View<Pane>, View<TerminalView>)> {
+    ) -> Vec<(usize, Model<Pane>, Model<TerminalView>)> {
         let Some(workspace) = self.workspace.upgrade() else {
             return Vec::new();
         };
 
-        let pane_terminal_views = |pane: View<Pane>| {
+        let pane_terminal_views = |pane: Model<Pane>| {
             pane.read(cx)
                 .items()
                 .enumerate()
@@ -672,7 +672,7 @@ impl TerminalPanel {
 
     fn activate_terminal_view(
         &self,
-        pane: &View<Pane>,
+        pane: &Model<Pane>,
         item_index: usize,
         focus: bool,
         cx: &mut WindowContext,
@@ -821,9 +821,9 @@ impl TerminalPanel {
     fn replace_terminal(
         &self,
         spawn_task: SpawnInTerminal,
-        task_pane: View<Pane>,
+        task_pane: Model<Pane>,
         terminal_item_index: usize,
-        terminal_to_replace: View<TerminalView>,
+        terminal_to_replace: Model<TerminalView>,
         cx: &mut ViewContext<'_, Self>,
     ) -> Task<Option<()>> {
         let reveal = spawn_task.reveal;
@@ -946,7 +946,7 @@ pub fn new_terminal_pane(
     project: Model<Project>,
     zoomed: bool,
     cx: &mut ViewContext<TerminalPanel>,
-) -> View<Pane> {
+) -> Model<Pane> {
     let is_local = project.read(cx).is_local();
     let terminal_panel = cx.view().clone();
     let pane = cx.new_view(|cx| {
@@ -1095,7 +1095,7 @@ pub fn new_terminal_pane(
 }
 
 async fn wait_for_terminals_tasks(
-    terminals_for_task: Vec<(usize, View<Pane>, View<TerminalView>)>,
+    terminals_for_task: Vec<(usize, Model<Pane>, Model<TerminalView>)>,
     cx: &mut AsyncWindowContext,
 ) {
     let pending_tasks = terminals_for_task.iter().filter_map(|(_, _, terminal)| {
@@ -1378,7 +1378,7 @@ impl Panel for TerminalPanel {
         Box::new(ToggleFocus)
     }
 
-    fn pane(&self) -> Option<View<Pane>> {
+    fn pane(&self) -> Option<Model<Pane>> {
         Some(self.active_pane.clone())
     }
 }

@@ -9,7 +9,7 @@ use gpui::{
     actions, div, img, list, px, AnyElement, AppContext, AsyncWindowContext, CursorStyle,
     DismissEvent, Element, EventEmitter, FocusHandle, FocusableView, InteractiveElement,
     IntoElement, ListAlignment, ListScrollEvent, ListState, Model, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Task, View, ViewContext, VisualContext, WeakView,
+    StatefulInteractiveElement, Styled, Task, Model, ViewContext, VisualContext, WeakView,
     WindowContext,
 };
 use notifications::{NotificationEntry, NotificationEvent, NotificationStore};
@@ -85,7 +85,7 @@ pub fn init(cx: &mut AppContext) {
 }
 
 impl NotificationPanel {
-    pub fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         let fs = workspace.app_state().fs.clone();
         let client = workspace.app_state().client.clone();
         let user_store = workspace.app_state().user_store.clone();
@@ -169,7 +169,7 @@ impl NotificationPanel {
     pub fn load(
         workspace: WeakView<Workspace>,
         cx: AsyncWindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         cx.spawn(|mut cx| async move {
             let serialized_panel = if let Some(panel) = cx
                 .background_executor()

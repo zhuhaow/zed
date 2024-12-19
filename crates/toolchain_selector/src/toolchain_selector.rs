@@ -5,7 +5,7 @@ use editor::Editor;
 use fuzzy::{match_strings, StringMatch, StringMatchCandidate};
 use gpui::{
     actions, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Model,
-    ParentElement, Render, Styled, Task, View, ViewContext, VisualContext, WeakView,
+    ParentElement, Render, Styled, Task, Model, ViewContext, VisualContext, WeakView,
 };
 use language::{LanguageName, Toolchain, ToolchainList};
 use picker::{Picker, PickerDelegate};
@@ -22,7 +22,7 @@ pub fn init(cx: &mut AppContext) {
 }
 
 pub struct ToolchainSelector {
-    picker: View<Picker<ToolchainSelectorDelegate>>,
+    picker: Model<Picker<ToolchainSelectorDelegate>>,
 }
 
 impl ToolchainSelector {

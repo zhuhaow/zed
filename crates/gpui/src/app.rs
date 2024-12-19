@@ -38,7 +38,7 @@ use crate::{
     Keystroke, LayoutId, Menu, MenuItem, OwnedMenu, PathPromptOptions, Pixels, Platform,
     PlatformDisplay, Point, PromptBuilder, PromptHandle, PromptLevel, Render,
     RenderablePromptHandle, Reservation, ScreenCaptureSource, SharedString, SubscriberSet,
-    Subscription, SvgRenderer, Task, TextSystem, View, ViewContext, Window, WindowAppearance,
+    Subscription, SvgRenderer, Task, TextSystem, Model, ViewContext, Window, WindowAppearance,
     WindowContext, WindowHandle, WindowId,
 };
 
@@ -555,7 +555,7 @@ impl AppContext {
     pub fn open_window<V: 'static + Render>(
         &mut self,
         options: crate::WindowOptions,
-        build_root_view: impl FnOnce(&mut WindowContext) -> View<V>,
+        build_root_view: impl FnOnce(&mut WindowContext) -> Model<V>,
     ) -> anyhow::Result<WindowHandle<V>> {
         self.update(|cx| {
             let id = cx.windows.insert(None);
@@ -1520,7 +1520,7 @@ impl Context for AppContext {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
+        read: impl FnOnce(Model<T>, &AppContext) -> R,
     ) -> Result<R>
     where
         T: 'static,

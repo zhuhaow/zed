@@ -6,7 +6,7 @@ use client::{telemetry::Telemetry, TelemetrySettings};
 use db::kvp::KEY_VALUE_STORE;
 use gpui::{
     actions, svg, Action, AppContext, EventEmitter, FocusHandle, FocusableView, InteractiveElement,
-    ParentElement, Render, Styled, Subscription, Task, View, ViewContext, VisualContext, WeakView,
+    ParentElement, Render, Styled, Subscription, Task, Model, ViewContext, VisualContext, WeakView,
     WindowContext,
 };
 use settings::{Settings, SettingsStore};
@@ -341,7 +341,7 @@ impl Render for WelcomePage {
 }
 
 impl WelcomePage {
-    pub fn new(workspace: &Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(workspace: &Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         let this = cx.new_view(|cx| {
             cx.on_release(|this: &mut Self, _, _| {
                 this.telemetry
@@ -417,7 +417,7 @@ impl Item for WelcomePage {
         &self,
         _workspace_id: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>> {
+    ) -> Option<Model<Self>> {
         Some(cx.new_view(|cx| WelcomePage {
             focus_handle: cx.focus_handle(),
             workspace: self.workspace.clone(),

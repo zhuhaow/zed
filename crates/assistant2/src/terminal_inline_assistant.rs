@@ -12,7 +12,7 @@ use collections::{HashMap, VecDeque};
 use editor::{actions::SelectAll, MultiBuffer};
 use fs::Fs;
 use gpui::{
-    AppContext, Context, FocusableView, Global, Model, Subscription, UpdateGlobal, View, WeakModel,
+    AppContext, Context, FocusableView, Global, Model, Subscription, UpdateGlobal, Model, WeakModel,
     WeakView,
 };
 use language::Buffer;
@@ -68,7 +68,7 @@ impl TerminalInlineAssistant {
 
     pub fn assist(
         &mut self,
-        terminal_view: &View<TerminalView>,
+        terminal_view: &Model<TerminalView>,
         workspace: WeakView<Workspace>,
         thread_store: Option<WeakModel<ThreadStore>>,
         cx: &mut WindowContext,
@@ -131,7 +131,7 @@ impl TerminalInlineAssistant {
 
     fn handle_prompt_editor_event(
         &mut self,
-        prompt_editor: View<PromptEditor<TerminalCodegen>>,
+        prompt_editor: Model<PromptEditor<TerminalCodegen>>,
         event: &PromptEditorEvent,
         cx: &mut WindowContext,
     ) {
@@ -361,7 +361,7 @@ impl TerminalInlineAssistant {
 
 struct TerminalInlineAssist {
     terminal: WeakView<TerminalView>,
-    prompt_editor: Option<View<PromptEditor<TerminalCodegen>>>,
+    prompt_editor: Option<Model<PromptEditor<TerminalCodegen>>>,
     codegen: Model<TerminalCodegen>,
     workspace: WeakView<Workspace>,
     context_store: Model<ContextStore>,
@@ -371,8 +371,8 @@ struct TerminalInlineAssist {
 impl TerminalInlineAssist {
     pub fn new(
         assist_id: TerminalInlineAssistId,
-        terminal: &View<TerminalView>,
-        prompt_editor: View<PromptEditor<TerminalCodegen>>,
+        terminal: &Model<TerminalView>,
+        prompt_editor: Model<PromptEditor<TerminalCodegen>>,
         workspace: WeakView<Workspace>,
         context_store: Model<ContextStore>,
         cx: &mut WindowContext,

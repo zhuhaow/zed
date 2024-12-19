@@ -17,12 +17,12 @@ use std::{
 
 /// A view is a piece of state that can be presented on screen by implementing the [Render] trait.
 /// Views implement [Element] and can composed with other views, and every window is created with a root view.
-pub struct View<V> {
+pub struct Model<V> {
     /// A view is just a [Model] whose type implements `Render`, and the model is accessible via this field.
     pub model: Model<V>,
 }
 
-impl<V> Sealed for View<V> {}
+impl<V> Sealed for Model<V> {}
 
 struct AnyViewState {
     prepaint_range: Range<PrepaintStateIndex>,
@@ -37,7 +37,7 @@ struct ViewCacheKey {
     text_style: TextStyle,
 }
 
-impl<V: 'static> Entity<V> for View<V> {
+impl<V: 'static> Entity<V> for Model<V> {
     type Weak = WeakView<V>;
 
     fn entity_id(&self) -> EntityId {
@@ -55,11 +55,11 @@ impl<V: 'static> Entity<V> for View<V> {
         Self: Sized,
     {
         let model = weak.model.upgrade()?;
-        Some(View { model })
+        Some(Model { model })
     }
 }
 
-impl<V: 'static> View<V> {
+impl<V: 'static> Model<V> {
     /// Convert this strong view reference into a weak view reference.
     pub fn downgrade(&self) -> WeakView<V> {
         Entity::downgrade(self)
@@ -91,7 +91,7 @@ impl<V: 'static> View<V> {
     }
 }
 
-impl<V: Render> Element for View<V> {
+impl<V: Render> Element for Model<V> {
     type RequestLayoutState = AnyElement;
     type PrepaintState = ();
 
@@ -132,7 +132,7 @@ impl<V: Render> Element for View<V> {
     }
 }
 
-impl<V> Clone for View<V> {
+impl<V> Clone for Model<V> {
     fn clone(&self) -> Self {
         Self {
             model: self.model.clone(),
@@ -140,7 +140,7 @@ impl<V> Clone for View<V> {
     }
 }
 
-impl<T> std::fmt::Debug for View<T> {
+impl<T> std::fmt::Debug for Model<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct(&format!("View<{}>", type_name::<T>()))
             .field("entity_id", &self.model.entity_id)
@@ -148,19 +148,19 @@ impl<T> std::fmt::Debug for View<T> {
     }
 }
 
-impl<V> Hash for View<V> {
+impl<V> Hash for Model<V> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.model.hash(state);
     }
 }
 
-impl<V> PartialEq for View<V> {
+impl<V> PartialEq for Model<V> {
     fn eq(&self, other: &Self) -> bool {
         self.model == other.model
     }
 }
 
-impl<V> Eq for View<V> {}
+impl<V> Eq for Model<V> {}
 
 /// A weak variant of [View] which does not prevent the view from being released.
 pub struct WeakView<V> {
@@ -174,7 +174,7 @@ impl<V: 'static> WeakView<V> {
     }
 
     /// Obtain a strong handle for the view if it hasn't been released.
-    pub fn upgrade(&self) -> Option<View<V>> {
+    pub fn upgrade(&self) -> Option<Model<V>> {
         Entity::upgrade_from(self)
     }
 
@@ -249,9 +249,9 @@ impl AnyView {
 
     /// Convert this to a [View] of a specific type.
     /// If this handle does not contain a view of the specified type, returns itself in an `Err` variant.
-    pub fn downcast<T: 'static>(self) -> Result<View<T>, Self> {
+    pub fn downcast<T: 'static>(self) -> Result<Model<T>, Self> {
         match self.model.downcast() {
-            Ok(model) => Ok(View { model }),
+            Ok(model) => Ok(Model { model }),
             Err(model) => Err(Self {
                 model,
                 render: self.render,
@@ -271,8 +271,8 @@ impl AnyView {
     }
 }
 
-impl<V: Render> From<View<V>> for AnyView {
-    fn from(value: View<V>) -> Self {
+impl<V: Render> From<Model<V>> for AnyView {
+    fn from(value: Model<V>) -> Self {
         AnyView {
             model: value.model.into_any(),
             render: any_view::render::<V>,
@@ -403,8 +403,8 @@ impl Element for AnyView {
     }
 }
 
-impl<V: 'static + Render> IntoElement for View<V> {
-    type Element = View<V>;
+impl<V: 'static + Render> IntoElement for Model<V> {
+    type Element = Model<V>;
 
     fn into_element(self) -> Self::Element {
         self

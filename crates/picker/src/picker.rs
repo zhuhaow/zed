@@ -3,7 +3,7 @@ use editor::{scroll::Autoscroll, Editor};
 use gpui::{
     actions, div, impl_actions, list, prelude::*, uniform_list, AnyElement, AppContext, ClickEvent,
     DismissEvent, EventEmitter, FocusHandle, FocusableView, Length, ListSizingBehavior, ListState,
-    MouseButton, MouseUpEvent, Render, ScrollStrategy, Task, UniformListScrollHandle, View,
+    MouseButton, MouseUpEvent, Render, ScrollStrategy, Task, UniformListScrollHandle, Model,
     ViewContext, WindowContext,
 };
 use head::Head;
@@ -120,7 +120,7 @@ pub trait PickerDelegate: Sized + 'static {
         PickerEditorPosition::default()
     }
 
-    fn render_editor(&self, editor: &View<Editor>, _cx: &mut ViewContext<Picker<Self>>) -> Div {
+    fn render_editor(&self, editor: &Model<Editor>, _cx: &mut ViewContext<Picker<Self>>) -> Div {
         v_flex()
             .when(
                 self.editor_position() == PickerEditorPosition::End,
@@ -399,7 +399,7 @@ impl<D: PickerDelegate> Picker<D> {
 
     fn on_input_editor_event(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &editor::EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {

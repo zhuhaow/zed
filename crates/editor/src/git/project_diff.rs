@@ -15,7 +15,7 @@ use git::{
 };
 use gpui::{
     actions, AnyElement, AnyView, AppContext, EventEmitter, FocusHandle, FocusableView,
-    InteractiveElement, Model, Render, Subscription, Task, View, WeakView,
+    InteractiveElement, Model, Render, Subscription, Task, Model, WeakView,
 };
 use language::{Buffer, BufferRow};
 use multi_buffer::{ExcerptId, ExcerptRange, ExpandExcerptDirection, MultiBuffer};
@@ -43,7 +43,7 @@ struct ProjectDiffEditor {
     buffer_changes: BTreeMap<WorktreeId, HashMap<ProjectEntryId, Changes>>,
     entry_order: HashMap<WorktreeId, Vec<(ProjectPath, ProjectEntryId)>>,
     excerpts: Model<MultiBuffer>,
-    editor: View<Editor>,
+    editor: Model<Editor>,
 
     project: Model<Project>,
     workspace: WeakView<Workspace>,
@@ -997,7 +997,7 @@ impl Item for ProjectDiffEditor {
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>>
+    ) -> Option<Model<Self>>
     where
         Self: Sized,
     {
@@ -1047,7 +1047,7 @@ impl Item for ProjectDiffEditor {
     fn act_as_type<'a>(
         &'a self,
         type_id: TypeId,
-        self_handle: &'a View<Self>,
+        self_handle: &'a Model<Self>,
         _: &'a AppContext,
     ) -> Option<AnyView> {
         if type_id == TypeId::of::<Self>() {

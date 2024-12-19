@@ -6,7 +6,7 @@ use extension_host::{ExtensionSettings, ExtensionStore};
 use fs::Fs;
 use fuzzy::{match_strings, StringMatch, StringMatchCandidate};
 use gpui::{
-    prelude::*, AppContext, DismissEvent, EventEmitter, FocusableView, Task, View, WeakView,
+    prelude::*, AppContext, DismissEvent, EventEmitter, FocusableView, Task, Model, WeakView,
 };
 use picker::{Picker, PickerDelegate};
 use release_channel::ReleaseChannel;
@@ -17,7 +17,7 @@ use util::ResultExt;
 use workspace::ModalView;
 
 pub struct ExtensionVersionSelector {
-    picker: View<Picker<ExtensionVersionSelectorDelegate>>,
+    picker: Model<Picker<ExtensionVersionSelectorDelegate>>,
 }
 
 impl ModalView for ExtensionVersionSelector {}

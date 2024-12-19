@@ -1,5 +1,5 @@
 use gpui::{
-    colors, div, prelude::*, DefaultColor, DefaultThemeAppearance, Hsla, Render, View, ViewContext,
+    colors, div, prelude::*, DefaultColor, DefaultThemeAppearance, Hsla, Render, Model, ViewContext,
     WindowContext,
 };
 use story::Story;
@@ -9,7 +9,7 @@ use ui::{h_flex, ActiveTheme};
 pub struct DefaultColorsStory;
 
 impl DefaultColorsStory {
-    pub fn view(cx: &mut WindowContext) -> View<Self> {
+    pub fn view(cx: &mut WindowContext) -> Model<Self> {
         cx.new_view(|_cx| Self)
     }
 }

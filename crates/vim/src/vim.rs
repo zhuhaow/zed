@@ -27,7 +27,7 @@ use editor::{
 };
 use gpui::{
     actions, impl_actions, Action, AppContext, Axis, Entity, EventEmitter, KeyContext,
-    KeystrokeEvent, Render, Subscription, View, ViewContext, WeakView,
+    KeystrokeEvent, Render, Subscription, Model, ViewContext, WeakView,
 };
 use insert::{NormalBefore, TemporaryNormal};
 use language::{CursorShape, Point, Selection, SelectionGoal, TransactionId};
@@ -182,7 +182,7 @@ pub fn init(cx: &mut AppContext) {
 
 #[derive(Clone)]
 pub(crate) struct VimAddon {
-    pub(crate) view: View<Vim>,
+    pub(crate) view: Model<Vim>,
 }
 
 impl editor::Addon for VimAddon {
@@ -240,7 +240,7 @@ impl Vim {
     /// The namespace for Vim actions.
     const NAMESPACE: &'static str = "vim";
 
-    pub fn new(cx: &mut ViewContext<Editor>) -> View<Self> {
+    pub fn new(cx: &mut ViewContext<Editor>) -> Model<Self> {
         let editor = cx.view().clone();
 
         cx.new_view(|cx| Vim {
@@ -381,17 +381,17 @@ impl Vim {
         cx.on_release(|_, _, _| drop(subscription)).detach();
     }
 
-    pub fn editor(&self) -> Option<View<Editor>> {
+    pub fn editor(&self) -> Option<Model<Editor>> {
         self.editor.upgrade()
     }
 
-    pub fn workspace(&self, cx: &mut ViewContext<Self>) -> Option<View<Workspace>> {
+    pub fn workspace(&self, cx: &mut ViewContext<Self>) -> Option<Model<Workspace>> {
         cx.window_handle()
             .downcast::<Workspace>()
             .and_then(|handle| handle.root(cx).ok())
     }
 
-    pub fn pane(&self, cx: &mut ViewContext<Self>) -> Option<View<Pane>> {
+    pub fn pane(&self, cx: &mut ViewContext<Self>) -> Option<Model<Pane>> {
         self.workspace(cx)
             .map(|workspace| workspace.read(cx).focused_pane(cx))
     }

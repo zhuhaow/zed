@@ -26,7 +26,7 @@ use futures::{
 use gpui::{
     anchored, deferred, point, AnyElement, AppContext, ClickEvent, CursorStyle, EventEmitter,
     FocusHandle, FocusableView, FontWeight, Global, HighlightStyle, Model, ModelContext,
-    Subscription, Task, TextStyle, UpdateGlobal, View, ViewContext, WeakView, WindowContext,
+    Subscription, Task, TextStyle, UpdateGlobal, Model, ViewContext, WeakView, WindowContext,
 };
 use language::{Buffer, IndentKind, Point, Selection, TransactionId};
 use language_model::{
@@ -115,7 +115,7 @@ impl InlineAssistant {
         }
     }
 
-    pub fn register_workspace(&mut self, workspace: &View<Workspace>, cx: &mut WindowContext) {
+    pub fn register_workspace(&mut self, workspace: &Model<Workspace>, cx: &mut WindowContext) {
         cx.subscribe(workspace, |workspace, event, cx| {
             Self::update_global(cx, |this, cx| {
                 this.handle_workspace_event(workspace, event, cx)
@@ -141,7 +141,7 @@ impl InlineAssistant {
 
     fn handle_workspace_event(
         &mut self,
-        workspace: View<Workspace>,
+        workspace: Model<Workspace>,
         event: &workspace::Event,
         cx: &mut WindowContext,
     ) {
@@ -168,7 +168,7 @@ impl InlineAssistant {
 
     fn register_workspace_item(
         &mut self,
-        workspace: &View<Workspace>,
+        workspace: &Model<Workspace>,
         item: &dyn ItemHandle,
         cx: &mut WindowContext,
     ) {
@@ -187,9 +187,9 @@ impl InlineAssistant {
 
     pub fn assist(
         &mut self,
-        editor: &View<Editor>,
+        editor: &Model<Editor>,
         workspace: Option<WeakView<Workspace>>,
-        assistant_panel: Option<&View<AssistantPanel>>,
+        assistant_panel: Option<&Model<AssistantPanel>>,
         initial_prompt: Option<String>,
         cx: &mut WindowContext,
     ) {
@@ -354,13 +354,13 @@ impl InlineAssistant {
     #[allow(clippy::too_many_arguments)]
     pub fn suggest_assist(
         &mut self,
-        editor: &View<Editor>,
+        editor: &Model<Editor>,
         mut range: Range<Anchor>,
         initial_prompt: String,
         initial_transaction_id: Option<TransactionId>,
         focus: bool,
         workspace: Option<WeakView<Workspace>>,
-        assistant_panel: Option<&View<AssistantPanel>>,
+        assistant_panel: Option<&Model<AssistantPanel>>,
         cx: &mut WindowContext,
     ) -> InlineAssistId {
         let assist_group_id = self.next_assist_group_id.post_inc();
@@ -441,9 +441,9 @@ impl InlineAssistant {
 
     fn insert_assist_blocks(
         &self,
-        editor: &View<Editor>,
+        editor: &Model<Editor>,
         range: &Range<Anchor>,
-        prompt_editor: &View<PromptEditor>,
+        prompt_editor: &Model<PromptEditor>,
         cx: &mut WindowContext,
     ) -> [CustomBlockId; 2] {
         let prompt_editor_height = prompt_editor.update(cx, |prompt_editor, cx| {
@@ -545,7 +545,7 @@ impl InlineAssistant {
 
     fn handle_prompt_editor_event(
         &mut self,
-        prompt_editor: View<PromptEditor>,
+        prompt_editor: Model<PromptEditor>,
         event: &PromptEditorEvent,
         cx: &mut WindowContext,
     ) {
@@ -569,7 +569,7 @@ impl InlineAssistant {
         }
     }
 
-    fn handle_editor_newline(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
+    fn handle_editor_newline(&mut self, editor: Model<Editor>, cx: &mut WindowContext) {
         let Some(editor_assists) = self.assists_by_editor.get(&editor.downgrade()) else {
             return;
         };
@@ -600,7 +600,7 @@ impl InlineAssistant {
         cx.propagate();
     }
 
-    fn handle_editor_cancel(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
+    fn handle_editor_cancel(&mut self, editor: Model<Editor>, cx: &mut WindowContext) {
         let Some(editor_assists) = self.assists_by_editor.get(&editor.downgrade()) else {
             return;
         };
@@ -662,7 +662,7 @@ impl InlineAssistant {
         }
     }
 
-    fn handle_editor_change(&mut self, editor: View<Editor>, cx: &mut WindowContext) {
+    fn handle_editor_change(&mut self, editor: Model<Editor>, cx: &mut WindowContext) {
         let Some(editor_assists) = self.assists_by_editor.get(&editor.downgrade()) else {
             return;
         };
@@ -689,7 +689,7 @@ impl InlineAssistant {
 
     fn handle_editor_event(
         &mut self,
-        editor: View<Editor>,
+        editor: Model<Editor>,
         event: &EditorEvent,
         cx: &mut WindowContext,
     ) {
@@ -1037,7 +1037,7 @@ impl InlineAssistant {
         assist.codegen.update(cx, |codegen, cx| codegen.stop(cx));
     }
 
-    fn update_editor_highlights(&self, editor: &View<Editor>, cx: &mut WindowContext) {
+    fn update_editor_highlights(&self, editor: &Model<Editor>, cx: &mut WindowContext) {
         let mut gutter_pending_ranges = Vec::new();
         let mut gutter_transformed_ranges = Vec::new();
         let mut foreground_ranges = Vec::new();
@@ -1130,7 +1130,7 @@ impl InlineAssistant {
 
     fn update_editor_blocks(
         &mut self,
-        editor: &View<Editor>,
+        editor: &Model<Editor>,
         assist_id: InlineAssistId,
         cx: &mut WindowContext,
     ) {
@@ -1237,7 +1237,7 @@ struct InlineAssistScrollLock {
 
 impl EditorInlineAssists {
     #[allow(clippy::too_many_arguments)]
-    fn new(editor: &View<Editor>, cx: &mut WindowContext) -> Self {
+    fn new(editor: &Model<Editor>, cx: &mut WindowContext) -> Self {
         let (highlight_updates_tx, mut highlight_updates_rx) = async_watch::channel(());
         Self {
             assist_ids: Vec::new(),
@@ -1319,7 +1319,7 @@ impl InlineAssistGroup {
     }
 }
 
-fn build_assist_editor_renderer(editor: &View<PromptEditor>) -> RenderBlock {
+fn build_assist_editor_renderer(editor: &Model<PromptEditor>) -> RenderBlock {
     let editor = editor.clone();
     Arc::new(move |cx: &mut BlockContext| {
         *editor.read(cx).gutter_dimensions.lock() = *cx.gutter_dimensions;
@@ -1359,8 +1359,8 @@ enum PromptEditorEvent {
 
 struct PromptEditor {
     id: InlineAssistId,
-    editor: View<Editor>,
-    language_model_selector: View<LanguageModelSelector>,
+    editor: Model<Editor>,
+    language_model_selector: Model<LanguageModelSelector>,
     edited_since_done: bool,
     gutter_dimensions: Arc<Mutex<GutterDimensions>>,
     prompt_history: VecDeque<String>,
@@ -1602,8 +1602,8 @@ impl PromptEditor {
         prompt_history: VecDeque<String>,
         prompt_buffer: Model<MultiBuffer>,
         codegen: Model<Codegen>,
-        parent_editor: &View<Editor>,
-        assistant_panel: Option<&View<AssistantPanel>>,
+        parent_editor: &Model<Editor>,
+        assistant_panel: Option<&Model<AssistantPanel>>,
         workspace: Option<WeakView<Workspace>>,
         fs: Arc<dyn Fs>,
         cx: &mut ViewContext<Self>,
@@ -1731,7 +1731,7 @@ impl PromptEditor {
 
     fn handle_parent_editor_event(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -1742,7 +1742,7 @@ impl PromptEditor {
 
     fn handle_assistant_panel_event(
         &mut self,
-        _: View<AssistantPanel>,
+        _: Model<AssistantPanel>,
         event: &AssistantPanelEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -1773,7 +1773,7 @@ impl PromptEditor {
 
     fn handle_prompt_editor_events(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -2224,8 +2224,8 @@ impl InlineAssist {
         assist_id: InlineAssistId,
         group_id: InlineAssistGroupId,
         include_context: bool,
-        editor: &View<Editor>,
-        prompt_editor: &View<PromptEditor>,
+        editor: &Model<Editor>,
+        prompt_editor: &Model<PromptEditor>,
         prompt_block_id: CustomBlockId,
         end_block_id: CustomBlockId,
         range: Range<Anchor>,
@@ -2356,7 +2356,7 @@ impl InlineAssist {
 
 struct InlineAssistDecorations {
     prompt_block_id: CustomBlockId,
-    prompt_editor: View<PromptEditor>,
+    prompt_editor: Model<PromptEditor>,
     removed_line_block_ids: HashSet<CustomBlockId>,
     end_block_id: CustomBlockId,
 }

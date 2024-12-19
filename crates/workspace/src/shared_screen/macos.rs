@@ -8,7 +8,7 @@ use client::{proto::PeerId, User};
 use futures::StreamExt;
 use gpui::{
     div, surface, AppContext, EventEmitter, FocusHandle, FocusableView, InteractiveElement,
-    ParentElement, Render, SharedString, Styled, Task, View, ViewContext, VisualContext,
+    ParentElement, Render, SharedString, Styled, Task, Model, ViewContext, VisualContext,
     WindowContext,
 };
 use std::sync::{Arc, Weak};
@@ -113,7 +113,7 @@ impl Item for SharedScreen {
         &self,
         _workspace_id: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>> {
+    ) -> Option<Model<Self>> {
         let track = self.track.upgrade()?;
         Some(cx.new_view(|cx| Self::new(track, self.peer_id, self.user.clone(), cx)))
     }

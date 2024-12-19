@@ -1,7 +1,7 @@
 use fs::Fs;
 use fuzzy::{match_strings, StringMatch, StringMatchCandidate};
 use gpui::{
-    actions, AppContext, DismissEvent, EventEmitter, FocusableView, Render, UpdateGlobal, View,
+    actions, AppContext, DismissEvent, EventEmitter, FocusableView, Render, UpdateGlobal, Model,
     ViewContext, VisualContext, WeakView,
 };
 use picker::{Picker, PickerDelegate};
@@ -40,7 +40,7 @@ pub fn toggle(workspace: &mut Workspace, toggle: &Toggle, cx: &mut ViewContext<W
 impl ModalView for ThemeSelector {}
 
 pub struct ThemeSelector {
-    picker: View<Picker<ThemeSelectorDelegate>>,
+    picker: Model<Picker<ThemeSelectorDelegate>>,
 }
 
 impl EventEmitter<DismissEvent> for ThemeSelector {}

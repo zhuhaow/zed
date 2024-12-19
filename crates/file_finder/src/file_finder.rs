@@ -16,7 +16,7 @@ use fuzzy::{CharBag, PathMatch, PathMatchCandidate};
 use gpui::{
     actions, Action, AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle,
     FocusableView, KeyContext, Model, Modifiers, ModifiersChangedEvent, ParentElement, Render,
-    Styled, Task, View, ViewContext, VisualContext, WeakView,
+    Styled, Task, Model, ViewContext, VisualContext, WeakView,
 };
 use new_path_prompt::NewPathPrompt;
 use open_path_prompt::OpenPathPrompt;
@@ -54,7 +54,7 @@ impl ModalView for FileFinder {
 }
 
 pub struct FileFinder {
-    picker: View<Picker<FileFinderDelegate>>,
+    picker: Model<Picker<FileFinderDelegate>>,
     picker_focus_handle: FocusHandle,
     init_modifiers: Option<Modifiers>,
 }

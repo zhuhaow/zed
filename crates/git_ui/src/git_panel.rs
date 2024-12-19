@@ -95,7 +95,7 @@ impl GitPanel {
     pub fn load(
         workspace: WeakView<Workspace>,
         cx: AsyncWindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         cx.spawn(|mut cx| async move {
             // Clippy incorrectly classifies this as a redundant closure
             #[allow(clippy::redundant_closure)]
@@ -103,7 +103,7 @@ impl GitPanel {
         })
     }
 
-    pub fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         let fs = workspace.app_state().fs.clone();
         let weak_workspace = workspace.weak_handle();
         let project = workspace.project().clone();

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use feature_flags::ZedPro;
 use gpui::{
     Action, AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Task,
-    View, WeakView,
+    Model, WeakView,
 };
 use language_model::{LanguageModel, LanguageModelAvailability, LanguageModelRegistry};
 use picker::{Picker, PickerDelegate};
@@ -16,7 +16,7 @@ const TRY_ZED_PRO_URL: &str = "https://zed.dev/pro";
 type OnModelChanged = Arc<dyn Fn(Arc<dyn LanguageModel>, &AppContext) + 'static>;
 
 pub struct LanguageModelSelector {
-    picker: View<Picker<LanguageModelPickerDelegate>>,
+    picker: Model<Picker<LanguageModelPickerDelegate>>,
 }
 
 impl LanguageModelSelector {
@@ -80,13 +80,13 @@ pub struct LanguageModelSelectorPopoverMenu<T>
 where
     T: PopoverTrigger,
 {
-    language_model_selector: View<LanguageModelSelector>,
+    language_model_selector: Model<LanguageModelSelector>,
     trigger: T,
     handle: Option<PopoverMenuHandle<LanguageModelSelector>>,
 }
 
 impl<T: PopoverTrigger> LanguageModelSelectorPopoverMenu<T> {
-    pub fn new(language_model_selector: View<LanguageModelSelector>, trigger: T) -> Self {
+    pub fn new(language_model_selector: Model<LanguageModelSelector>, trigger: T) -> Self {
         Self {
             language_model_selector,
             trigger,

@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use editor::{Editor, EditorMode, MultiBuffer};
 use futures::future::Shared;
-use gpui::{prelude::*, AppContext, Hsla, Task, TextStyleRefinement, View};
+use gpui::{prelude::*, AppContext, Hsla, Task, TextStyleRefinement, Model};
 use language::{Buffer, Language, LanguageRegistry};
 use markdown_preview::{markdown_parser::parse_markdown, markdown_renderer::render_markdown_block};
 use nbformat::v4::{CellId, CellMetadata, CellType};
@@ -75,9 +75,9 @@ impl Clickable for CellControl {
 /// A notebook cell
 #[derive(Clone)]
 pub enum Cell {
-    Code(View<CodeCell>),
-    Markdown(View<MarkdownCell>),
-    Raw(View<RawCell>),
+    Code(Model<CodeCell>),
+    Markdown(Model<MarkdownCell>),
+    Raw(Model<RawCell>),
 }
 
 fn convert_outputs(outputs: &Vec<nbformat::v4::Output>, cx: &mut WindowContext) -> Vec<Output> {
@@ -417,7 +417,7 @@ pub struct CodeCell {
     metadata: CellMetadata,
     execution_count: Option<i32>,
     source: String,
-    editor: View<editor::Editor>,
+    editor: Model<editor::Editor>,
     outputs: Vec<Output>,
     selected: bool,
     cell_position: Option<CellPosition>,

@@ -6,7 +6,7 @@ use client::zed_urls;
 use fs::Fs;
 use gpui::{
     prelude::*, px, svg, Action, AnyElement, AppContext, AsyncWindowContext, EventEmitter,
-    FocusHandle, FocusableView, FontWeight, Model, Pixels, Task, View, ViewContext, WeakView,
+    FocusHandle, FocusableView, FontWeight, Model, Pixels, Task, Model, ViewContext, WeakView,
     WindowContext,
 };
 use language::LanguageRegistry;
@@ -58,12 +58,12 @@ pub struct AssistantPanel {
     fs: Arc<dyn Fs>,
     language_registry: Arc<LanguageRegistry>,
     thread_store: Model<ThreadStore>,
-    thread: View<ActiveThread>,
-    message_editor: View<MessageEditor>,
+    thread: Model<ActiveThread>,
+    message_editor: Model<MessageEditor>,
     tools: Arc<ToolWorkingSet>,
     local_timezone: UtcOffset,
     active_view: ActiveView,
-    history: View<ThreadHistory>,
+    history: Model<ThreadHistory>,
     width: Option<Pixels>,
     height: Option<Pixels>,
 }
@@ -72,7 +72,7 @@ impl AssistantPanel {
     pub fn load(
         workspace: WeakView<Workspace>,
         cx: AsyncWindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         cx.spawn(|mut cx| async move {
             let tools = Arc::new(ToolWorkingSet::default());
             let thread_store = workspace

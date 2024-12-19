@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use gpui::{FocusHandle, Model, View, WeakModel, WeakView};
+use gpui::{FocusHandle, Model, Model, WeakModel, WeakView};
 use ui::{prelude::*, PopoverMenu, PopoverMenuHandle, Tooltip};
 use workspace::Workspace;
 
@@ -12,7 +12,7 @@ use crate::ToggleContextPicker;
 
 pub struct ContextStrip {
     context_store: Model<ContextStore>,
-    context_picker: View<ContextPicker>,
+    context_picker: Model<ContextPicker>,
     context_picker_menu_handle: PopoverMenuHandle<ContextPicker>,
     focus_handle: FocusHandle,
 }

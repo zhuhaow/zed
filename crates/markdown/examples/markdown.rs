@@ -1,5 +1,5 @@
 use assets::Assets;
-use gpui::{prelude::*, rgb, App, KeyBinding, StyleRefinement, View, WindowOptions};
+use gpui::{prelude::*, rgb, App, KeyBinding, StyleRefinement, Model, WindowOptions};
 use language::{language_settings::AllLanguageSettings, LanguageRegistry};
 use markdown::{Markdown, MarkdownStyle};
 use node_runtime::NodeRuntime;
@@ -167,7 +167,7 @@ pub fn main() {
 }
 
 struct MarkdownExample {
-    markdown: View<Markdown>,
+    markdown: Model<Markdown>,
 }
 
 impl MarkdownExample {

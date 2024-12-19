@@ -7,7 +7,7 @@ use crate::markdown_elements::{
 use gpui::{
     div, img, px, rems, AbsoluteLength, AnyElement, ClipboardItem, DefiniteLength, Div, Element,
     ElementId, HighlightStyle, Hsla, ImageSource, InteractiveText, IntoElement, Keystroke, Length,
-    Modifiers, ParentElement, Render, Resource, SharedString, Styled, StyledText, TextStyle, View,
+    Modifiers, ParentElement, Render, Resource, SharedString, Styled, StyledText, TextStyle, Model,
     WeakView, WindowContext,
 };
 use settings::Settings;
@@ -569,7 +569,7 @@ impl InteractiveMarkdownElementTooltip {
         tooltip_text: Option<String>,
         action_text: &str,
         cx: &mut WindowContext,
-    ) -> View<Self> {
+    ) -> Model<Self> {
         let tooltip_text = tooltip_text.map(|t| util::truncate_and_trailoff(&t, 50).into());
 
         cx.new_view(|_| Self {

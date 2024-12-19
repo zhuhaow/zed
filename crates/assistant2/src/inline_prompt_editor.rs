@@ -18,7 +18,7 @@ use feature_flags::{FeatureFlagAppExt as _, ZedPro};
 use fs::Fs;
 use gpui::{
     anchored, deferred, point, AnyElement, AppContext, ClickEvent, CursorStyle, EventEmitter,
-    FocusHandle, FocusableView, FontWeight, Model, Subscription, TextStyle, View, ViewContext,
+    FocusHandle, FocusableView, FontWeight, Model, Subscription, TextStyle, Model, ViewContext,
     WeakModel, WeakView, WindowContext,
 };
 use language_model::{LanguageModel, LanguageModelRegistry};
@@ -35,11 +35,11 @@ use util::ResultExt;
 use workspace::Workspace;
 
 pub struct PromptEditor<T> {
-    pub editor: View<Editor>,
+    pub editor: Model<Editor>,
     mode: PromptEditorMode,
-    context_strip: View<ContextStrip>,
+    context_strip: Model<ContextStrip>,
     context_picker_menu_handle: PopoverMenuHandle<ContextPicker>,
-    language_model_selector: View<LanguageModelSelector>,
+    language_model_selector: Model<LanguageModelSelector>,
     edited_since_done: bool,
     prompt_history: VecDeque<String>,
     prompt_history_ix: Option<usize>,
@@ -265,7 +265,7 @@ impl<T: 'static> PromptEditor<T> {
 
     fn handle_prompt_editor_events(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {

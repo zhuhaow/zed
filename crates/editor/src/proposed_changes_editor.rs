@@ -1,7 +1,7 @@
 use crate::{ApplyAllDiffHunks, Editor, EditorEvent, SemanticsProvider};
 use collections::HashSet;
 use futures::{channel::mpsc, future::join_all};
-use gpui::{AppContext, EventEmitter, FocusableView, Model, Render, Subscription, Task, View};
+use gpui::{AppContext, EventEmitter, FocusableView, Model, Render, Subscription, Task, Model};
 use language::{Buffer, BufferEvent, Capability};
 use multi_buffer::{ExcerptRange, MultiBuffer};
 use project::{buffer_store::BufferChangeSet, Project};
@@ -15,7 +15,7 @@ use workspace::{
 };
 
 pub struct ProposedChangesEditor {
-    editor: View<Editor>,
+    editor: Model<Editor>,
     multibuffer: Model<MultiBuffer>,
     title: SharedString,
     buffer_entries: Vec<BufferEntry>,
@@ -35,7 +35,7 @@ struct BufferEntry {
 }
 
 pub struct ProposedChangesEditorToolbar {
-    current_editor: Option<View<ProposedChangesEditor>>,
+    current_editor: Option<Model<ProposedChangesEditor>>,
 }
 
 struct RecalculateDiff {
@@ -296,14 +296,14 @@ impl Item for ProposedChangesEditor {
         Some(self.title.clone())
     }
 
-    fn as_searchable(&self, _: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, _: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         Some(Box::new(self.editor.clone()))
     }
 
     fn act_as_type<'a>(
         &'a self,
         type_id: TypeId,
-        self_handle: &'a View<Self>,
+        self_handle: &'a Model<Self>,
         _: &'a AppContext,
     ) -> Option<gpui::AnyView> {
         if type_id == TypeId::of::<Self>() {

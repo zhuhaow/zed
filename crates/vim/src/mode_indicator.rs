@@ -1,4 +1,4 @@
-use gpui::{div, Element, Render, Subscription, View, ViewContext, WeakView};
+use gpui::{div, Element, Render, Subscription, Model, ViewContext, WeakView};
 use itertools::Itertools;
 use workspace::{item::ItemHandle, ui::prelude::*, StatusItemView};
 
@@ -56,11 +56,11 @@ impl ModeIndicator {
         });
     }
 
-    fn vim(&self) -> Option<View<Vim>> {
+    fn vim(&self) -> Option<Model<Vim>> {
         self.vim.as_ref().and_then(|vim| vim.upgrade())
     }
 
-    fn current_operators_description(&self, vim: View<Vim>, cx: &mut ViewContext<Self>) -> String {
+    fn current_operators_description(&self, vim: Model<Vim>, cx: &mut ViewContext<Self>) -> String {
         let recording = Vim::globals(cx)
             .recording_register
             .map(|reg| format!("recording @{reg} "))

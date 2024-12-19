@@ -1,4 +1,4 @@
-use gpui::{div, Action, Div, InteractiveElement, View, ViewContext};
+use gpui::{div, Action, Div, InteractiveElement, Model, ViewContext};
 use workspace::Workspace;
 
 use crate::BufferSearchBar;
@@ -11,7 +11,7 @@ pub trait SearchActionsRegistrar {
 type SearchBarActionCallback<A> = fn(&mut BufferSearchBar, &A, &mut ViewContext<BufferSearchBar>);
 
 type GetSearchBar<T> =
-    for<'a, 'b> fn(&'a T, &'a mut ViewContext<'b, T>) -> Option<View<BufferSearchBar>>;
+    for<'a, 'b> fn(&'a T, &'a mut ViewContext<'b, T>) -> Option<Model<BufferSearchBar>>;
 
 /// Registers search actions on a div that can be taken out.
 pub struct DivRegistrar<'a, 'b, T: 'static> {

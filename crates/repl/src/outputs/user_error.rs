@@ -1,4 +1,4 @@
-use gpui::{AnyElement, FontWeight, View, WindowContext};
+use gpui::{AnyElement, FontWeight, Model, WindowContext};
 use ui::{h_flex, prelude::*, v_flex, Label};
 
 use crate::outputs::plain::TerminalOutput;
@@ -7,7 +7,7 @@ use crate::outputs::plain::TerminalOutput;
 pub struct ErrorView {
     pub ename: String,
     pub evalue: String,
-    pub traceback: View<TerminalOutput>,
+    pub traceback: Model<TerminalOutput>,
 }
 
 impl ErrorView {

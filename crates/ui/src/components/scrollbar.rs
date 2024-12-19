@@ -6,7 +6,7 @@ use gpui::{
     point, quad, Along, Axis as ScrollbarAxis, Bounds, ContentMask, Corners, Edges, Element,
     ElementId, Entity, EntityId, GlobalElementId, Hitbox, Hsla, LayoutId, MouseDownEvent,
     MouseMoveEvent, MouseUpEvent, Pixels, Point, ScrollHandle, ScrollWheelEvent, Size, Style,
-    UniformListScrollHandle, View, WindowContext,
+    UniformListScrollHandle, Model, WindowContext,
 };
 
 pub struct Scrollbar {
@@ -110,7 +110,7 @@ impl ScrollbarState {
     }
 
     /// Set a parent view which should be notified whenever this Scrollbar gets a scroll event.
-    pub fn parent_view<V: 'static>(mut self, v: &View<V>) -> Self {
+    pub fn parent_view<V: 'static>(mut self, v: &Model<V>) -> Self {
         self.parent_id = Some(v.entity_id());
         self
     }

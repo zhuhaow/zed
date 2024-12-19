@@ -96,7 +96,7 @@ pub fn main() {
     });
 }
 struct HelloWorld {
-    markdown: View<Markdown>,
+    markdown: Model<Markdown>,
 }
 
 impl Render for HelloWorld {

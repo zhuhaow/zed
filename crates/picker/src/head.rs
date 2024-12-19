@@ -1,22 +1,22 @@
 use std::sync::Arc;
 
 use editor::{Editor, EditorEvent};
-use gpui::{prelude::*, AppContext, FocusHandle, FocusableView, View};
+use gpui::{prelude::*, AppContext, FocusHandle, FocusableView, Model};
 use ui::prelude::*;
 
 /// The head of a [`Picker`](crate::Picker).
 pub(crate) enum Head {
     /// Picker has an editor that allows the user to filter the list.
-    Editor(View<Editor>),
+    Editor(Model<Editor>),
 
     /// Picker has no head, it's just a list of items.
-    Empty(View<EmptyHead>),
+    Empty(Model<EmptyHead>),
 }
 
 impl Head {
     pub fn editor<V: 'static>(
         placeholder_text: Arc<str>,
-        edit_handler: impl FnMut(&mut V, View<Editor>, &EditorEvent, &mut ViewContext<'_, V>) + 'static,
+        edit_handler: impl FnMut(&mut V, Model<Editor>, &EditorEvent, &mut ViewContext<'_, V>) + 'static,
         cx: &mut ViewContext<V>,
     ) -> Self {
         let editor = cx.new_view(|cx| {

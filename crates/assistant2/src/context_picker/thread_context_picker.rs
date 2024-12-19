@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fuzzy::StringMatchCandidate;
-use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, View, WeakModel, WeakView};
+use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, Model, WeakModel, WeakView};
 use picker::{Picker, PickerDelegate};
 use ui::{prelude::*, ListItem};
 
@@ -12,7 +12,7 @@ use crate::thread::ThreadId;
 use crate::thread_store::ThreadStore;
 
 pub struct ThreadContextPicker {
-    picker: View<Picker<ThreadContextPickerDelegate>>,
+    picker: Model<Picker<ThreadContextPickerDelegate>>,
 }
 
 impl ThreadContextPicker {

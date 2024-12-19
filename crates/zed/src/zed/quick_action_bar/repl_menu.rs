@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use gpui::ElementId;
-use gpui::{percentage, Animation, AnimationExt, AnyElement, Transformation, View};
+use gpui::{percentage, Animation, AnimationExt, AnyElement, Transformation, Model};
 use picker::Picker;
 use repl::{
     components::{KernelPickerDelegate, KernelSelector},
@@ -370,7 +370,7 @@ impl QuickActionBar {
     }
 }
 
-fn session_state(session: View<Session>, cx: &WindowContext) -> ReplMenuState {
+fn session_state(session: Model<Session>, cx: &WindowContext) -> ReplMenuState {
     let session = session.read(cx);
 
     let kernel_name = session.kernel_specification.name();

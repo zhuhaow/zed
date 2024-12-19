@@ -5,7 +5,7 @@ use editor::items::entry_git_aware_label_color;
 use gpui::{
     canvas, div, fill, img, opaque_grey, point, size, AnyElement, AppContext, Bounds, EventEmitter,
     FocusHandle, FocusableView, InteractiveElement, IntoElement, Model, ObjectFit, ParentElement,
-    Render, Styled, Task, View, ViewContext, VisualContext, WeakView, WindowContext,
+    Render, Styled, Task, Model, ViewContext, VisualContext, WeakView, WindowContext,
 };
 use persistence::IMAGE_VIEWER;
 use theme::Theme;
@@ -148,7 +148,7 @@ impl Item for ImageView {
         &self,
         _workspace_id: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>>
+    ) -> Option<Model<Self>>
     where
         Self: Sized,
     {
@@ -188,7 +188,7 @@ impl SerializableItem for ImageView {
         workspace_id: WorkspaceId,
         item_id: ItemId,
         cx: &mut WindowContext,
-    ) -> Task<gpui::Result<View<Self>>> {
+    ) -> Task<gpui::Result<Model<Self>>> {
         cx.spawn(|mut cx| async move {
             let image_path = IMAGE_VIEWER
                 .get_image_path(item_id, workspace_id)?

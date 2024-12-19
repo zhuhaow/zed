@@ -12,7 +12,7 @@ use editor::{Editor, EditorEvent};
 use futures::AsyncReadExt;
 use gpui::{
     div, rems, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Model,
-    PromptLevel, Render, Task, View, ViewContext,
+    PromptLevel, Render, Task, Model, ViewContext,
 };
 use http_client::HttpClient;
 use language::Buffer;
@@ -76,8 +76,8 @@ enum SubmissionState {
 
 pub struct FeedbackModal {
     system_specs: SystemSpecs,
-    feedback_editor: View<Editor>,
-    email_address_editor: View<Editor>,
+    feedback_editor: Model<Editor>,
+    email_address_editor: Model<Editor>,
     submission_state: Option<SubmissionState>,
     dismiss_modal: bool,
     character_count: i32,

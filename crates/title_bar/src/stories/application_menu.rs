@@ -1,4 +1,4 @@
-use gpui::{Render, View};
+use gpui::{Render, Model};
 use story::{Story, StoryItem, StorySection};
 
 use ui::prelude::*;
@@ -6,7 +6,7 @@ use ui::prelude::*;
 use crate::application_menu::ApplicationMenu;
 
 pub struct ApplicationMenuStory {
-    menu: View<ApplicationMenu>,
+    menu: Model<ApplicationMenu>,
 }
 
 impl ApplicationMenuStory {

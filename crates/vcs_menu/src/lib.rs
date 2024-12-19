@@ -4,7 +4,7 @@ use git::repository::Branch;
 use gpui::{
     rems, AnyElement, AppContext, AsyncAppContext, DismissEvent, EventEmitter, FocusHandle,
     FocusableView, InteractiveElement, IntoElement, ParentElement, Render, SharedString, Styled,
-    Subscription, Task, View, ViewContext, VisualContext, WeakView, WindowContext,
+    Subscription, Task, Model, ViewContext, VisualContext, WeakView, WindowContext,
 };
 use picker::{Picker, PickerDelegate};
 use project::ProjectPath;
@@ -23,7 +23,7 @@ pub fn init(cx: &mut AppContext) {
 }
 
 pub struct BranchList {
-    pub picker: View<Picker<BranchListDelegate>>,
+    pub picker: Model<Picker<BranchListDelegate>>,
     rem_width: f32,
     _subscription: Subscription,
 }
@@ -103,7 +103,7 @@ pub struct BranchListDelegate {
 
 impl BranchListDelegate {
     async fn new(
-        workspace: View<Workspace>,
+        workspace: Model<Workspace>,
         branch_name_trailoff_after: usize,
         cx: &AsyncAppContext,
     ) -> Result<Self> {

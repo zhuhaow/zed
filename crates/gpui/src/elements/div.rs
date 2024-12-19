@@ -21,7 +21,7 @@ use crate::{
     HitboxId, IntoElement, IsZero, KeyContext, KeyDownEvent, KeyUpEvent, LayoutId,
     ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     ParentElement, Pixels, Point, Render, ScrollWheelEvent, SharedString, Size, Style,
-    StyleRefinement, Styled, Task, TooltipId, View, Visibility, WindowContext,
+    StyleRefinement, Styled, Task, TooltipId, Model, Visibility, WindowContext,
 };
 use collections::HashMap;
 use refineable::Refineable;
@@ -450,7 +450,7 @@ impl Interactivity {
     pub fn on_drag<T, W>(
         &mut self,
         value: T,
-        constructor: impl Fn(&T, Point<Pixels>, &mut WindowContext) -> View<W> + 'static,
+        constructor: impl Fn(&T, Point<Pixels>, &mut WindowContext) -> Model<W> + 'static,
     ) where
         Self: Sized,
         T: 'static,
@@ -983,7 +983,7 @@ pub trait StatefulInteractiveElement: InteractiveElement {
     fn on_drag<T, W>(
         mut self,
         value: T,
-        constructor: impl Fn(&T, Point<Pixels>, &mut WindowContext) -> View<W> + 'static,
+        constructor: impl Fn(&T, Point<Pixels>, &mut WindowContext) -> Model<W> + 'static,
     ) -> Self
     where
         Self: Sized,

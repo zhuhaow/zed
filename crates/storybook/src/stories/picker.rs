@@ -1,12 +1,12 @@
 use fuzzy::StringMatchCandidate;
-use gpui::{div, prelude::*, KeyBinding, Render, SharedString, Styled, Task, View, WindowContext};
+use gpui::{div, prelude::*, KeyBinding, Render, SharedString, Styled, Task, Model, WindowContext};
 use picker::{Picker, PickerDelegate};
 use std::sync::Arc;
 use ui::{prelude::*, ListItemSpacing};
 use ui::{Label, ListItem};
 
 pub struct PickerStory {
-    picker: View<Picker<Delegate>>,
+    picker: Model<Picker<Delegate>>,
 }
 
 struct Delegate {
@@ -109,7 +109,7 @@ impl PickerDelegate for Delegate {
 }
 
 impl PickerStory {
-    pub fn new(cx: &mut WindowContext) -> View<Self> {
+    pub fn new(cx: &mut WindowContext) -> Model<Self> {
         cx.new_view(|cx| {
             cx.bind_keys([
                 KeyBinding::new("up", menu::SelectPrev, Some("picker")),

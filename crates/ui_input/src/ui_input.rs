@@ -37,7 +37,7 @@ pub struct TextField {
     /// Exposes the underlying [`View<Editor>`] to allow for customizing the editor beyond the provided API.
     ///
     /// This likely will only be public in the short term, ideally the API will be expanded to cover necessary use cases.
-    pub editor: View<Editor>,
+    pub editor: Model<Editor>,
     /// An optional icon that is displayed at the start of the text field.
     ///
     /// For example, a magnifying glass icon in a search field.
@@ -94,7 +94,7 @@ impl TextField {
             .update(cx, |editor, _| editor.set_read_only(disabled))
     }
 
-    pub fn editor(&self) -> &View<Editor> {
+    pub fn editor(&self) -> &Model<Editor> {
         &self.editor
     }
 }

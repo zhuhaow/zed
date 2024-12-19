@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_recursion::async_recursion;
 use collections::HashSet;
 use futures::{stream::FuturesUnordered, StreamExt as _};
-use gpui::{AsyncWindowContext, Axis, Model, Task, View, WeakView};
+use gpui::{AsyncWindowContext, Axis, Model, Task, Model, WeakView};
 use project::{terminals::TerminalKind, Project};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -23,7 +23,7 @@ use crate::{
 
 pub(crate) fn serialize_pane_group(
     pane_group: &PaneGroup,
-    active_pane: &View<Pane>,
+    active_pane: &Model<Pane>,
     cx: &WindowContext,
 ) -> SerializedPaneGroup {
     build_serialized_pane_group(&pane_group.root, active_pane, cx)
@@ -31,7 +31,7 @@ pub(crate) fn serialize_pane_group(
 
 fn build_serialized_pane_group(
     pane_group: &Member,
-    active_pane: &View<Pane>,
+    active_pane: &Model<Pane>,
     cx: &WindowContext,
 ) -> SerializedPaneGroup {
     match pane_group {
@@ -54,7 +54,7 @@ fn build_serialized_pane_group(
     }
 }
 
-fn serialize_pane(pane: &View<Pane>, active: bool, cx: &WindowContext) -> SerializedPane {
+fn serialize_pane(pane: &Model<Pane>, active: bool, cx: &WindowContext) -> SerializedPane {
     let mut items_to_serialize = HashSet::default();
     let pane = pane.read(cx);
     let children = pane
@@ -88,7 +88,7 @@ pub(crate) fn deserialize_terminal_panel(
     database_id: WorkspaceId,
     serialized_panel: SerializedTerminalPanel,
     cx: &mut WindowContext,
-) -> Task<anyhow::Result<View<TerminalPanel>>> {
+) -> Task<anyhow::Result<Model<TerminalPanel>>> {
     cx.spawn(move |mut cx| async move {
         let terminal_panel = workspace.update(&mut cx, |workspace, cx| {
             cx.new_view(|cx| {
@@ -141,7 +141,7 @@ pub(crate) fn deserialize_terminal_panel(
 
 fn populate_pane_items(
     pane: &mut Pane,
-    items: Vec<View<TerminalView>>,
+    items: Vec<Model<TerminalView>>,
     active_item: Option<u64>,
     cx: &mut ViewContext<'_, Pane>,
 ) {
@@ -160,11 +160,11 @@ fn populate_pane_items(
 async fn deserialize_pane_group(
     workspace: WeakView<Workspace>,
     project: Model<Project>,
-    panel: View<TerminalPanel>,
+    panel: Model<TerminalPanel>,
     workspace_id: WorkspaceId,
     serialized: &SerializedPaneGroup,
     cx: &mut AsyncWindowContext,
-) -> Option<(Member, Option<View<Pane>>)> {
+) -> Option<(Member, Option<Model<Pane>>)> {
     match serialized {
         SerializedPaneGroup::Group {
             axis,
@@ -274,7 +274,7 @@ async fn deserialize_terminal_views(
     workspace: WeakView<Workspace>,
     item_ids: &[u64],
     cx: &mut AsyncWindowContext,
-) -> Vec<View<TerminalView>> {
+) -> Vec<Model<TerminalView>> {
     let mut items = Vec::with_capacity(item_ids.len());
     let mut deserialized_items = item_ids
         .iter()

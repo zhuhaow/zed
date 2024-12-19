@@ -1,5 +1,5 @@
 use crate::ProjectDiagnosticsEditor;
-use gpui::{EventEmitter, ParentElement, Render, View, ViewContext, WeakView};
+use gpui::{EventEmitter, ParentElement, Render, Model, ViewContext, WeakView};
 use ui::prelude::*;
 use ui::{IconButton, IconButtonShape, IconName, Tooltip};
 use workspace::{item::ItemHandle, ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView};
@@ -105,7 +105,7 @@ impl ToolbarControls {
         ToolbarControls { editor: None }
     }
 
-    fn diagnostics(&self) -> Option<View<ProjectDiagnosticsEditor>> {
+    fn diagnostics(&self) -> Option<Model<ProjectDiagnosticsEditor>> {
         self.editor.as_ref()?.upgrade()
     }
 }

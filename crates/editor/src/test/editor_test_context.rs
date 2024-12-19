@@ -6,7 +6,7 @@ use collections::BTreeMap;
 use futures::Future;
 use git::diff::DiffHunkStatus;
 use gpui::{
-    prelude::*, AnyWindowHandle, AppContext, Keystroke, ModelContext, Pixels, Point, View,
+    prelude::*, AnyWindowHandle, AppContext, Keystroke, ModelContext, Pixels, Point, Model,
     ViewContext, VisualTestContext, WindowHandle,
 };
 use itertools::Itertools;
@@ -33,7 +33,7 @@ use super::{build_editor, build_editor_with_project};
 pub struct EditorTestContext {
     pub cx: gpui::VisualTestContext,
     pub window: AnyWindowHandle,
-    pub editor: View<Editor>,
+    pub editor: Model<Editor>,
     pub assertion_cx: AssertionContextManager,
 }
 

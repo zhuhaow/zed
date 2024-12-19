@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use editor::test::editor_lsp_test_context::EditorLspTestContext;
-use gpui::{Context, SemanticVersion, UpdateGlobal, View, VisualContext};
+use gpui::{Context, SemanticVersion, UpdateGlobal, Model, VisualContext};
 use search::{project_search::ProjectSearchBar, BufferSearchBar};
 
 use crate::{state::Operator, *};
@@ -85,7 +85,7 @@ impl VimTestContext {
         Self { cx }
     }
 
-    pub fn update_view<F, T, R>(&mut self, view: View<T>, update: F) -> R
+    pub fn update_view<F, T, R>(&mut self, view: Model<T>, update: F) -> R
     where
         T: 'static,
         F: FnOnce(&mut T, &mut ViewContext<T>) -> R + 'static,

@@ -5,7 +5,7 @@ use futures::StreamExt;
 use gpui::{
     actions, percentage, Animation, AnimationExt as _, AppContext, CursorStyle, EventEmitter,
     InteractiveElement as _, Model, ParentElement as _, Render, SharedString,
-    StatefulInteractiveElement, Styled, Transformation, View, ViewContext, VisualContext as _,
+    StatefulInteractiveElement, Styled, Transformation, Model, ViewContext, VisualContext as _,
 };
 use language::{LanguageRegistry, LanguageServerBinaryStatus, LanguageServerId};
 use lsp::LanguageServerName;
@@ -54,7 +54,7 @@ impl ActivityIndicator {
         workspace: &mut Workspace,
         languages: Arc<LanguageRegistry>,
         cx: &mut ViewContext<Workspace>,
-    ) -> View<ActivityIndicator> {
+    ) -> Model<ActivityIndicator> {
         let project = workspace.project().clone();
         let auto_updater = AutoUpdater::get(cx);
         let this = cx.new_view(|cx: &mut ViewContext<Self>| {

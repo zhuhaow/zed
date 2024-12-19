@@ -23,7 +23,7 @@ use feature_flags::FeatureFlagAppExt;
 use futures::{channel::mpsc, select_biased, StreamExt};
 use gpui::{
     actions, point, px, AppContext, AsyncAppContext, Context, FocusableView, MenuItem,
-    PathPromptOptions, PromptLevel, ReadGlobal, Task, TitlebarOptions, View, ViewContext,
+    PathPromptOptions, PromptLevel, ReadGlobal, Task, TitlebarOptions, Model, ViewContext,
     VisualContext, WindowKind, WindowOptions,
 };
 pub use open_listener::*;
@@ -668,7 +668,7 @@ fn register_actions(
     }
 }
 
-fn initialize_pane(workspace: &Workspace, pane: &View<Pane>, cx: &mut ViewContext<Workspace>) {
+fn initialize_pane(workspace: &Workspace, pane: &Model<Pane>, cx: &mut ViewContext<Workspace>) {
     pane.update(cx, |pane, cx| {
         pane.toolbar().update(cx, |toolbar, cx| {
             let multibuffer_hint = cx.new_view(|_| MultibufferHint::new());

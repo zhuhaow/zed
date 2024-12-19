@@ -13,7 +13,7 @@ use gpui::Task;
 use gpui::WeakView;
 use gpui::{
     AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Model,
-    PromptLevel, ScrollHandle, View, ViewContext,
+    PromptLevel, ScrollHandle, Model, ViewContext,
 };
 use picker::Picker;
 use project::Project;
@@ -54,9 +54,9 @@ pub struct RemoteServerProjects {
 }
 
 struct CreateRemoteServer {
-    address_editor: View<Editor>,
+    address_editor: Model<Editor>,
     address_error: Option<SharedString>,
-    ssh_prompt: Option<View<SshPrompt>>,
+    ssh_prompt: Option<Model<SshPrompt>>,
     _creating: Option<Task<Option<()>>>,
 }
 
@@ -78,13 +78,13 @@ impl CreateRemoteServer {
 struct ProjectPicker {
     connection_string: SharedString,
     nickname: Option<SharedString>,
-    picker: View<Picker<OpenPathDelegate>>,
+    picker: Model<Picker<OpenPathDelegate>>,
     _path_task: Shared<Task<Option<()>>>,
 }
 
 struct EditNicknameState {
     index: usize,
-    editor: View<Editor>,
+    editor: Model<Editor>,
 }
 
 impl EditNicknameState {
@@ -122,7 +122,7 @@ impl ProjectPicker {
         project: Model<Project>,
         workspace: WeakView<Workspace>,
         cx: &mut ViewContext<RemoteServerProjects>,
-    ) -> View<Self> {
+    ) -> Model<Self> {
         let (tx, rx) = oneshot::channel();
         let lister = project::DirectoryLister::Project(project.clone());
         let query = lister.default_query(cx);
@@ -304,7 +304,7 @@ enum Mode {
     Default(DefaultState),
     ViewServerOptions(ViewServerOptionsState),
     EditNickname(EditNicknameState),
-    ProjectPicker(View<ProjectPicker>),
+    ProjectPicker(Model<ProjectPicker>),
     CreateRemoteServer(CreateRemoteServer),
 }
 
@@ -321,7 +321,7 @@ impl RemoteServerProjects {
         });
     }
 
-    pub fn open(workspace: View<Workspace>, cx: &mut WindowContext) {
+    pub fn open(workspace: Model<Workspace>, cx: &mut WindowContext) {
         workspace.update(cx, |workspace, cx| {
             let handle = cx.view().downgrade();
             workspace.toggle_modal(cx, |cx| Self::new(cx, handle))
@@ -365,7 +365,7 @@ impl RemoteServerProjects {
         this
     }
 
-    fn create_ssh_server(&mut self, editor: View<Editor>, cx: &mut ViewContext<Self>) {
+    fn create_ssh_server(&mut self, editor: Model<Editor>, cx: &mut ViewContext<Self>) {
         let input = get_text(&editor, cx);
         if input.is_empty() {
             return;
@@ -1066,7 +1066,7 @@ impl RemoteServerProjects {
                         })
                         .child({
                             fn remove_ssh_server(
-                                remote_servers: View<RemoteServerProjects>,
+                                remote_servers: Model<RemoteServerProjects>,
                                 index: usize,
                                 connection_string: SharedString,
                                 cx: &mut WindowContext<'_>,
@@ -1340,7 +1340,7 @@ impl RemoteServerProjects {
     }
 }
 
-fn get_text(element: &View<Editor>, cx: &mut WindowContext) -> String {
+fn get_text(element: &Model<Editor>, cx: &mut WindowContext) -> String {
     element.read(cx).text(cx).trim().to_string()
 }
 

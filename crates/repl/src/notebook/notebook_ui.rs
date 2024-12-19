@@ -10,7 +10,7 @@ use futures::future::Shared;
 use futures::FutureExt;
 use gpui::{
     actions, list, prelude::*, AnyElement, AppContext, EventEmitter, FocusHandle, FocusableView,
-    ListScrollEvent, ListState, Model, Point, Task, View,
+    ListScrollEvent, ListState, Model, Point, Task, Model,
 };
 use language::{Language, LanguageRegistry};
 use project::{Project, ProjectEntryId, ProjectPath};
@@ -640,7 +640,7 @@ impl Item for NotebookEditor {
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<gpui::View<Self>>
+    ) -> Option<gpui::Model<Self>>
     where
         Self: Sized,
     {
@@ -687,7 +687,7 @@ impl Item for NotebookEditor {
     }
 
     // TODO
-    fn as_searchable(&self, _: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, _: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         None
     }
 

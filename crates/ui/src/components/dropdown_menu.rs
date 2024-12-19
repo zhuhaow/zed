@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use gpui::{ClickEvent, Corner, CursorStyle, MouseButton, View};
+use gpui::{ClickEvent, Corner, CursorStyle, MouseButton, Model};
 
 use crate::{prelude::*, ContextMenu, PopoverMenu};
 
@@ -7,7 +7,7 @@ use crate::{prelude::*, ContextMenu, PopoverMenu};
 pub struct DropdownMenu {
     id: ElementId,
     label: SharedString,
-    menu: View<ContextMenu>,
+    menu: Model<ContextMenu>,
     full_width: bool,
     disabled: bool,
 }
@@ -16,7 +16,7 @@ impl DropdownMenu {
     pub fn new(
         id: impl Into<ElementId>,
         label: impl Into<SharedString>,
-        menu: View<ContextMenu>,
+        menu: Model<ContextMenu>,
     ) -> Self {
         Self {
             id: id.into(),

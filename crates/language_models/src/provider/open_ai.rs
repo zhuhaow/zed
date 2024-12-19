@@ -4,7 +4,7 @@ use editor::{Editor, EditorElement, EditorStyle};
 use futures::{future::BoxFuture, FutureExt, StreamExt};
 use gpui::{
     AnyView, AppContext, AsyncAppContext, FontStyle, ModelContext, Subscription, Task, TextStyle,
-    View, WhiteSpace,
+    Model, WhiteSpace,
 };
 use http_client::HttpClient;
 use language_model::{
@@ -374,7 +374,7 @@ pub fn count_open_ai_tokens(
 }
 
 struct ConfigurationView {
-    api_key_editor: View<Editor>,
+    api_key_editor: Model<Editor>,
     state: gpui::Model<State>,
     load_credentials_task: Option<Task<()>>,
 }

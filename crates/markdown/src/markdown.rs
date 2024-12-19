@@ -7,7 +7,7 @@ use gpui::{
     DispatchPhase, Edges, FocusHandle, FocusableView, FontStyle, FontWeight, GlobalElementId,
     Hitbox, Hsla, KeyContext, Length, MouseDownEvent, MouseEvent, MouseMoveEvent, MouseUpEvent,
     Point, Render, StrikethroughStyle, StyleRefinement, StyledText, Task, TextLayout, TextRun,
-    TextStyle, TextStyleRefinement, View,
+    TextStyle, TextStyleRefinement, Model,
 };
 use language::{Language, LanguageRegistry, Rope};
 use parser::{parse_links_only, parse_markdown, MarkdownEvent, MarkdownTag, MarkdownTagEnd};
@@ -265,7 +265,7 @@ impl ParsedMarkdown {
 }
 
 pub struct MarkdownElement {
-    markdown: View<Markdown>,
+    markdown: Model<Markdown>,
     style: MarkdownStyle,
     language_registry: Option<Arc<LanguageRegistry>>,
     fallback_code_block_language: Option<String>,
@@ -273,7 +273,7 @@ pub struct MarkdownElement {
 
 impl MarkdownElement {
     fn new(
-        markdown: View<Markdown>,
+        markdown: Model<Markdown>,
         style: MarkdownStyle,
         language_registry: Option<Arc<LanguageRegistry>>,
         fallback_code_block_language: Option<String>,

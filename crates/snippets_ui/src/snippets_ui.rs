@@ -1,7 +1,7 @@
 use fuzzy::{match_strings, StringMatch, StringMatchCandidate};
 use gpui::{
     actions, AppContext, DismissEvent, EventEmitter, FocusableView, ParentElement, Render, Styled,
-    View, ViewContext, VisualContext, WeakView,
+    Model, ViewContext, VisualContext, WeakView,
 };
 use language::LanguageRegistry;
 use paths::config_dir;
@@ -41,7 +41,7 @@ fn open_folder(workspace: &mut Workspace, _: &OpenFolder, cx: &mut ViewContext<W
 }
 
 pub struct ScopeSelector {
-    picker: View<Picker<ScopeSelectorDelegate>>,
+    picker: Model<Picker<ScopeSelectorDelegate>>,
 }
 
 impl ScopeSelector {

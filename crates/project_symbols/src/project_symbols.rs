@@ -1,7 +1,7 @@
 use editor::{scroll::Autoscroll, styled_runs_for_code_label, Bias, Editor};
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
-    rems, AppContext, DismissEvent, FontWeight, Model, ParentElement, StyledText, Task, View,
+    rems, AppContext, DismissEvent, FontWeight, Model, ParentElement, StyledText, Task, Model,
     ViewContext, WeakView, WindowContext,
 };
 use ordered_float::OrderedFloat;
@@ -31,7 +31,7 @@ pub fn init(cx: &mut AppContext) {
     .detach();
 }
 
-pub type ProjectSymbols = View<Picker<ProjectSymbolsDelegate>>;
+pub type ProjectSymbols = Model<Picker<ProjectSymbolsDelegate>>;
 
 pub struct ProjectSymbolsDelegate {
     workspace: WeakView<Workspace>,

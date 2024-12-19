@@ -15,7 +15,7 @@ use futures::channel::oneshot;
 use gpui::{
     actions, div, impl_actions, Action, AppContext, ClickEvent, EventEmitter, FocusHandle,
     FocusableView, Hsla, InteractiveElement as _, IntoElement, KeyContext, ParentElement as _,
-    Render, ScrollHandle, Styled, Subscription, Task, TextStyle, View, ViewContext,
+    Render, ScrollHandle, Styled, Subscription, Task, TextStyle, Model, ViewContext,
     VisualContext as _, WindowContext,
 };
 use project::{
@@ -77,9 +77,9 @@ pub fn init(cx: &mut AppContext) {
 }
 
 pub struct BufferSearchBar {
-    query_editor: View<Editor>,
+    query_editor: Model<Editor>,
     query_editor_focused: bool,
-    replacement_editor: View<Editor>,
+    replacement_editor: Model<Editor>,
     replacement_editor_focused: bool,
     active_searchable_item: Option<Box<dyn SearchableItemHandle>>,
     active_match_index: Option<usize>,
@@ -104,7 +104,7 @@ pub struct BufferSearchBar {
 impl BufferSearchBar {
     fn render_text_input(
         &self,
-        editor: &View<Editor>,
+        editor: &Model<Editor>,
         color: Hsla,
         cx: &ViewContext<Self>,
     ) -> impl IntoElement {
@@ -907,7 +907,7 @@ impl BufferSearchBar {
 
     fn on_query_editor_event(
         &mut self,
-        editor: View<Editor>,
+        editor: Model<Editor>,
         event: &editor::EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -941,7 +941,7 @@ impl BufferSearchBar {
 
     fn on_replacement_editor_event(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &editor::EditorEvent,
         _: &mut ViewContext<Self>,
     ) {
@@ -1312,7 +1312,7 @@ mod tests {
 
     fn init_test(
         cx: &mut TestAppContext,
-    ) -> (View<Editor>, View<BufferSearchBar>, &mut VisualTestContext) {
+    ) -> (Model<Editor>, Model<BufferSearchBar>, &mut VisualTestContext) {
         init_globals(cx);
         let buffer = cx.new_model(|cx| {
             Buffer::local(
@@ -2211,8 +2211,8 @@ mod tests {
     }
 
     struct ReplacementTestParams<'a> {
-        editor: &'a View<Editor>,
-        search_bar: &'a View<BufferSearchBar>,
+        editor: &'a Model<Editor>,
+        search_bar: &'a Model<BufferSearchBar>,
         cx: &'a mut VisualTestContext,
         search_text: &'static str,
         search_options: Option<SearchOptions>,

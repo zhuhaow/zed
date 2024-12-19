@@ -10,7 +10,7 @@ use gpui::{
     actions, div, list, prelude::*, px, Action, AppContext, AsyncWindowContext, ClipboardItem,
     CursorStyle, DismissEvent, ElementId, EventEmitter, FocusHandle, FocusableView, FontWeight,
     HighlightStyle, ListOffset, ListScrollEvent, ListState, Model, Render, Stateful, Subscription,
-    Task, View, ViewContext, VisualContext, WeakView,
+    Task, Model, ViewContext, VisualContext, WeakView,
 };
 use language::LanguageRegistry;
 use menu::Confirm;
@@ -51,7 +51,7 @@ pub struct ChatPanel {
     languages: Arc<LanguageRegistry>,
     message_list: ListState,
     active_chat: Option<(Model<ChannelChat>, Subscription)>,
-    message_editor: View<MessageEditor>,
+    message_editor: Model<MessageEditor>,
     local_timezone: UtcOffset,
     fs: Arc<dyn Fs>,
     width: Option<Pixels>,
@@ -74,7 +74,7 @@ struct SerializedChatPanel {
 actions!(chat_panel, [ToggleFocus]);
 
 impl ChatPanel {
-    pub fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         let fs = workspace.app_state().fs.clone();
         let client = workspace.app_state().client.clone();
         let channel_store = ChannelStore::global(cx);
@@ -189,7 +189,7 @@ impl ChatPanel {
     pub fn load(
         workspace: WeakView<Workspace>,
         cx: AsyncWindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         cx.spawn(|mut cx| async move {
             let serialized_panel = if let Some(panel) = cx
                 .background_executor()
@@ -695,11 +695,11 @@ impl ChatPanel {
     }
 
     fn render_message_menu(
-        this: &View<Self>,
+        this: &Model<Self>,
         message_id: u64,
         can_delete_message: bool,
         cx: &mut WindowContext,
-    ) -> View<ContextMenu> {
+    ) -> Model<ContextMenu> {
         let menu = {
             ContextMenu::build(cx, move |menu, cx| {
                 menu.entry(

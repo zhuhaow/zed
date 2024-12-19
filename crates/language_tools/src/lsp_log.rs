@@ -4,7 +4,7 @@ use editor::{actions::MoveToEnd, Editor, EditorEvent};
 use futures::{channel::mpsc, StreamExt};
 use gpui::{
     actions, div, AppContext, Context, Corner, EventEmitter, FocusHandle, FocusableView,
-    IntoElement, Model, ModelContext, ParentElement, Render, Styled, Subscription, View,
+    IntoElement, Model, ModelContext, ParentElement, Render, Styled, Subscription, Model,
     ViewContext, VisualContext, WeakModel, WindowContext,
 };
 use language::LanguageServerId;
@@ -151,7 +151,7 @@ struct LanguageServerRpcState {
 }
 
 pub struct LspLogView {
-    pub(crate) editor: View<Editor>,
+    pub(crate) editor: Model<Editor>,
     editor_subscriptions: Vec<Subscription>,
     log_store: Model<LogStore>,
     current_server_id: Option<LanguageServerId>,
@@ -162,7 +162,7 @@ pub struct LspLogView {
 }
 
 pub struct LspLogToolbarItemView {
-    log_view: Option<View<LspLogView>>,
+    log_view: Option<Model<LspLogView>>,
     _log_view_subscription: Option<Subscription>,
 }
 
@@ -692,7 +692,7 @@ impl LspLogView {
     fn editor_for_logs(
         log_contents: String,
         cx: &mut ViewContext<Self>,
-    ) -> (View<Editor>, Vec<Subscription>) {
+    ) -> (Model<Editor>, Vec<Subscription>) {
         let editor = cx.new_view(|cx| {
             let mut editor = Editor::multi_line(cx);
             editor.set_text(log_contents, cx);
@@ -719,7 +719,7 @@ impl LspLogView {
     fn editor_for_capabilities(
         capabilities: ServerCapabilities,
         cx: &mut ViewContext<Self>,
-    ) -> (View<Editor>, Vec<Subscription>) {
+    ) -> (Model<Editor>, Vec<Subscription>) {
         let editor = cx.new_view(|cx| {
             let mut editor = Editor::multi_line(cx);
             editor.set_text(serde_json::to_string_pretty(&capabilities).unwrap(), cx);
@@ -1015,7 +1015,7 @@ impl Item for LspLogView {
         None
     }
 
-    fn as_searchable(&self, handle: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, handle: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         Some(Box::new(handle.clone()))
     }
 
@@ -1023,7 +1023,7 @@ impl Item for LspLogView {
         &self,
         _workspace_id: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>>
+    ) -> Option<Model<Self>>
     where
         Self: Sized,
     {

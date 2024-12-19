@@ -5,19 +5,19 @@ use std::{cell::RefCell, rc::Rc};
 use gpui::{
     anchored, deferred, div, px, AnyElement, Bounds, Corner, DismissEvent, DispatchPhase, Element,
     ElementId, GlobalElementId, Hitbox, InteractiveElement, IntoElement, LayoutId, ManagedView,
-    MouseButton, MouseDownEvent, ParentElement, Pixels, Point, View, VisualContext, WindowContext,
+    MouseButton, MouseDownEvent, ParentElement, Pixels, Point, Model, VisualContext, WindowContext,
 };
 
 pub struct RightClickMenu<M: ManagedView> {
     id: ElementId,
     child_builder: Option<Box<dyn FnOnce(bool) -> AnyElement + 'static>>,
-    menu_builder: Option<Rc<dyn Fn(&mut WindowContext) -> View<M> + 'static>>,
+    menu_builder: Option<Rc<dyn Fn(&mut WindowContext) -> Model<M> + 'static>>,
     anchor: Option<Corner>,
     attach: Option<Corner>,
 }
 
 impl<M: ManagedView> RightClickMenu<M> {
-    pub fn menu(mut self, f: impl Fn(&mut WindowContext) -> View<M> + 'static) -> Self {
+    pub fn menu(mut self, f: impl Fn(&mut WindowContext) -> Model<M> + 'static) -> Self {
         self.menu_builder = Some(Rc::new(f));
         self
     }
@@ -69,7 +69,7 @@ pub fn right_click_menu<M: ManagedView>(id: impl Into<ElementId>) -> RightClickM
 }
 
 pub struct MenuHandleElementState<M> {
-    menu: Rc<RefCell<Option<View<M>>>>,
+    menu: Rc<RefCell<Option<Model<M>>>>,
     position: Rc<RefCell<Point<Pixels>>>,
 }
 

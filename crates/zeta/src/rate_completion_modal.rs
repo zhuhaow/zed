@@ -2,7 +2,7 @@ use crate::{InlineCompletion, InlineCompletionRating, Zeta};
 use editor::Editor;
 use gpui::{
     actions, prelude::*, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView,
-    HighlightStyle, Model, StyledText, TextStyle, View, ViewContext,
+    HighlightStyle, Model, StyledText, TextStyle, Model, ViewContext,
 };
 use language::{language_settings, OffsetRangeExt};
 use settings::Settings;
@@ -45,7 +45,7 @@ pub struct RateCompletionModal {
 
 struct ActiveCompletion {
     completion: InlineCompletion,
-    feedback_editor: View<Editor>,
+    feedback_editor: Model<Editor>,
 }
 
 impl RateCompletionModal {

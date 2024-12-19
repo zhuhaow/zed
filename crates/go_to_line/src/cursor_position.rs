@@ -1,5 +1,5 @@
 use editor::{Editor, ToPoint};
-use gpui::{AppContext, FocusHandle, FocusableView, Subscription, Task, View, WeakView};
+use gpui::{AppContext, FocusHandle, FocusableView, Subscription, Task, Model, WeakView};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use settings::{Settings, SettingsSources};
@@ -42,7 +42,7 @@ impl CursorPosition {
 
     fn update_position(
         &mut self,
-        editor: View<Editor>,
+        editor: Model<Editor>,
         debounce: Option<Duration>,
         cx: &mut ViewContext<Self>,
     ) {

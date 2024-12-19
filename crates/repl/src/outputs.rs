@@ -38,7 +38,7 @@ use std::time::Duration;
 use editor::{Editor, MultiBuffer};
 use gpui::{
     percentage, Animation, AnimationExt, AnyElement, ClipboardItem, Model, Render, Transformation,
-    View, WeakView,
+    Model, WeakView,
 };
 use language::Buffer;
 use runtimelib::{ExecutionState, JupyterMessageContent, MimeBundle, MimeType};
@@ -86,7 +86,7 @@ pub(crate) trait OutputContent {
     }
 }
 
-impl<V: OutputContent + 'static> OutputContent for View<V> {
+impl<V: OutputContent + 'static> OutputContent for Model<V> {
     fn clipboard_content(&self, cx: &WindowContext) -> Option<ClipboardItem> {
         self.read(cx).clipboard_content(cx)
     }
@@ -106,24 +106,24 @@ impl<V: OutputContent + 'static> OutputContent for View<V> {
 
 pub enum Output {
     Plain {
-        content: View<TerminalOutput>,
+        content: Model<TerminalOutput>,
         display_id: Option<String>,
     },
     Stream {
-        content: View<TerminalOutput>,
+        content: Model<TerminalOutput>,
     },
     Image {
-        content: View<ImageView>,
+        content: Model<ImageView>,
         display_id: Option<String>,
     },
     ErrorOutput(ErrorView),
     Message(String),
     Table {
-        content: View<TableView>,
+        content: Model<TableView>,
         display_id: Option<String>,
     },
     Markdown {
-        content: View<MarkdownView>,
+        content: Model<MarkdownView>,
         display_id: Option<String>,
     },
     ClearOutputWaitMarker,
@@ -131,7 +131,7 @@ pub enum Output {
 
 impl Output {
     fn render_output_controls<V: OutputContent + 'static>(
-        v: View<V>,
+        v: Model<V>,
         workspace: WeakView<Workspace>,
         cx: &mut ViewContext<ExecutionView>,
     ) -> Option<AnyElement> {

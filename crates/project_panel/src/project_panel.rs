@@ -26,7 +26,7 @@ use gpui::{
     Div, DragMoveEvent, EventEmitter, ExternalPaths, FocusHandle, FocusableView, Hsla,
     InteractiveElement, KeyContext, ListHorizontalSizingBehavior, ListSizingBehavior, Model,
     MouseButton, MouseDownEvent, ParentElement, Pixels, Point, PromptLevel, Render, ScrollStrategy,
-    Stateful, Styled, Subscription, Task, UniformListScrollHandle, View, ViewContext,
+    Stateful, Styled, Subscription, Task, UniformListScrollHandle, Model, ViewContext,
     VisualContext as _, WeakView, WindowContext,
 };
 use indexmap::IndexMap;
@@ -88,9 +88,9 @@ pub struct ProjectPanel {
     // Currently selected leaf entry (see auto-folding for a definition of that) in a file tree
     selection: Option<SelectedEntry>,
     marked_entries: BTreeSet<SelectedEntry>,
-    context_menu: Option<(View<ContextMenu>, Point<Pixels>, Subscription)>,
+    context_menu: Option<(Model<ContextMenu>, Point<Pixels>, Subscription)>,
     edit_state: Option<EditState>,
-    filename_editor: View<Editor>,
+    filename_editor: Model<Editor>,
     clipboard: Option<ClipboardEntry>,
     _dragged_entry_destination: Option<Arc<Path>>,
     workspace: WeakView<Workspace>,
@@ -275,7 +275,7 @@ fn get_item_color(cx: &ViewContext<ProjectPanel>) -> ItemColors {
 }
 
 impl ProjectPanel {
-    fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         let project = workspace.project().clone();
         let project_panel = cx.new_view(|cx: &mut ViewContext<Self>| {
             let focus_handle = cx.focus_handle();
@@ -491,7 +491,7 @@ impl ProjectPanel {
     pub async fn load(
         workspace: WeakView<Workspace>,
         mut cx: AsyncWindowContext,
-    ) -> Result<View<Self>> {
+    ) -> Result<Model<Self>> {
         let serialized_panel = cx
             .background_executor()
             .spawn(async move { KEY_VALUE_STORE.read_kvp(PROJECT_PANEL_KEY) })
@@ -4278,7 +4278,7 @@ impl ClipboardEntry {
 mod tests {
     use super::*;
     use collections::HashSet;
-    use gpui::{Empty, TestAppContext, View, VisualTestContext, WindowHandle};
+    use gpui::{Empty, TestAppContext, Model, VisualTestContext, WindowHandle};
     use pretty_assertions::assert_eq;
     use project::{FakeFs, WorktreeSettings};
     use serde_json::json;
@@ -7770,7 +7770,7 @@ mod tests {
     }
 
     fn toggle_expand_dir(
-        panel: &View<ProjectPanel>,
+        panel: &Model<ProjectPanel>,
         path: impl AsRef<Path>,
         cx: &mut VisualTestContext,
     ) {
@@ -7788,7 +7788,7 @@ mod tests {
         });
     }
 
-    fn select_path(panel: &View<ProjectPanel>, path: impl AsRef<Path>, cx: &mut VisualTestContext) {
+    fn select_path(panel: &Model<ProjectPanel>, path: impl AsRef<Path>, cx: &mut VisualTestContext) {
         let path = path.as_ref();
         panel.update(cx, |panel, cx| {
             for worktree in panel.project.read(cx).worktrees(cx).collect::<Vec<_>>() {
@@ -7807,7 +7807,7 @@ mod tests {
     }
 
     fn select_path_with_mark(
-        panel: &View<ProjectPanel>,
+        panel: &Model<ProjectPanel>,
         path: impl AsRef<Path>,
         cx: &mut VisualTestContext,
     ) {
@@ -7833,7 +7833,7 @@ mod tests {
     }
 
     fn find_project_entry(
-        panel: &View<ProjectPanel>,
+        panel: &Model<ProjectPanel>,
         path: impl AsRef<Path>,
         cx: &mut VisualTestContext,
     ) -> Option<ProjectEntryId> {
@@ -7850,7 +7850,7 @@ mod tests {
     }
 
     fn visible_entries_as_strings(
-        panel: &View<ProjectPanel>,
+        panel: &Model<ProjectPanel>,
         range: Range<usize>,
         cx: &mut VisualTestContext,
     ) -> Vec<String> {
@@ -7981,7 +7981,7 @@ mod tests {
             .unwrap();
     }
 
-    fn submit_deletion(panel: &View<ProjectPanel>, cx: &mut VisualTestContext) {
+    fn submit_deletion(panel: &Model<ProjectPanel>, cx: &mut VisualTestContext) {
         assert!(
             !cx.has_pending_prompt(),
             "Should have no prompts before the deletion"
@@ -8001,7 +8001,7 @@ mod tests {
         cx.executor().run_until_parked();
     }
 
-    fn submit_deletion_skipping_prompt(panel: &View<ProjectPanel>, cx: &mut VisualTestContext) {
+    fn submit_deletion_skipping_prompt(panel: &Model<ProjectPanel>, cx: &mut VisualTestContext) {
         assert!(
             !cx.has_pending_prompt(),
             "Should have no prompts before the deletion"

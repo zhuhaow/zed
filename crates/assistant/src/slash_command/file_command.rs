@@ -6,7 +6,7 @@ use assistant_slash_command::{
 use futures::channel::mpsc;
 use futures::Stream;
 use fuzzy::PathMatch;
-use gpui::{AppContext, Model, Task, View, WeakView};
+use gpui::{AppContext, Model, Task, Model, WeakView};
 use language::{BufferSnapshot, CodeLabel, HighlightId, LineEnding, LspAdapterDelegate};
 use project::{PathMatchCandidateSet, Project};
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ impl FileSlashCommand {
         &self,
         query: String,
         cancellation_flag: Arc<AtomicBool>,
-        workspace: &View<Workspace>,
+        workspace: &Model<Workspace>,
         cx: &mut AppContext,
     ) -> Task<Vec<PathMatch>> {
         if query.is_empty() {

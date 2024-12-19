@@ -12,7 +12,7 @@ use crate::{
     RenderImage, RenderImageParams, RenderSvgParams, Replay, ResizeEdge, ScaledPixels, Scene,
     Shadow, SharedString, Size, StrikethroughStyle, Style, SubscriberSet, Subscription,
     TaffyLayoutEngine, Task, TextStyle, TextStyleRefinement, TransformationMatrix, Underline,
-    UnderlineStyle, View, VisualContext, WeakView, WindowAppearance, WindowBackgroundAppearance,
+    UnderlineStyle, Model, VisualContext, WeakView, WindowAppearance, WindowBackgroundAppearance,
     WindowBounds, WindowControls, WindowDecorations, WindowOptions, WindowParams, WindowTextSystem,
     SUBPIXEL_VARIANTS,
 };
@@ -3759,7 +3759,7 @@ impl<'a> WindowContext<'a> {
     /// Returns a generic event listener that invokes the given listener with the view and context associated with the given view handle.
     pub fn listener_for<V: Render, E>(
         &self,
-        view: &View<V>,
+        view: &Model<V>,
         f: impl Fn(&mut V, &E, &mut ViewContext<V>) + 'static,
     ) -> impl Fn(&E, &mut WindowContext) + 'static {
         let view = view.downgrade();
@@ -3771,7 +3771,7 @@ impl<'a> WindowContext<'a> {
     /// Returns a generic handler that invokes the given handler with the view and context associated with the given view handle.
     pub fn handler_for<V: Render>(
         &self,
-        view: &View<V>,
+        view: &Model<V>,
         f: impl Fn(&mut V, &mut ViewContext<V>) + 'static,
     ) -> impl Fn(&mut WindowContext) {
         let view = view.downgrade();
@@ -3886,7 +3886,7 @@ impl Context for WindowContext<'_> {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
+        read: impl FnOnce(Model<T>, &AppContext) -> R,
     ) -> Result<R>
     where
         T: 'static,
@@ -3910,12 +3910,12 @@ impl VisualContext for WindowContext<'_> {
     fn new_view<V>(
         &mut self,
         build_view_state: impl FnOnce(&mut ViewContext<'_, V>) -> V,
-    ) -> Self::Result<View<V>>
+    ) -> Self::Result<Model<V>>
     where
         V: 'static + Render,
     {
         let slot = self.app.entities.reserve();
-        let view = View {
+        let view = Model {
             model: slot.clone(),
         };
         let mut cx = ViewContext::new(&mut *self.app, &mut *self.window, &view);
@@ -3938,7 +3938,7 @@ impl VisualContext for WindowContext<'_> {
     /// Updates the given view. Prefer calling [`View::update`] instead, which calls this method.
     fn update_view<T: 'static, R>(
         &mut self,
-        view: &View<T>,
+        view: &Model<T>,
         update: impl FnOnce(&mut T, &mut ViewContext<'_, T>) -> R,
     ) -> Self::Result<R> {
         let mut lease = self.app.entities.lease(&view.model);
@@ -3951,7 +3951,7 @@ impl VisualContext for WindowContext<'_> {
     fn replace_root_view<V>(
         &mut self,
         build_view: impl FnOnce(&mut ViewContext<'_, V>) -> V,
-    ) -> Self::Result<View<V>>
+    ) -> Self::Result<Model<V>>
     where
         V: 'static + Render,
     {
@@ -3961,13 +3961,13 @@ impl VisualContext for WindowContext<'_> {
         view
     }
 
-    fn focus_view<V: crate::FocusableView>(&mut self, view: &View<V>) -> Self::Result<()> {
+    fn focus_view<V: crate::FocusableView>(&mut self, view: &Model<V>) -> Self::Result<()> {
         self.update_view(view, |view, cx| {
             view.focus_handle(cx).clone().focus(cx);
         })
     }
 
-    fn dismiss_view<V>(&mut self, view: &View<V>) -> Self::Result<()>
+    fn dismiss_view<V>(&mut self, view: &Model<V>) -> Self::Result<()>
     where
         V: ManagedView,
     {
@@ -4044,7 +4044,7 @@ impl<T> BorrowWindow for T where T: BorrowMut<AppContext> + BorrowMut<Window> {}
 /// When you call [`View::update`], you're passed a `&mut V` and an `&mut ViewContext<V>`.
 pub struct ViewContext<'a, V> {
     window_cx: WindowContext<'a>,
-    view: &'a View<V>,
+    view: &'a Model<V>,
 }
 
 impl<V> Borrow<AppContext> for ViewContext<'_, V> {
@@ -4072,7 +4072,7 @@ impl<V> BorrowMut<Window> for ViewContext<'_, V> {
 }
 
 impl<'a, V: 'static> ViewContext<'a, V> {
-    pub(crate) fn new(app: &'a mut AppContext, window: &'a mut Window, view: &'a View<V>) -> Self {
+    pub(crate) fn new(app: &'a mut AppContext, window: &'a mut Window, view: &'a Model<V>) -> Self {
         Self {
             window_cx: WindowContext::new(app, window),
             view,
@@ -4085,7 +4085,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     }
 
     /// Get the view pointer underlying this context.
-    pub fn view(&self) -> &View<V> {
+    pub fn view(&self) -> &Model<V> {
         self.view
     }
 
@@ -4580,7 +4580,7 @@ impl<V> Context for ViewContext<'_, V> {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
+        read: impl FnOnce(Model<T>, &AppContext) -> R,
     ) -> Result<R>
     where
         T: 'static,
@@ -4593,13 +4593,13 @@ impl<V: 'static> VisualContext for ViewContext<'_, V> {
     fn new_view<W: Render + 'static>(
         &mut self,
         build_view_state: impl FnOnce(&mut ViewContext<'_, W>) -> W,
-    ) -> Self::Result<View<W>> {
+    ) -> Self::Result<Model<W>> {
         self.window_cx.new_view(build_view_state)
     }
 
     fn update_view<V2: 'static, R>(
         &mut self,
-        view: &View<V2>,
+        view: &Model<V2>,
         update: impl FnOnce(&mut V2, &mut ViewContext<'_, V2>) -> R,
     ) -> Self::Result<R> {
         self.window_cx.update_view(view, update)
@@ -4608,18 +4608,18 @@ impl<V: 'static> VisualContext for ViewContext<'_, V> {
     fn replace_root_view<W>(
         &mut self,
         build_view: impl FnOnce(&mut ViewContext<'_, W>) -> W,
-    ) -> Self::Result<View<W>>
+    ) -> Self::Result<Model<W>>
     where
         W: 'static + Render,
     {
         self.window_cx.replace_root_view(build_view)
     }
 
-    fn focus_view<W: FocusableView>(&mut self, view: &View<W>) -> Self::Result<()> {
+    fn focus_view<W: FocusableView>(&mut self, view: &Model<W>) -> Self::Result<()> {
         self.window_cx.focus_view(view)
     }
 
-    fn dismiss_view<W: ManagedView>(&mut self, view: &View<W>) -> Self::Result<()> {
+    fn dismiss_view<W: ManagedView>(&mut self, view: &Model<W>) -> Self::Result<()> {
         self.window_cx.dismiss_view(view)
     }
 }
@@ -4683,7 +4683,7 @@ impl<V: 'static + Render> WindowHandle<V> {
     /// Get the root view out of this window.
     ///
     /// This will fail if the window is closed or if the root view's type does not match `V`.
-    pub fn root<C>(&self, cx: &mut C) -> Result<View<V>>
+    pub fn root<C>(&self, cx: &mut C) -> Result<Model<V>>
     where
         C: Context,
     {
@@ -4745,7 +4745,7 @@ impl<V: 'static + Render> WindowHandle<V> {
     /// Read the root view pointer off of this window.
     ///
     /// This will fail if the window is closed or if the root view's type does not match `V`.
-    pub fn root_view<C>(&self, cx: &C) -> Result<View<V>>
+    pub fn root_view<C>(&self, cx: &C) -> Result<Model<V>>
     where
         C: Context,
     {
@@ -4836,7 +4836,7 @@ impl AnyWindowHandle {
     /// Read the state of the root view of this window.
     ///
     /// This will fail if the window has been closed.
-    pub fn read<T, C, R>(self, cx: &C, read: impl FnOnce(View<T>, &AppContext) -> R) -> Result<R>
+    pub fn read<T, C, R>(self, cx: &C, read: impl FnOnce(Model<T>, &AppContext) -> R) -> Result<R>
     where
         C: Context,
         T: 'static,

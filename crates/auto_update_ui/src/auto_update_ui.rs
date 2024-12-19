@@ -2,7 +2,7 @@ mod update_notification;
 
 use auto_update::AutoUpdater;
 use editor::{Editor, MultiBuffer};
-use gpui::{actions, prelude::*, AppContext, SharedString, View, ViewContext};
+use gpui::{actions, prelude::*, AppContext, SharedString, Model, ViewContext};
 use http_client::HttpClient;
 use markdown_preview::markdown_preview_view::{MarkdownPreviewMode, MarkdownPreviewView};
 use release_channel::{AppVersion, ReleaseChannel};
@@ -93,7 +93,7 @@ fn view_release_notes_locally(workspace: &mut Workspace, cx: &mut ViewContext<Wo
                                 Editor::for_multibuffer(buffer, Some(project), true, cx)
                             });
                             let workspace_handle = workspace.weak_handle();
-                            let view: View<MarkdownPreviewView> = MarkdownPreviewView::new(
+                            let view: Model<MarkdownPreviewView> = MarkdownPreviewView::new(
                                 MarkdownPreviewMode::Default,
                                 editor,
                                 workspace_handle,

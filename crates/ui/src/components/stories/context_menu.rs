@@ -1,4 +1,4 @@
-use gpui::{actions, Corner, Render, View};
+use gpui::{actions, Corner, Render, Model};
 use story::Story;
 
 use crate::prelude::*;
@@ -6,7 +6,7 @@ use crate::{right_click_menu, ContextMenu, Label};
 
 actions!(context_menu, [PrintCurrentDate, PrintBestFood]);
 
-fn build_menu(cx: &mut WindowContext, header: impl Into<SharedString>) -> View<ContextMenu> {
+fn build_menu(cx: &mut WindowContext, header: impl Into<SharedString>) -> Model<ContextMenu> {
     ContextMenu::build(cx, |menu, _| {
         menu.header(header)
             .separator()

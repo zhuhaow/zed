@@ -28,7 +28,7 @@ use gpui::{
     ElementId, EventEmitter, FocusHandle, FocusableView, HighlightStyle, InteractiveElement,
     IntoElement, KeyContext, ListHorizontalSizingBehavior, ListSizingBehavior, Model, MouseButton,
     MouseDownEvent, ParentElement, Pixels, Point, Render, ScrollStrategy, SharedString, Stateful,
-    StatefulInteractiveElement as _, Styled, Subscription, Task, UniformListScrollHandle, View,
+    StatefulInteractiveElement as _, Styled, Subscription, Task, UniformListScrollHandle, Model,
     ViewContext, VisualContext, WeakView, WindowContext,
 };
 use itertools::Itertools;
@@ -91,7 +91,7 @@ pub struct OutlinePanel {
     active: bool,
     pinned: bool,
     scroll_handle: UniformListScrollHandle,
-    context_menu: Option<(View<ContextMenu>, Point<Pixels>, Subscription)>,
+    context_menu: Option<(Model<ContextMenu>, Point<Pixels>, Subscription)>,
     focus_handle: FocusHandle,
     pending_serialization: Task<Option<()>>,
     fs_entries_depth: HashMap<(WorktreeId, ProjectEntryId), usize>,
@@ -110,7 +110,7 @@ pub struct OutlinePanel {
     outline_fetch_tasks: HashMap<(BufferId, ExcerptId), Task<()>>,
     excerpts: HashMap<BufferId, HashMap<ExcerptId, Excerpt>>,
     cached_entries: Vec<CachedEntry>,
-    filter_editor: View<Editor>,
+    filter_editor: Model<Editor>,
     mode: ItemsDisplayMode,
     show_scrollbar: bool,
     vertical_scrollbar_state: ScrollbarState,
@@ -591,7 +591,7 @@ impl OutlinePanel {
     pub async fn load(
         workspace: WeakView<Workspace>,
         mut cx: AsyncWindowContext,
-    ) -> anyhow::Result<View<Self>> {
+    ) -> anyhow::Result<Model<Self>> {
         let serialized_panel = cx
             .background_executor()
             .spawn(async move { KEY_VALUE_STORE.read_kvp(OUTLINE_PANEL_KEY) })
@@ -617,7 +617,7 @@ impl OutlinePanel {
         })
     }
 
-    fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    fn new(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         let project = workspace.project().clone();
         let workspace_handle = cx.view().downgrade();
         let outline_panel = cx.new_view(|cx| {
@@ -1661,7 +1661,7 @@ impl OutlinePanel {
         }
     }
 
-    fn reveal_entry_for_selection(&mut self, editor: View<Editor>, cx: &mut ViewContext<'_, Self>) {
+    fn reveal_entry_for_selection(&mut self, editor: Model<Editor>, cx: &mut ViewContext<'_, Self>) {
         if !self.active || !OutlinePanelSettings::get_global(cx).auto_reveal_entries {
             return;
         }
@@ -2286,7 +2286,7 @@ impl OutlinePanel {
 
     fn update_fs_entries(
         &mut self,
-        active_editor: View<Editor>,
+        active_editor: Model<Editor>,
         debounce: Option<Duration>,
         cx: &mut ViewContext<Self>,
     ) {
@@ -2650,7 +2650,7 @@ impl OutlinePanel {
     fn replace_active_editor(
         &mut self,
         new_active_item: Box<dyn ItemHandle>,
-        new_active_editor: View<Editor>,
+        new_active_editor: Model<Editor>,
         cx: &mut ViewContext<Self>,
     ) {
         self.clear_previous(cx);
@@ -2696,7 +2696,7 @@ impl OutlinePanel {
 
     fn location_for_editor_selection(
         &self,
-        editor: &View<Editor>,
+        editor: &Model<Editor>,
         cx: &mut ViewContext<Self>,
     ) -> Option<PanelEntry> {
         let selection = editor.update(cx, |editor, cx| {
@@ -3750,7 +3750,7 @@ impl OutlinePanel {
     fn add_search_entries(
         &mut self,
         state: &mut GenerationState,
-        active_editor: &View<Editor>,
+        active_editor: &Model<Editor>,
         parent_entry: FsEntry,
         parent_depth: usize,
         filter_query: Option<String>,
@@ -3812,7 +3812,7 @@ impl OutlinePanel {
         }
     }
 
-    fn active_editor(&self) -> Option<View<Editor>> {
+    fn active_editor(&self) -> Option<Model<Editor>> {
         self.active_item.as_ref()?.active_editor.upgrade()
     }
 
@@ -4340,7 +4340,7 @@ impl OutlinePanel {
 fn workspace_active_editor(
     workspace: &Workspace,
     cx: &AppContext,
-) -> Option<(Box<dyn ItemHandle>, View<Editor>)> {
+) -> Option<(Box<dyn ItemHandle>, Model<Editor>)> {
     let active_item = workspace.active_item(cx)?;
     let active_editor = active_item
         .act_as::<Editor>(cx)
@@ -4597,7 +4597,7 @@ fn find_active_indent_guide_ix(
 }
 
 fn subscribe_for_editor_events(
-    editor: &View<Editor>,
+    editor: &Model<Editor>,
     cx: &mut ViewContext<OutlinePanel>,
 ) -> Subscription {
     let debounce = Some(UPDATE_DEBOUNCE);
@@ -5516,7 +5516,7 @@ mod tests {
     fn outline_panel(
         workspace: &WindowHandle<Workspace>,
         cx: &mut TestAppContext,
-    ) -> View<OutlinePanel> {
+    ) -> Model<OutlinePanel> {
         workspace
             .update(cx, |workspace, cx| {
                 workspace
@@ -5831,7 +5831,7 @@ mod tests {
             .snapshot(cx)
     }
 
-    fn selected_row_text(editor: &View<Editor>, cx: &mut WindowContext) -> String {
+    fn selected_row_text(editor: &Model<Editor>, cx: &mut WindowContext) -> String {
         editor.update(cx, |editor, cx| {
                 let selections = editor.selections.all::<language::Point>(cx);
                 assert_eq!(selections.len(), 1, "Active editor should have exactly one selection after any outline panel interactions");

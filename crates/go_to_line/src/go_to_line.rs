@@ -4,7 +4,7 @@ use cursor_position::LineIndicatorFormat;
 use editor::{scroll::Autoscroll, Editor};
 use gpui::{
     div, prelude::*, AnyWindowHandle, AppContext, DismissEvent, EventEmitter, FocusHandle,
-    FocusableView, Render, SharedString, Styled, Subscription, View, ViewContext, VisualContext,
+    FocusableView, Render, SharedString, Styled, Subscription, Model, ViewContext, VisualContext,
 };
 use settings::Settings;
 use text::{Bias, Point};
@@ -19,8 +19,8 @@ pub fn init(cx: &mut AppContext) {
 }
 
 pub struct GoToLine {
-    line_editor: View<Editor>,
-    active_editor: View<Editor>,
+    line_editor: Model<Editor>,
+    active_editor: Model<Editor>,
     current_text: SharedString,
     prev_scroll_position: Option<gpui::Point<f32>>,
     _subscriptions: Vec<Subscription>,
@@ -55,7 +55,7 @@ impl GoToLine {
             .detach();
     }
 
-    pub fn new(active_editor: View<Editor>, cx: &mut ViewContext<Self>) -> Self {
+    pub fn new(active_editor: Model<Editor>, cx: &mut ViewContext<Self>) -> Self {
         let cursor =
             active_editor.update(cx, |editor, cx| editor.selections.last::<Point>(cx).head());
 
@@ -101,7 +101,7 @@ impl GoToLine {
 
     fn on_line_editor_event(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &editor::EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -410,16 +410,16 @@ mod tests {
     }
 
     fn open_go_to_line_view(
-        workspace: &View<Workspace>,
+        workspace: &Model<Workspace>,
         cx: &mut VisualTestContext,
-    ) -> View<GoToLine> {
+    ) -> Model<GoToLine> {
         cx.dispatch_action(editor::actions::ToggleGoToLine);
         workspace.update(cx, |workspace, cx| {
             workspace.active_modal::<GoToLine>(cx).unwrap().clone()
         })
     }
 
-    fn highlighted_display_rows(editor: &View<Editor>, cx: &mut VisualTestContext) -> Vec<u32> {
+    fn highlighted_display_rows(editor: &Model<Editor>, cx: &mut VisualTestContext) -> Vec<u32> {
         editor.update(cx, |editor, cx| {
             editor
                 .highlighted_display_rows(cx)
@@ -431,7 +431,7 @@ mod tests {
 
     #[track_caller]
     fn assert_single_caret_at_row(
-        editor: &View<Editor>,
+        editor: &Model<Editor>,
         buffer_row: u32,
         cx: &mut VisualTestContext,
     ) {

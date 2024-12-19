@@ -4,7 +4,7 @@ use assistant_tool::ToolWorkingSet;
 use collections::HashMap;
 use gpui::{
     list, AnyElement, AppContext, Empty, ListAlignment, ListState, Model, StyleRefinement,
-    Subscription, TextStyleRefinement, View, WeakView,
+    Subscription, TextStyleRefinement, Model, WeakView,
 };
 use language::LanguageRegistry;
 use language_model::Role;
@@ -24,7 +24,7 @@ pub struct ActiveThread {
     thread: Model<Thread>,
     messages: Vec<MessageId>,
     list_state: ListState,
-    rendered_messages_by_id: HashMap<MessageId, View<Markdown>>,
+    rendered_messages_by_id: HashMap<MessageId, Model<Markdown>>,
     last_error: Option<ThreadError>,
     _subscriptions: Vec<Subscription>,
 }

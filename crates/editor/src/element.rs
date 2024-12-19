@@ -36,7 +36,7 @@ use gpui::{
     Entity, FontId, GlobalElementId, Hitbox, Hsla, InteractiveElement, IntoElement, Length,
     ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad,
     ParentElement, Pixels, ScrollDelta, ScrollWheelEvent, ShapedLine, SharedString, Size,
-    StatefulInteractiveElement, Style, Styled, Subscription, TextRun, TextStyleRefinement, View,
+    StatefulInteractiveElement, Style, Styled, Subscription, TextRun, TextStyleRefinement, Model,
     ViewContext, WeakView, WindowContext,
 };
 use itertools::Itertools;
@@ -147,7 +147,7 @@ impl SelectionLayout {
 }
 
 pub struct EditorElement {
-    editor: View<Editor>,
+    editor: Model<Editor>,
     style: EditorStyle,
 }
 
@@ -156,7 +156,7 @@ type DisplayRowDelta = u32;
 impl EditorElement {
     pub(crate) const SCROLLBAR_WIDTH: Pixels = px(15.);
 
-    pub fn new(editor: &View<Editor>, style: EditorStyle) -> Self {
+    pub fn new(editor: &Model<Editor>, style: EditorStyle) -> Self {
         Self {
             editor: editor.clone(),
             style,
@@ -5034,7 +5034,7 @@ fn render_blame_entry(
     blame_entry: BlameEntry,
     style: &EditorStyle,
     last_used_color: &mut Option<(PlayerColor, Oid)>,
-    editor: View<Editor>,
+    editor: Model<Editor>,
     cx: &mut WindowContext<'_>,
 ) -> AnyElement {
     let mut sha_color = cx
@@ -5115,7 +5115,7 @@ fn render_blame_entry(
 fn deploy_blame_entry_context_menu(
     blame_entry: &BlameEntry,
     details: Option<&CommitDetails>,
-    editor: View<Editor>,
+    editor: Model<Editor>,
     position: gpui::Point<Pixels>,
     cx: &mut WindowContext<'_>,
 ) {
@@ -7213,7 +7213,7 @@ fn scale_horizontal_mouse_autoscroll_delta(delta: Pixels) -> f32 {
 }
 
 pub fn register_action<T: Action>(
-    view: &View<Editor>,
+    view: &Model<Editor>,
     cx: &mut WindowContext,
     listener: impl Fn(&mut Editor, &T, &mut ViewContext<Editor>) + 'static,
 ) {

@@ -12,7 +12,7 @@ use fuzzy::StringMatchCandidate;
 use gpui::{
     actions, point, size, transparent_black, Action, AppContext, BackgroundExecutor, Bounds,
     EventEmitter, Global, PromptLevel, ReadGlobal, Subscription, Task, TextStyle, TitlebarOptions,
-    UpdateGlobal, View, WindowBounds, WindowHandle, WindowOptions,
+    UpdateGlobal, Model, WindowBounds, WindowHandle, WindowOptions,
 };
 use heed::{
     types::{SerdeBincode, SerdeJson, Str},
@@ -121,14 +121,14 @@ pub struct PromptLibrary {
     language_registry: Arc<LanguageRegistry>,
     prompt_editors: HashMap<PromptId, PromptEditor>,
     active_prompt_id: Option<PromptId>,
-    picker: View<Picker<PromptPickerDelegate>>,
+    picker: Model<Picker<PromptPickerDelegate>>,
     pending_load: Task<()>,
     _subscriptions: Vec<Subscription>,
 }
 
 struct PromptEditor {
-    title_editor: View<Editor>,
-    body_editor: View<Editor>,
+    title_editor: Model<Editor>,
+    body_editor: Model<Editor>,
     token_count: Option<usize>,
     pending_token_count: Task<Option<()>>,
     next_title_and_body_to_save: Option<(String, Rope)>,
@@ -296,7 +296,7 @@ impl PickerDelegate for PromptPickerDelegate {
         Some(element)
     }
 
-    fn render_editor(&self, editor: &View<Editor>, cx: &mut ViewContext<Picker<Self>>) -> Div {
+    fn render_editor(&self, editor: &Model<Editor>, cx: &mut ViewContext<Picker<Self>>) -> Div {
         h_flex()
             .bg(cx.theme().colors().editor_background)
             .rounded_md()
@@ -341,7 +341,7 @@ impl PromptLibrary {
 
     fn handle_picker_event(
         &mut self,
-        _: View<Picker<PromptPickerDelegate>>,
+        _: Model<Picker<PromptPickerDelegate>>,
         event: &PromptPickerEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -732,7 +732,7 @@ impl PromptLibrary {
     fn handle_prompt_title_editor_event(
         &mut self,
         prompt_id: PromptId,
-        title_editor: View<Editor>,
+        title_editor: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -756,7 +756,7 @@ impl PromptLibrary {
     fn handle_prompt_body_editor_event(
         &mut self,
         prompt_id: PromptId,
-        body_editor: View<Editor>,
+        body_editor: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {

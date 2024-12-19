@@ -1,7 +1,7 @@
 use client::{ContactRequestStatus, User, UserStore};
 use gpui::{
     AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Model, ParentElement as _,
-    Render, Styled, Task, View, ViewContext, VisualContext, WeakView,
+    Render, Styled, Task, Model, ViewContext, VisualContext, WeakView,
 };
 use picker::{Picker, PickerDelegate};
 use std::sync::Arc;
@@ -10,7 +10,7 @@ use util::{ResultExt as _, TryFutureExt};
 use workspace::ModalView;
 
 pub struct ContactFinder {
-    picker: View<Picker<ContactFinderDelegate>>,
+    picker: Model<Picker<ContactFinderDelegate>>,
 }
 
 impl ContactFinder {

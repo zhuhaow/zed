@@ -2,7 +2,7 @@ use crate::ProjectIndex;
 use gpui::{
     canvas, div, list, uniform_list, AnyElement, AppContext, CursorStyle, EventEmitter,
     FocusHandle, FocusableView, IntoElement, ListOffset, ListState, Model, MouseMoveEvent, Render,
-    UniformListScrollHandle, View,
+    UniformListScrollHandle, Model,
 };
 use project::WorktreeId;
 use settings::Settings;
@@ -287,7 +287,7 @@ impl Item for ProjectIndexDebugView {
         &self,
         _: Option<workspace::WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>>
+    ) -> Option<Model<Self>>
     where
         Self: Sized,
     {

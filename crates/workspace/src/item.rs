@@ -14,7 +14,7 @@ use client::{
 use futures::{channel::mpsc, StreamExt};
 use gpui::{
     AnyElement, AnyView, AppContext, Entity, EntityId, EventEmitter, FocusHandle, FocusableView,
-    Font, HighlightStyle, Model, Pixels, Point, SharedString, Task, View, ViewContext, WeakView,
+    Font, HighlightStyle, Model, Pixels, Point, SharedString, Task, Model, ViewContext, WeakView,
     WindowContext,
 };
 use project::{Project, ProjectEntryId, ProjectPath};
@@ -240,7 +240,7 @@ pub trait Item: FocusableView + EventEmitter<Self::Event> {
         &self,
         _workspace_id: Option<WorkspaceId>,
         _: &mut ViewContext<Self>,
-    ) -> Option<View<Self>>
+    ) -> Option<Model<Self>>
     where
         Self: Sized,
     {
@@ -285,7 +285,7 @@ pub trait Item: FocusableView + EventEmitter<Self::Event> {
     fn act_as_type<'a>(
         &'a self,
         type_id: TypeId,
-        self_handle: &'a View<Self>,
+        self_handle: &'a Model<Self>,
         _: &'a AppContext,
     ) -> Option<AnyView> {
         if TypeId::of::<Self>() == type_id {
@@ -295,7 +295,7 @@ pub trait Item: FocusableView + EventEmitter<Self::Event> {
         }
     }
 
-    fn as_searchable(&self, _: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, _: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         None
     }
 
@@ -337,7 +337,7 @@ pub trait SerializableItem: Item {
         _workspace_id: WorkspaceId,
         _item_id: ItemId,
         _cx: &mut WindowContext,
-    ) -> Task<Result<View<Self>>>;
+    ) -> Task<Result<Model<Self>>>;
 
     fn serialize(
         &mut self,
@@ -361,7 +361,7 @@ pub trait SerializableItemHandle: ItemHandle {
     fn should_serialize(&self, event: &dyn Any, cx: &AppContext) -> bool;
 }
 
-impl<T> SerializableItemHandle for View<T>
+impl<T> SerializableItemHandle for Model<T>
 where
     T: SerializableItem,
 {
@@ -419,7 +419,7 @@ pub trait ItemHandle: 'static + Send {
     fn added_to_pane(
         &self,
         workspace: &mut Workspace,
-        pane: View<Pane>,
+        pane: Model<Pane>,
         cx: &mut ViewContext<Workspace>,
     );
     fn deactivated(&self, cx: &mut WindowContext);
@@ -473,17 +473,17 @@ pub trait WeakItemHandle: Send + Sync {
 }
 
 impl dyn ItemHandle {
-    pub fn downcast<V: 'static>(&self) -> Option<View<V>> {
+    pub fn downcast<V: 'static>(&self) -> Option<Model<V>> {
         self.to_any().downcast().ok()
     }
 
-    pub fn act_as<V: 'static>(&self, cx: &AppContext) -> Option<View<V>> {
+    pub fn act_as<V: 'static>(&self, cx: &AppContext) -> Option<Model<V>> {
         self.act_as_type(TypeId::of::<V>(), cx)
             .and_then(|t| t.downcast().ok())
     }
 }
 
-impl<T: Item> ItemHandle for View<T> {
+impl<T: Item> ItemHandle for Model<T> {
     fn subscribe_to_item_events(
         &self,
         cx: &mut WindowContext,
@@ -609,7 +609,7 @@ impl<T: Item> ItemHandle for View<T> {
     fn added_to_pane(
         &self,
         workspace: &mut Workspace,
-        pane: View<Pane>,
+        pane: Model<Pane>,
         cx: &mut ViewContext<Workspace>,
     ) {
         let weak_item = self.downgrade();
@@ -672,7 +672,7 @@ impl<T: Item> ItemHandle for View<T> {
 
             let mut event_subscription = Some(cx.subscribe(
                 self,
-                move |workspace, item: View<T>, event, cx| {
+                move |workspace, item: Model<T>, event, cx| {
                     let pane = if let Some(pane) = workspace
                         .panes_by_item
                         .get(&item.item_id())
@@ -937,11 +937,11 @@ pub trait FollowableItem: Item {
     fn remote_id(&self) -> Option<ViewId>;
     fn to_state_proto(&self, cx: &WindowContext) -> Option<proto::view::Variant>;
     fn from_state_proto(
-        project: View<Workspace>,
+        project: Model<Workspace>,
         id: ViewId,
         state: &mut Option<proto::view::Variant>,
         cx: &mut WindowContext,
-    ) -> Option<Task<Result<View<Self>>>>;
+    ) -> Option<Task<Result<Model<Self>>>>;
     fn to_follow_event(event: &Self::Event) -> Option<FollowEvent>;
     fn add_event_to_update_proto(
         &self,
@@ -982,7 +982,7 @@ pub trait FollowableItemHandle: ItemHandle {
     fn dedup(&self, existing: &dyn FollowableItemHandle, cx: &WindowContext) -> Option<Dedup>;
 }
 
-impl<T: FollowableItem> FollowableItemHandle for View<T> {
+impl<T: FollowableItem> FollowableItemHandle for Model<T> {
     fn remote_id(&self, client: &Arc<Client>, cx: &WindowContext) -> Option<ViewId> {
         self.read(cx).remote_id().or_else(|| {
             client.peer_id().map(|creator| ViewId {
@@ -1056,7 +1056,7 @@ pub mod test {
     use crate::{ItemId, ItemNavHistory, Workspace, WorkspaceId};
     use gpui::{
         AnyElement, AppContext, Context as _, EntityId, EventEmitter, FocusableView,
-        InteractiveElement, IntoElement, Model, Render, SharedString, Task, View, ViewContext,
+        InteractiveElement, IntoElement, Model, Render, SharedString, Task, Model, ViewContext,
         VisualContext, WeakView,
     };
     use project::{Project, ProjectEntryId, ProjectPath, WorktreeId};
@@ -1285,7 +1285,7 @@ pub mod test {
             &self,
             _workspace_id: Option<WorkspaceId>,
             cx: &mut ViewContext<Self>,
-        ) -> Option<View<Self>>
+        ) -> Option<Model<Self>>
         where
             Self: Sized,
         {
@@ -1368,7 +1368,7 @@ pub mod test {
             workspace_id: WorkspaceId,
             _item_id: ItemId,
             cx: &mut WindowContext,
-        ) -> Task<anyhow::Result<View<Self>>> {
+        ) -> Task<anyhow::Result<Model<Self>>> {
             let view = cx.new_view(|cx| Self::new_deserialized(workspace_id, cx));
             Task::ready(Ok(view))
         }

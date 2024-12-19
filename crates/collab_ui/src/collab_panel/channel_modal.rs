@@ -6,7 +6,7 @@ use client::{
 use fuzzy::{match_strings, StringMatchCandidate};
 use gpui::{
     actions, anchored, deferred, div, AppContext, ClipboardItem, DismissEvent, EventEmitter,
-    FocusableView, Model, ParentElement, Render, Styled, Subscription, Task, View, ViewContext,
+    FocusableView, Model, ParentElement, Render, Styled, Subscription, Task, Model, ViewContext,
     VisualContext, WeakView,
 };
 use picker::{Picker, PickerDelegate};
@@ -26,7 +26,7 @@ actions!(
 );
 
 pub struct ChannelModal {
-    picker: View<Picker<ChannelModalDelegate>>,
+    picker: Model<Picker<ChannelModalDelegate>>,
     channel_store: Model<ChannelStore>,
     channel_id: ChannelId,
 }
@@ -240,7 +240,7 @@ pub struct ChannelModalDelegate {
     match_candidates: Vec<StringMatchCandidate>,
     members: Vec<ChannelMembership>,
     has_all_members: bool,
-    context_menu: Option<(View<ContextMenu>, Subscription)>,
+    context_menu: Option<(Model<ContextMenu>, Subscription)>,
 }
 
 impl PickerDelegate for ChannelModalDelegate {

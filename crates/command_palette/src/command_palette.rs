@@ -12,7 +12,7 @@ use command_palette_hooks::{
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     Action, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView, Global,
-    ParentElement, Render, Styled, Task, UpdateGlobal, View, ViewContext, VisualContext, WeakView,
+    ParentElement, Render, Styled, Task, UpdateGlobal, Model, ViewContext, VisualContext, WeakView,
 };
 use picker::{Picker, PickerDelegate};
 
@@ -33,7 +33,7 @@ pub fn init(cx: &mut AppContext) {
 impl ModalView for CommandPalette {}
 
 pub struct CommandPalette {
-    picker: View<Picker<CommandPaletteDelegate>>,
+    picker: Model<Picker<CommandPaletteDelegate>>,
 }
 
 /// Removes subsequent whitespace characters and double colons from the query.

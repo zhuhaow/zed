@@ -8,7 +8,7 @@ use gpui::{
     prelude::{FluentBuilder as _, IntoElement},
     px, rgb, size, AsyncAppContext, Bounds, InteractiveElement, KeyBinding, Menu, MenuItem,
     ParentElement, Pixels, Render, ScreenCaptureStream, SharedString,
-    StatefulInteractiveElement as _, Styled, Task, View, ViewContext, VisualContext, WindowBounds,
+    StatefulInteractiveElement as _, Styled, Task, Model, ViewContext, VisualContext, WindowBounds,
     WindowHandle, WindowOptions,
 };
 #[cfg(not(target_os = "windows"))]
@@ -117,7 +117,7 @@ struct LivekitWindow {
 struct ParticipantState {
     audio_output_stream: Option<(RemoteTrackPublication, AudioStream)>,
     muted: bool,
-    screen_share_output_view: Option<(RemoteVideoTrack, View<RemoteVideoTrackView>)>,
+    screen_share_output_view: Option<(RemoteVideoTrack, Model<RemoteVideoTrackView>)>,
     speaking: bool,
 }
 

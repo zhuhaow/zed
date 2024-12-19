@@ -15,7 +15,7 @@ use fuzzy::{match_strings, StringMatchCandidate};
 use gpui::{
     actions, uniform_list, Action, AppContext, ClipboardItem, EventEmitter, Flatten, FocusableView,
     InteractiveElement, KeyContext, ParentElement, Render, Styled, Task, TextStyle,
-    UniformListScrollHandle, View, ViewContext, VisualContext, WeakView, WindowContext,
+    UniformListScrollHandle, Model, ViewContext, VisualContext, WeakView, WindowContext,
 };
 use num_format::{Locale, ToFormattedString};
 use project::DirectoryLister;
@@ -186,7 +186,7 @@ pub struct ExtensionsPage {
     remote_extension_entries: Vec<ExtensionMetadata>,
     dev_extension_entries: Vec<Arc<ExtensionManifest>>,
     filtered_remote_extension_indices: Vec<usize>,
-    query_editor: View<Editor>,
+    query_editor: Model<Editor>,
     query_contains_error: bool,
     _subscriptions: [gpui::Subscription; 2],
     extension_fetch_task: Option<Task<()>>,
@@ -194,7 +194,7 @@ pub struct ExtensionsPage {
 }
 
 impl ExtensionsPage {
-    pub fn new(workspace: &Workspace, cx: &mut ViewContext<Workspace>) -> View<Self> {
+    pub fn new(workspace: &Workspace, cx: &mut ViewContext<Workspace>) -> Model<Self> {
         cx.new_view(|cx: &mut ViewContext<Self>| {
             let store = ExtensionStore::global(cx);
             let workspace_handle = workspace.weak_handle();
@@ -621,10 +621,10 @@ impl ExtensionsPage {
     }
 
     fn render_remote_extension_context_menu(
-        this: &View<Self>,
+        this: &Model<Self>,
         extension_id: Arc<str>,
         cx: &mut WindowContext,
-    ) -> View<ContextMenu> {
+    ) -> Model<ContextMenu> {
         let context_menu = ContextMenu::build(cx, |context_menu, cx| {
             context_menu
                 .entry(
@@ -802,7 +802,7 @@ impl ExtensionsPage {
         )
     }
 
-    fn render_text_input(&self, editor: &View<Editor>, cx: &ViewContext<Self>) -> impl IntoElement {
+    fn render_text_input(&self, editor: &Model<Editor>, cx: &ViewContext<Self>) -> impl IntoElement {
         let settings = ThemeSettings::get_global(cx);
         let text_style = TextStyle {
             color: if editor.read(cx).read_only(cx) {
@@ -832,7 +832,7 @@ impl ExtensionsPage {
 
     fn on_query_change(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &editor::EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -1146,7 +1146,7 @@ impl Item for ExtensionsPage {
         &self,
         _workspace_id: Option<WorkspaceId>,
         _: &mut ViewContext<Self>,
-    ) -> Option<View<Self>> {
+    ) -> Option<Model<Self>> {
         None
     }
 

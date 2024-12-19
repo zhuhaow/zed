@@ -17,7 +17,7 @@ use editor::{
 };
 use futures::FutureExt as _;
 use gpui::{
-    div, prelude::*, EventEmitter, Model, Render, Subscription, Task, View, ViewContext, WeakView,
+    div, prelude::*, EventEmitter, Model, Render, Subscription, Task, Model, ViewContext, WeakView,
 };
 use language::Point;
 use project::Fs;
@@ -43,7 +43,7 @@ struct EditorBlock {
     code_range: Range<Anchor>,
     invalidation_anchor: Anchor,
     block_id: CustomBlockId,
-    execution_view: View<ExecutionView>,
+    execution_view: Model<ExecutionView>,
 }
 
 type CloseBlockFn =
@@ -115,7 +115,7 @@ impl EditorBlock {
     }
 
     fn create_output_area_renderer(
-        execution_view: View<ExecutionView>,
+        execution_view: Model<ExecutionView>,
         on_close: CloseBlockFn,
     ) -> RenderBlock {
         Arc::new(move |cx: &mut BlockContext| {

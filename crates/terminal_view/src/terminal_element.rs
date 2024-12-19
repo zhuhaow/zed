@@ -5,7 +5,7 @@ use gpui::{
     HighlightStyle, Hitbox, Hsla, InputHandler, InteractiveElement, Interactivity, IntoElement,
     LayoutId, Model, ModelContext, ModifiersChangedEvent, MouseButton, MouseMoveEvent, Pixels,
     Point, ShapedLine, StatefulInteractiveElement, StrikethroughStyle, Styled, TextRun, TextStyle,
-    UTF16Selection, UnderlineStyle, View, WeakView, WhiteSpace, WindowContext, WindowTextSystem,
+    UTF16Selection, UnderlineStyle, Model, WeakView, WhiteSpace, WindowContext, WindowTextSystem,
 };
 use itertools::Itertools;
 use language::CursorShape;
@@ -149,7 +149,7 @@ impl LayoutRect {
 /// We need to keep a reference to the view for mouse events, do we need it for any other terminal stuff, or can we move that to connection?
 pub struct TerminalElement {
     terminal: Model<Terminal>,
-    terminal_view: View<TerminalView>,
+    terminal_view: Model<TerminalView>,
     workspace: WeakView<Workspace>,
     focus: FocusHandle,
     focused: bool,
@@ -171,7 +171,7 @@ impl TerminalElement {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         terminal: Model<Terminal>,
-        terminal_view: View<TerminalView>,
+        terminal_view: Model<TerminalView>,
         workspace: WeakView<Workspace>,
         focus: FocusHandle,
         focused: bool,

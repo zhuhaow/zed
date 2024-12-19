@@ -18,7 +18,7 @@ use gpui::{
     AsyncWindowContext, ClickEvent, ClipboardItem, Corner, Div, DragMoveEvent, EntityId,
     EventEmitter, ExternalPaths, FocusHandle, FocusOutEvent, FocusableView, KeyContext, Model,
     MouseButton, MouseDownEvent, NavigationDirection, Pixels, Point, PromptLevel, Render,
-    ScrollHandle, Subscription, Task, View, ViewContext, VisualContext, WeakFocusHandle, WeakView,
+    ScrollHandle, Subscription, Task, Model, ViewContext, VisualContext, WeakFocusHandle, WeakView,
     WindowContext,
 };
 use itertools::Itertools;
@@ -208,7 +208,7 @@ pub enum Event {
         local: bool,
     },
     Remove {
-        focus_on_pane: Option<View<Pane>>,
+        focus_on_pane: Option<Model<Pane>>,
     },
     RemoveItem {
         idx: usize,
@@ -284,7 +284,7 @@ pub struct Pane {
     preview_item_id: Option<EntityId>,
     last_focus_handle_by_item: HashMap<EntityId, WeakFocusHandle>,
     nav_history: NavHistory,
-    toolbar: View<Toolbar>,
+    toolbar: Model<Toolbar>,
     pub(crate) workspace: WeakView<Workspace>,
     project: Model<Project>,
     drag_split_direction: Option<SplitDirection>,
@@ -358,7 +358,7 @@ pub struct NavigationEntry {
 
 #[derive(Clone)]
 pub struct DraggedTab {
-    pub pane: View<Pane>,
+    pub pane: Model<Pane>,
     pub item: Box<dyn ItemHandle>,
     pub ix: usize,
     pub detail: usize,
@@ -703,7 +703,7 @@ impl Pane {
         cx.notify();
     }
 
-    pub fn nav_history_for_item<T: Item>(&self, item: &View<T>) -> ItemNavHistory {
+    pub fn nav_history_for_item<T: Item>(&self, item: &Model<T>) -> ItemNavHistory {
         ItemNavHistory {
             history: self.nav_history.clone(),
             item: Arc::new(item.downgrade()),
@@ -1000,7 +1000,7 @@ impl Pane {
         self.items.iter()
     }
 
-    pub fn items_of_type<T: Render>(&self) -> impl '_ + Iterator<Item = View<T>> {
+    pub fn items_of_type<T: Render>(&self) -> impl '_ + Iterator<Item = Model<T>> {
         self.items
             .iter()
             .filter_map(|item| item.to_any().downcast().ok())
@@ -1517,7 +1517,7 @@ impl Pane {
         &mut self,
         item_index: usize,
         activate_pane: bool,
-        focus_on_pane_if_closed: View<Pane>,
+        focus_on_pane_if_closed: Model<Pane>,
         cx: &mut ViewContext<Self>,
     ) {
         self._remove_item(
@@ -1534,7 +1534,7 @@ impl Pane {
         item_index: usize,
         activate_pane: bool,
         close_pane_if_empty: bool,
-        focus_on_pane_if_closed: Option<View<Pane>>,
+        focus_on_pane_if_closed: Option<Model<Pane>>,
         cx: &mut ViewContext<Self>,
     ) {
         let activate_on_close = &ItemSettings::get_global(cx).activate_on_close;
@@ -1857,7 +1857,7 @@ impl Pane {
         cx.emit(Event::Split(direction));
     }
 
-    pub fn toolbar(&self) -> &View<Toolbar> {
+    pub fn toolbar(&self) -> &Model<Toolbar> {
         &self.toolbar
     }
 
@@ -2504,7 +2504,7 @@ impl Pane {
             )
     }
 
-    pub fn render_menu_overlay(menu: &View<ContextMenu>) -> Div {
+    pub fn render_menu_overlay(menu: &Model<ContextMenu>) -> Div {
         div().absolute().bottom_0().right_0().size_0().child(
             deferred(anchored().anchor(Corner::TopRight).child(menu.clone())).with_priority(1),
         )
@@ -4074,11 +4074,11 @@ mod tests {
     }
 
     fn add_labeled_item(
-        pane: &View<Pane>,
+        pane: &Model<Pane>,
         label: &str,
         is_dirty: bool,
         cx: &mut VisualTestContext,
-    ) -> Box<View<TestItem>> {
+    ) -> Box<Model<TestItem>> {
         pane.update(cx, |pane, cx| {
             let labeled_item = Box::new(
                 cx.new_view(|cx| TestItem::new(cx).with_label(label).with_dirty(is_dirty)),
@@ -4089,10 +4089,10 @@ mod tests {
     }
 
     fn set_labeled_items<const COUNT: usize>(
-        pane: &View<Pane>,
+        pane: &Model<Pane>,
         labels: [&str; COUNT],
         cx: &mut VisualTestContext,
-    ) -> [Box<View<TestItem>>; COUNT] {
+    ) -> [Box<Model<TestItem>>; COUNT] {
         pane.update(cx, |pane, cx| {
             pane.items.clear();
             let mut active_item_index = 0;
@@ -4119,7 +4119,7 @@ mod tests {
     // Assert the item label, with the active item label suffixed with a '*'
     #[track_caller]
     fn assert_item_labels<const COUNT: usize>(
-        pane: &View<Pane>,
+        pane: &Model<Pane>,
         expected_states: [&str; COUNT],
         cx: &mut VisualTestContext,
     ) {

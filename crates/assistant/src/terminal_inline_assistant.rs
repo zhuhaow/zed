@@ -14,7 +14,7 @@ use fs::Fs;
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use gpui::{
     AppContext, Context, EventEmitter, FocusHandle, FocusableView, Global, Model, ModelContext,
-    Subscription, Task, TextStyle, UpdateGlobal, View, WeakView,
+    Subscription, Task, TextStyle, UpdateGlobal, Model, WeakView,
 };
 use language::Buffer;
 use language_model::{
@@ -87,9 +87,9 @@ impl TerminalInlineAssistant {
 
     pub fn assist(
         &mut self,
-        terminal_view: &View<TerminalView>,
+        terminal_view: &Model<TerminalView>,
         workspace: Option<WeakView<Workspace>>,
-        assistant_panel: Option<&View<AssistantPanel>>,
+        assistant_panel: Option<&Model<AssistantPanel>>,
         initial_prompt: Option<String>,
         cx: &mut WindowContext,
     ) {
@@ -149,7 +149,7 @@ impl TerminalInlineAssistant {
 
     fn handle_prompt_editor_event(
         &mut self,
-        prompt_editor: View<PromptEditor>,
+        prompt_editor: Model<PromptEditor>,
         event: &PromptEditorEvent,
         cx: &mut WindowContext,
     ) {
@@ -393,7 +393,7 @@ impl TerminalInlineAssistant {
 
 struct TerminalInlineAssist {
     terminal: WeakView<TerminalView>,
-    prompt_editor: Option<View<PromptEditor>>,
+    prompt_editor: Option<Model<PromptEditor>>,
     codegen: Model<Codegen>,
     workspace: Option<WeakView<Workspace>>,
     include_context: bool,
@@ -403,9 +403,9 @@ struct TerminalInlineAssist {
 impl TerminalInlineAssist {
     pub fn new(
         assist_id: TerminalInlineAssistId,
-        terminal: &View<TerminalView>,
+        terminal: &Model<TerminalView>,
         include_context: bool,
-        prompt_editor: View<PromptEditor>,
+        prompt_editor: Model<PromptEditor>,
         workspace: Option<WeakView<Workspace>>,
         cx: &mut WindowContext,
     ) -> Self {
@@ -477,8 +477,8 @@ enum PromptEditorEvent {
 struct PromptEditor {
     id: TerminalInlineAssistId,
     height_in_lines: u8,
-    editor: View<Editor>,
-    language_model_selector: View<LanguageModelSelector>,
+    editor: Model<Editor>,
+    language_model_selector: Model<LanguageModelSelector>,
     edited_since_done: bool,
     prompt_history: VecDeque<String>,
     prompt_history_ix: Option<usize>,
@@ -679,7 +679,7 @@ impl PromptEditor {
         prompt_history: VecDeque<String>,
         prompt_buffer: Model<MultiBuffer>,
         codegen: Model<Codegen>,
-        assistant_panel: Option<&View<AssistantPanel>>,
+        assistant_panel: Option<&Model<AssistantPanel>>,
         workspace: Option<WeakView<Workspace>>,
         fs: Arc<dyn Fs>,
         cx: &mut ViewContext<Self>,
@@ -778,7 +778,7 @@ impl PromptEditor {
 
     fn handle_assistant_panel_event(
         &mut self,
-        _: View<AssistantPanel>,
+        _: Model<AssistantPanel>,
         event: &AssistantPanelEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -806,13 +806,13 @@ impl PromptEditor {
         })
     }
 
-    fn handle_prompt_editor_changed(&mut self, _: View<Editor>, cx: &mut ViewContext<Self>) {
+    fn handle_prompt_editor_changed(&mut self, _: Model<Editor>, cx: &mut ViewContext<Self>) {
         self.count_lines(cx);
     }
 
     fn handle_prompt_editor_events(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {

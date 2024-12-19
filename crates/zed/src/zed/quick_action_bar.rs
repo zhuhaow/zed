@@ -11,7 +11,7 @@ use editor::actions::{
 use editor::{Editor, EditorSettings};
 use gpui::{
     Action, ClickEvent, Corner, ElementId, EventEmitter, FocusHandle, FocusableView,
-    InteractiveElement, ParentElement, Render, Styled, Subscription, View, ViewContext, WeakView,
+    InteractiveElement, ParentElement, Render, Styled, Subscription, Model, ViewContext, WeakView,
 };
 use search::{buffer_search, BufferSearchBar};
 use settings::{Settings, SettingsStore};
@@ -28,7 +28,7 @@ use zed_actions::InlineAssist;
 pub struct QuickActionBar {
     _inlay_hints_enabled_subscription: Option<Subscription>,
     active_item: Option<Box<dyn ItemHandle>>,
-    buffer_search_bar: View<BufferSearchBar>,
+    buffer_search_bar: Model<BufferSearchBar>,
     show: bool,
     toggle_selections_handle: PopoverMenuHandle<ContextMenu>,
     toggle_settings_handle: PopoverMenuHandle<ContextMenu>,
@@ -37,7 +37,7 @@ pub struct QuickActionBar {
 
 impl QuickActionBar {
     pub fn new(
-        buffer_search_bar: View<BufferSearchBar>,
+        buffer_search_bar: Model<BufferSearchBar>,
         workspace: &Workspace,
         cx: &mut ViewContext<Self>,
     ) -> Self {
@@ -56,7 +56,7 @@ impl QuickActionBar {
         this
     }
 
-    fn active_editor(&self) -> Option<View<Editor>> {
+    fn active_editor(&self) -> Option<Model<Editor>> {
         self.active_item
             .as_ref()
             .and_then(|item| item.downcast::<Editor>())

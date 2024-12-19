@@ -6,7 +6,7 @@ use crate::{
     SelectMode, ToDisplayPoint, ToggleCodeActions,
 };
 use gpui::prelude::FluentBuilder;
-use gpui::{DismissEvent, Pixels, Point, Subscription, View, ViewContext};
+use gpui::{DismissEvent, Pixels, Point, Subscription, Model, ViewContext};
 use std::ops::Range;
 use text::PointUtf16;
 use workspace::OpenInTerminal;
@@ -26,7 +26,7 @@ pub enum MenuPosition {
 
 pub struct MouseContextMenu {
     pub(crate) position: MenuPosition,
-    pub(crate) context_menu: View<ui::ContextMenu>,
+    pub(crate) context_menu: Model<ui::ContextMenu>,
     _subscription: Subscription,
 }
 
@@ -44,7 +44,7 @@ impl MouseContextMenu {
         editor: &mut Editor,
         source: multi_buffer::Anchor,
         position: Point<Pixels>,
-        context_menu: View<ui::ContextMenu>,
+        context_menu: Model<ui::ContextMenu>,
         cx: &mut ViewContext<Editor>,
     ) -> Option<Self> {
         let editor_snapshot = editor.snapshot(cx);
@@ -63,7 +63,7 @@ impl MouseContextMenu {
 
     pub(crate) fn new(
         position: MenuPosition,
-        context_menu: View<ui::ContextMenu>,
+        context_menu: Model<ui::ContextMenu>,
         cx: &mut ViewContext<Editor>,
     ) -> Self {
         let context_menu_focus = context_menu.focus_handle(cx);

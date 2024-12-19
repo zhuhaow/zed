@@ -1,6 +1,6 @@
 use crate::{ItemHandle, Pane};
 use gpui::{
-    AnyView, Decorations, IntoElement, ParentElement, Render, Styled, Subscription, View,
+    AnyView, Decorations, IntoElement, ParentElement, Render, Styled, Subscription, Model,
     ViewContext, WindowContext,
 };
 use std::any::TypeId;
@@ -29,7 +29,7 @@ trait StatusItemViewHandle: Send {
 pub struct StatusBar {
     left_items: Vec<Box<dyn StatusItemViewHandle>>,
     right_items: Vec<Box<dyn StatusItemViewHandle>>,
-    active_pane: View<Pane>,
+    active_pane: Model<Pane>,
     _observe_active_pane: Subscription,
 }
 
@@ -77,7 +77,7 @@ impl StatusBar {
 }
 
 impl StatusBar {
-    pub fn new(active_pane: &View<Pane>, cx: &mut ViewContext<Self>) -> Self {
+    pub fn new(active_pane: &Model<Pane>, cx: &mut ViewContext<Self>) -> Self {
         let mut this = Self {
             left_items: Default::default(),
             right_items: Default::default(),
@@ -89,7 +89,7 @@ impl StatusBar {
         this
     }
 
-    pub fn add_left_item<T>(&mut self, item: View<T>, cx: &mut ViewContext<Self>)
+    pub fn add_left_item<T>(&mut self, item: Model<T>, cx: &mut ViewContext<Self>)
     where
         T: 'static + StatusItemView,
     {
@@ -100,7 +100,7 @@ impl StatusBar {
         cx.notify();
     }
 
-    pub fn item_of_type<T: StatusItemView>(&self) -> Option<View<T>> {
+    pub fn item_of_type<T: StatusItemView>(&self) -> Option<Model<T>> {
         self.left_items
             .iter()
             .chain(self.right_items.iter())
@@ -127,7 +127,7 @@ impl StatusBar {
     pub fn insert_item_after<T>(
         &mut self,
         position: usize,
-        item: View<T>,
+        item: Model<T>,
         cx: &mut ViewContext<Self>,
     ) where
         T: 'static + StatusItemView,
@@ -153,7 +153,7 @@ impl StatusBar {
         cx.notify();
     }
 
-    pub fn add_right_item<T>(&mut self, item: View<T>, cx: &mut ViewContext<Self>)
+    pub fn add_right_item<T>(&mut self, item: Model<T>, cx: &mut ViewContext<Self>)
     where
         T: 'static + StatusItemView,
     {
@@ -164,7 +164,7 @@ impl StatusBar {
         cx.notify();
     }
 
-    pub fn set_active_pane(&mut self, active_pane: &View<Pane>, cx: &mut ViewContext<Self>) {
+    pub fn set_active_pane(&mut self, active_pane: &Model<Pane>, cx: &mut ViewContext<Self>) {
         self.active_pane = active_pane.clone();
         self._observe_active_pane =
             cx.observe(active_pane, |this, _, cx| this.update_active_pane_item(cx));
@@ -179,7 +179,7 @@ impl StatusBar {
     }
 }
 
-impl<T: StatusItemView> StatusItemViewHandle for View<T> {
+impl<T: StatusItemView> StatusItemViewHandle for Model<T> {
     fn to_any(&self) -> AnyView {
         self.clone().into()
     }

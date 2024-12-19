@@ -12,7 +12,7 @@ use editor::{
 };
 use gpui::{
     actions, AnyView, AppContext, ClipboardItem, Entity as _, EventEmitter, FocusableView, Model,
-    Pixels, Point, Render, Subscription, Task, View, ViewContext, VisualContext as _, WeakView,
+    Pixels, Point, Render, Subscription, Task, Model, ViewContext, VisualContext as _, WeakView,
     WindowContext,
 };
 use project::Project;
@@ -38,7 +38,7 @@ pub fn init(cx: &mut AppContext) {
 }
 
 pub struct ChannelView {
-    pub editor: View<Editor>,
+    pub editor: Model<Editor>,
     workspace: WeakView<Workspace>,
     project: Model<Project>,
     channel_store: Model<ChannelStore>,
@@ -52,9 +52,9 @@ impl ChannelView {
     pub fn open(
         channel_id: ChannelId,
         link_position: Option<String>,
-        workspace: View<Workspace>,
+        workspace: Model<Workspace>,
         cx: &mut WindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         let pane = workspace.read(cx).active_pane().clone();
         let channel_view = Self::open_in_pane(
             channel_id,
@@ -83,10 +83,10 @@ impl ChannelView {
     pub fn open_in_pane(
         channel_id: ChannelId,
         link_position: Option<String>,
-        pane: View<Pane>,
-        workspace: View<Workspace>,
+        pane: Model<Pane>,
+        workspace: Model<Workspace>,
         cx: &mut WindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         let channel_view = Self::load(channel_id, workspace, cx);
         cx.spawn(|mut cx| async move {
             let channel_view = channel_view.await?;
@@ -134,9 +134,9 @@ impl ChannelView {
 
     pub fn load(
         channel_id: ChannelId,
-        workspace: View<Workspace>,
+        workspace: Model<Workspace>,
         cx: &mut WindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         let weak_workspace = workspace.downgrade();
         let workspace = workspace.read(cx);
         let project = workspace.project().to_owned();
@@ -377,7 +377,7 @@ impl Item for ChannelView {
     fn act_as_type<'a>(
         &'a self,
         type_id: TypeId,
-        self_handle: &'a View<Self>,
+        self_handle: &'a Model<Self>,
         _: &'a AppContext,
     ) -> Option<AnyView> {
         if type_id == TypeId::of::<Self>() {
@@ -440,7 +440,7 @@ impl Item for ChannelView {
         &self,
         _: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>> {
+    ) -> Option<Model<Self>> {
         Some(cx.new_view(|cx| {
             Self::new(
                 self.project.clone(),
@@ -470,7 +470,7 @@ impl Item for ChannelView {
             .update(cx, |editor, cx| Item::set_nav_history(editor, history, cx))
     }
 
-    fn as_searchable(&self, _: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, _: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         Some(Box::new(self.editor.clone()))
     }
 
@@ -513,11 +513,11 @@ impl FollowableItem for ChannelView {
     }
 
     fn from_state_proto(
-        workspace: View<workspace::Workspace>,
+        workspace: Model<workspace::Workspace>,
         remote_id: workspace::ViewId,
         state: &mut Option<proto::view::Variant>,
         cx: &mut WindowContext,
-    ) -> Option<gpui::Task<anyhow::Result<View<Self>>>> {
+    ) -> Option<gpui::Task<anyhow::Result<Model<Self>>>> {
         let Some(proto::view::Variant::ChannelView(_)) = state else {
             return None;
         };

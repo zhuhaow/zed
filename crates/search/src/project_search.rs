@@ -13,7 +13,7 @@ use gpui::{
     actions, div, Action, AnyElement, AnyView, AppContext, Axis, Context as _, EntityId,
     EventEmitter, FocusHandle, FocusableView, Global, Hsla, InteractiveElement, IntoElement,
     KeyContext, Model, ModelContext, ParentElement, Point, Render, SharedString, Styled,
-    Subscription, Task, TextStyle, UpdateGlobal, View, ViewContext, VisualContext, WeakModel,
+    Subscription, Task, TextStyle, UpdateGlobal, Model, ViewContext, VisualContext, WeakModel,
     WeakView, WindowContext,
 };
 use language::Buffer;
@@ -146,15 +146,15 @@ pub struct ProjectSearchView {
     workspace: WeakView<Workspace>,
     focus_handle: FocusHandle,
     model: Model<ProjectSearch>,
-    query_editor: View<Editor>,
-    replacement_editor: View<Editor>,
-    results_editor: View<Editor>,
+    query_editor: Model<Editor>,
+    replacement_editor: Model<Editor>,
+    results_editor: Model<Editor>,
     search_options: SearchOptions,
     panels_with_errors: HashSet<InputPanel>,
     active_match_index: Option<usize>,
     search_id: usize,
-    included_files_editor: View<Editor>,
-    excluded_files_editor: View<Editor>,
+    included_files_editor: Model<Editor>,
+    excluded_files_editor: Model<Editor>,
     filters_enabled: bool,
     replace_enabled: bool,
     included_opened_only: bool,
@@ -168,7 +168,7 @@ pub struct ProjectSearchSettings {
 }
 
 pub struct ProjectSearchBar {
-    active_project_search: Option<View<ProjectSearchView>>,
+    active_project_search: Option<Model<ProjectSearchView>>,
     subscription: Option<Subscription>,
 }
 
@@ -401,7 +401,7 @@ impl Item for ProjectSearchView {
     fn act_as_type<'a>(
         &'a self,
         type_id: TypeId,
-        self_handle: &'a View<Self>,
+        self_handle: &'a Model<Self>,
         _: &'a AppContext,
     ) -> Option<AnyView> {
         if type_id == TypeId::of::<Self>() {
@@ -500,7 +500,7 @@ impl Item for ProjectSearchView {
         &self,
         _workspace_id: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>>
+    ) -> Option<Model<Self>>
     where
         Self: Sized,
     {
@@ -863,7 +863,7 @@ impl ProjectSearchView {
 
     fn existing_or_new_search(
         workspace: &mut Workspace,
-        existing: Option<View<ProjectSearchView>>,
+        existing: Option<Model<ProjectSearchView>>,
         action: &workspace::DeploySearch,
         cx: &mut ViewContext<Workspace>,
     ) {
@@ -1246,7 +1246,7 @@ impl ProjectSearchView {
     }
 
     #[cfg(any(test, feature = "test-support"))]
-    pub fn results_editor(&self) -> &View<Editor> {
+    pub fn results_editor(&self) -> &Model<Editor> {
         &self.results_editor
     }
 }
@@ -1551,7 +1551,7 @@ impl ProjectSearchBar {
         }
     }
 
-    fn render_text_input(&self, editor: &View<Editor>, cx: &ViewContext<Self>) -> impl IntoElement {
+    fn render_text_input(&self, editor: &Model<Editor>, cx: &ViewContext<Self>) -> impl IntoElement {
         let settings = ThemeSettings::get_global(cx);
         let text_style = TextStyle {
             color: if editor.read(cx).read_only(cx) {
@@ -2034,7 +2034,7 @@ fn register_workspace_action_for_present_search<A: Action>(
 
 #[cfg(any(test, feature = "test-support"))]
 pub fn perform_project_search(
-    search_view: &View<ProjectSearchView>,
+    search_view: &Model<ProjectSearchView>,
     text: impl Into<std::sync::Arc<str>>,
     cx: &mut gpui::VisualTestContext,
 ) {
@@ -3275,7 +3275,7 @@ pub mod tests {
         assert_eq!(cx.update(|cx| second_pane.read(cx).items_len()), 2);
 
         let update_search_view =
-            |search_view: &View<ProjectSearchView>, query: &str, cx: &mut TestAppContext| {
+            |search_view: &Model<ProjectSearchView>, query: &str, cx: &mut TestAppContext| {
                 window
                     .update(cx, |_, cx| {
                         search_view.update(cx, |search_view, cx| {
@@ -3289,7 +3289,7 @@ pub mod tests {
             };
 
         let active_query =
-            |search_view: &View<ProjectSearchView>, cx: &mut TestAppContext| -> String {
+            |search_view: &Model<ProjectSearchView>, cx: &mut TestAppContext| -> String {
                 window
                     .update(cx, |_, cx| {
                         search_view.update(cx, |search_view, cx| {
@@ -3300,7 +3300,7 @@ pub mod tests {
             };
 
         let select_prev_history_item =
-            |search_bar: &View<ProjectSearchBar>, cx: &mut TestAppContext| {
+            |search_bar: &Model<ProjectSearchBar>, cx: &mut TestAppContext| {
                 window
                     .update(cx, |_, cx| {
                         search_bar.update(cx, |search_bar, cx| {
@@ -3312,7 +3312,7 @@ pub mod tests {
             };
 
         let select_next_history_item =
-            |search_bar: &View<ProjectSearchBar>, cx: &mut TestAppContext| {
+            |search_bar: &Model<ProjectSearchBar>, cx: &mut TestAppContext| {
                 window
                     .update(cx, |_, cx| {
                         search_bar.update(cx, |search_bar, cx| {

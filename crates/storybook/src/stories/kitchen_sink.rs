@@ -1,4 +1,4 @@
-use gpui::{prelude::*, Render, View};
+use gpui::{prelude::*, Render, Model};
 use story::Story;
 use strum::IntoEnumIterator;
 use ui::prelude::*;
@@ -8,7 +8,7 @@ use crate::story_selector::ComponentStory;
 pub struct KitchenSinkStory;
 
 impl KitchenSinkStory {
-    pub fn view(cx: &mut WindowContext) -> View<Self> {
+    pub fn view(cx: &mut WindowContext) -> Model<Self> {
         cx.new_view(|_cx| Self)
     }
 }

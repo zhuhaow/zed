@@ -44,7 +44,7 @@ use gpui::{
     ClipboardItem, CursorStyle, Empty, Entity, EventEmitter, ExternalPaths, FocusHandle,
     FocusableView, FontWeight, InteractiveElement, IntoElement, Model, ParentElement, Pixels,
     Render, RenderImage, SharedString, Size, StatefulInteractiveElement, Styled, Subscription,
-    Task, Transformation, UpdateGlobal, View, WeakModel, WeakView,
+    Task, Transformation, UpdateGlobal, Model, WeakModel, WeakView,
 };
 use indexed_docs::IndexedDocsStore;
 use language::{
@@ -133,7 +133,7 @@ pub enum AssistantPanelEvent {
 }
 
 pub struct AssistantPanel {
-    pane: View<Pane>,
+    pane: Model<Pane>,
     workspace: WeakView<Workspace>,
     width: Option<Pixels>,
     height: Option<Pixels>,
@@ -143,7 +143,7 @@ pub struct AssistantPanel {
     fs: Arc<dyn Fs>,
     subscriptions: Vec<Subscription>,
     model_selector_menu_handle: PopoverMenuHandle<LanguageModelSelector>,
-    model_summary_editor: View<Editor>,
+    model_summary_editor: Model<Editor>,
     authenticate_provider_task: Option<(LanguageModelProviderId, Task<()>)>,
     configuration_subscription: Option<Subscription>,
     client_status: Option<client::Status>,
@@ -169,8 +169,8 @@ enum SavedContextPickerEvent {
 }
 
 enum InlineAssistTarget {
-    Editor(View<Editor>, bool),
-    Terminal(View<TerminalView>),
+    Editor(Model<Editor>, bool),
+    Terminal(Model<TerminalView>),
 }
 
 impl EventEmitter<SavedContextPickerEvent> for Picker<SavedContextPickerDelegate> {}
@@ -315,7 +315,7 @@ impl AssistantPanel {
         workspace: WeakView<Workspace>,
         prompt_builder: Arc<PromptBuilder>,
         cx: AsyncWindowContext,
-    ) -> Task<Result<View<Self>>> {
+    ) -> Task<Result<Model<Self>>> {
         cx.spawn(|mut cx| async move {
             let slash_commands = Arc::new(SlashCommandWorkingSet::default());
             let tools = Arc::new(ToolWorkingSet::default());
@@ -568,7 +568,7 @@ impl AssistantPanel {
 
     fn handle_pane_event(
         &mut self,
-        pane: View<Pane>,
+        pane: Model<Pane>,
         event: &pane::Event,
         cx: &mut ViewContext<Self>,
     ) {
@@ -634,7 +634,7 @@ impl AssistantPanel {
 
     fn handle_summary_editor_event(
         &mut self,
-        model_summary_editor: View<Editor>,
+        model_summary_editor: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -673,7 +673,7 @@ impl AssistantPanel {
 
     fn handle_toolbar_event(
         &mut self,
-        _: View<ContextEditorToolbarItem>,
+        _: Model<ContextEditorToolbarItem>,
         _: &ContextEditorToolbarItemEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -897,7 +897,7 @@ impl AssistantPanel {
 
     fn resolve_inline_assist_target(
         workspace: &mut Workspace,
-        assistant_panel: &View<AssistantPanel>,
+        assistant_panel: &Model<AssistantPanel>,
         cx: &mut WindowContext,
     ) -> Option<InlineAssistTarget> {
         if let Some(terminal_panel) = workspace.panel::<TerminalPanel>(cx) {
@@ -964,7 +964,7 @@ impl AssistantPanel {
         }
     }
 
-    fn new_context(&mut self, cx: &mut ViewContext<Self>) -> Option<View<ContextEditor>> {
+    fn new_context(&mut self, cx: &mut ViewContext<Self>) -> Option<Model<ContextEditor>> {
         let project = self.project.read(cx);
         if project.is_via_collab() {
             let task = self
@@ -1041,7 +1041,7 @@ impl AssistantPanel {
         }
     }
 
-    fn show_context(&mut self, context_editor: View<ContextEditor>, cx: &mut ViewContext<Self>) {
+    fn show_context(&mut self, context_editor: Model<ContextEditor>, cx: &mut ViewContext<Self>) {
         let focus = self.focus_handle(cx).contains_focused(cx);
         let prev_len = self.pane.read(cx).items_len();
         self.pane.update(cx, |pane, cx| {
@@ -1061,7 +1061,7 @@ impl AssistantPanel {
 
     fn show_updated_summary(
         &self,
-        context_editor: &View<ContextEditor>,
+        context_editor: &Model<ContextEditor>,
         cx: &mut ViewContext<Self>,
     ) {
         context_editor.update(cx, |context_editor, cx| {
@@ -1076,7 +1076,7 @@ impl AssistantPanel {
 
     fn handle_context_editor_event(
         &mut self,
-        context_editor: View<ContextEditor>,
+        context_editor: Model<ContextEditor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -1197,7 +1197,7 @@ impl AssistantPanel {
         self.model_selector_menu_handle.toggle(cx);
     }
 
-    fn active_context_editor(&self, cx: &AppContext) -> Option<View<ContextEditor>> {
+    fn active_context_editor(&self, cx: &AppContext) -> Option<Model<ContextEditor>> {
         self.pane
             .read(cx)
             .active_item()?
@@ -1258,7 +1258,7 @@ impl AssistantPanel {
         &mut self,
         id: ContextId,
         cx: &mut ViewContext<Self>,
-    ) -> Task<Result<View<ContextEditor>>> {
+    ) -> Task<Result<Model<ContextEditor>>> {
         let existing_context = self.pane.read(cx).items().find_map(|item| {
             item.downcast::<ContextEditor>()
                 .filter(|editor| *editor.read(cx).context.read(cx).id() == id)
@@ -1434,7 +1434,7 @@ impl Panel for AssistantPanel {
         }
     }
 
-    fn pane(&self) -> Option<View<Pane>> {
+    fn pane(&self) -> Option<Model<Pane>> {
         Some(self.pane.clone())
     }
 
@@ -1509,7 +1509,7 @@ pub struct ContextEditor {
     workspace: WeakView<Workspace>,
     project: Model<Project>,
     lsp_adapter_delegate: Option<Arc<dyn LspAdapterDelegate>>,
-    editor: View<Editor>,
+    editor: Model<Editor>,
     blocks: HashMap<MessageId, (MessageHeader, CustomBlockId)>,
     image_blocks: HashSet<CustomBlockId>,
     scroll_position: Option<ScrollPosition>,
@@ -2398,7 +2398,7 @@ impl ContextEditor {
 
     fn handle_editor_event(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &EditorEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -2475,7 +2475,7 @@ impl ContextEditor {
 
     fn close_patch_editor(
         &mut self,
-        editor: View<ProposedChangesEditor>,
+        editor: Model<ProposedChangesEditor>,
         cx: &mut ViewContext<ContextEditor>,
     ) {
         self.workspace
@@ -2585,7 +2585,7 @@ impl ContextEditor {
 
     fn handle_editor_search_event(
         &mut self,
-        _: View<Editor>,
+        _: Model<Editor>,
         event: &SearchEvent,
         cx: &mut ViewContext<Self>,
     ) {
@@ -2883,7 +2883,7 @@ impl ContextEditor {
     /// Returns either the selected text, or the content of the Markdown code
     /// block surrounding the cursor.
     fn get_selection_or_code_block(
-        context_editor_view: &View<ContextEditor>,
+        context_editor_view: &Model<ContextEditor>,
         cx: &mut ViewContext<Workspace>,
     ) -> Option<(String, bool)> {
         const CODE_FENCE_DELIMITER: &'static str = "```";
@@ -4234,7 +4234,7 @@ impl Item for ContextEditor {
         Some(self.title(cx).to_string().into())
     }
 
-    fn as_searchable(&self, handle: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, handle: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         Some(Box::new(handle.clone()))
     }
 
@@ -4256,7 +4256,7 @@ impl Item for ContextEditor {
     fn act_as_type<'a>(
         &'a self,
         type_id: TypeId,
-        self_handle: &'a View<Self>,
+        self_handle: &'a Model<Self>,
         _: &'a AppContext,
     ) -> Option<AnyView> {
         if type_id == TypeId::of::<Self>() {
@@ -4355,11 +4355,11 @@ impl FollowableItem for ContextEditor {
     }
 
     fn from_state_proto(
-        workspace: View<Workspace>,
+        workspace: Model<Workspace>,
         id: workspace::ViewId,
         state: &mut Option<proto::view::Variant>,
         cx: &mut WindowContext,
-    ) -> Option<Task<Result<View<Self>>>> {
+    ) -> Option<Task<Result<Model<Self>>>> {
         let proto::view::Variant::ContextEditor(_) = state.as_ref()? else {
             return None;
         };
@@ -4456,8 +4456,8 @@ impl FollowableItem for ContextEditor {
 
 pub struct ContextEditorToolbarItem {
     active_context_editor: Option<WeakView<ContextEditor>>,
-    model_summary_editor: View<Editor>,
-    language_model_selector: View<LanguageModelSelector>,
+    model_summary_editor: Model<Editor>,
+    language_model_selector: Model<LanguageModelSelector>,
     language_model_selector_menu_handle: PopoverMenuHandle<LanguageModelSelector>,
 }
 
@@ -4465,7 +4465,7 @@ impl ContextEditorToolbarItem {
     pub fn new(
         workspace: &Workspace,
         model_selector_menu_handle: PopoverMenuHandle<LanguageModelSelector>,
-        model_summary_editor: View<Editor>,
+        model_summary_editor: Model<Editor>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         Self {
@@ -4664,7 +4664,7 @@ enum ContextEditorToolbarItemEvent {
 impl EventEmitter<ContextEditorToolbarItemEvent> for ContextEditorToolbarItem {}
 
 pub struct ContextHistory {
-    picker: View<Picker<SavedContextPickerDelegate>>,
+    picker: Model<Picker<SavedContextPickerDelegate>>,
     _subscriptions: Vec<Subscription>,
     assistant_panel: WeakView<AssistantPanel>,
 }
@@ -4701,7 +4701,7 @@ impl ContextHistory {
 
     fn handle_picker_event(
         &mut self,
-        _: View<Picker<SavedContextPickerDelegate>>,
+        _: Model<Picker<SavedContextPickerDelegate>>,
         event: &SavedContextPickerEvent,
         cx: &mut ViewContext<Self>,
     ) {

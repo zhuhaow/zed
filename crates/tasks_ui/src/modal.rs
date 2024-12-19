@@ -5,7 +5,7 @@ use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     rems, Action, AnyElement, AppContext, DismissEvent, EventEmitter, FocusableView,
     InteractiveElement, Model, ParentElement, Render, SharedString, Styled, Subscription, Task,
-    View, ViewContext, VisualContext, WeakView,
+    Model, ViewContext, VisualContext, WeakView,
 };
 use picker::{highlighted_match_with_paths::HighlightedText, Picker, PickerDelegate};
 use project::{task_store::TaskStore, TaskSourceKind};
@@ -116,7 +116,7 @@ impl TasksModalDelegate {
 }
 
 pub(crate) struct TasksModal {
-    picker: View<Picker<TasksModalDelegate>>,
+    picker: Model<Picker<TasksModalDelegate>>,
     _subscription: Subscription,
 }
 
@@ -1003,7 +1003,7 @@ mod tests {
     }
 
     fn emulate_task_schedule(
-        tasks_picker: View<Picker<TasksModalDelegate>>,
+        tasks_picker: Model<Picker<TasksModalDelegate>>,
         project: &Model<Project>,
         scheduled_task_label: &str,
         cx: &mut VisualTestContext,
@@ -1034,9 +1034,9 @@ mod tests {
     }
 
     fn open_spawn_tasks(
-        workspace: &View<Workspace>,
+        workspace: &Model<Workspace>,
         cx: &mut VisualTestContext,
-    ) -> View<Picker<TasksModalDelegate>> {
+    ) -> Model<Picker<TasksModalDelegate>> {
         cx.dispatch_action(Spawn::modal());
         workspace.update(cx, |workspace, cx| {
             workspace
@@ -1048,12 +1048,12 @@ mod tests {
         })
     }
 
-    fn query(spawn_tasks: &View<Picker<TasksModalDelegate>>, cx: &mut VisualTestContext) -> String {
+    fn query(spawn_tasks: &Model<Picker<TasksModalDelegate>>, cx: &mut VisualTestContext) -> String {
         spawn_tasks.update(cx, |spawn_tasks, cx| spawn_tasks.query(cx))
     }
 
     fn task_names(
-        spawn_tasks: &View<Picker<TasksModalDelegate>>,
+        spawn_tasks: &Model<Picker<TasksModalDelegate>>,
         cx: &mut VisualTestContext,
     ) -> Vec<String> {
         spawn_tasks.update(cx, |spawn_tasks, _| {

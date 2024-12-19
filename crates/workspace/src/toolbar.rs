@@ -1,6 +1,6 @@
 use crate::ItemHandle;
 use gpui::{
-    AnyView, Entity, EntityId, EventEmitter, ParentElement as _, Render, Styled, View, ViewContext,
+    AnyView, Entity, EntityId, EventEmitter, ParentElement as _, Render, Styled, Model, ViewContext,
     WindowContext,
 };
 use ui::prelude::*;
@@ -162,7 +162,7 @@ impl Toolbar {
         cx.notify();
     }
 
-    pub fn add_item<T>(&mut self, item: View<T>, cx: &mut ViewContext<Self>)
+    pub fn add_item<T>(&mut self, item: Model<T>, cx: &mut ViewContext<Self>)
     where
         T: 'static + ToolbarItemView,
     {
@@ -211,7 +211,7 @@ impl Toolbar {
         }
     }
 
-    pub fn item_of_type<T: ToolbarItemView>(&self) -> Option<View<T>> {
+    pub fn item_of_type<T: ToolbarItemView>(&self) -> Option<Model<T>> {
         self.items
             .iter()
             .find_map(|(item, _)| item.to_any().downcast().ok())
@@ -222,7 +222,7 @@ impl Toolbar {
     }
 }
 
-impl<T: ToolbarItemView> ToolbarItemViewHandle for View<T> {
+impl<T: ToolbarItemView> ToolbarItemViewHandle for Model<T> {
     fn id(&self) -> EntityId {
         self.entity_id()
     }

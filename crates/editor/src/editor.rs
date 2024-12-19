@@ -83,7 +83,7 @@ use gpui::{
     FontWeight, Global, HighlightStyle, Hsla, InteractiveText, KeyContext, Model, ModelContext,
     MouseButton, PaintQuad, ParentElement, Pixels, Render, SharedString, Size, Styled, StyledText,
     Subscription, Task, TextStyle, TextStyleRefinement, UTF16Selection, UnderlineStyle,
-    UniformListScrollHandle, View, ViewContext, ViewInputHandler, VisualContext, WeakFocusHandle,
+    UniformListScrollHandle, Model, ViewContext, ViewInputHandler, VisualContext, WeakFocusHandle,
     WeakView, WindowContext,
 };
 use highlight_matching_bracket::refresh_matching_bracket_highlights;
@@ -679,7 +679,7 @@ pub struct Editor {
     custom_context_menu: Option<
         Box<
             dyn 'static
-                + Fn(&mut Self, DisplayPoint, &mut ViewContext<Self>) -> Option<View<ui::ContextMenu>>,
+                + Fn(&mut Self, DisplayPoint, &mut ViewContext<Self>) -> Option<Model<ui::ContextMenu>>,
         >,
     >,
     last_bounds: Option<Bounds<Pixels>>,
@@ -918,7 +918,7 @@ struct SnippetState {
 pub struct RenameState {
     pub range: Range<Anchor>,
     pub old_name: Arc<str>,
-    pub editor: View<Editor>,
+    pub editor: Model<Editor>,
     block_id: CustomBlockId,
 }
 
@@ -1465,7 +1465,7 @@ impl Editor {
     pub fn new_in_workspace(
         workspace: &mut Workspace,
         cx: &mut ViewContext<Workspace>,
-    ) -> Task<Result<View<Editor>>> {
+    ) -> Task<Result<Model<Editor>>> {
         let project = workspace.project().clone();
         let create = project.update(cx, |project, cx| project.create_buffer(cx));
 
@@ -1534,7 +1534,7 @@ impl Editor {
         &self.buffer
     }
 
-    pub fn workspace(&self) -> Option<View<Workspace>> {
+    pub fn workspace(&self) -> Option<Model<Workspace>> {
         self.workspace.as_ref()?.0.upgrade()
     }
 
@@ -1613,7 +1613,7 @@ impl Editor {
     pub fn set_custom_context_menu(
         &mut self,
         f: impl 'static
-            + Fn(&mut Self, DisplayPoint, &mut ViewContext<Self>) -> Option<View<ui::ContextMenu>>,
+            + Fn(&mut Self, DisplayPoint, &mut ViewContext<Self>) -> Option<Model<ui::ContextMenu>>,
     ) {
         self.custom_context_menu = Some(Box::new(f))
     }
@@ -9564,7 +9564,7 @@ impl Editor {
                         });
                     } else {
                         cx.window_context().defer(move |cx| {
-                            let target_editor: View<Self> =
+                            let target_editor: Model<Self> =
                                 workspace.update(cx, |workspace, cx| {
                                     let pane = if split {
                                         workspace.adjacent_pane(cx)
@@ -13964,7 +13964,7 @@ impl EditorSnapshot {
         &self,
         buffer_row: MultiBufferRow,
         row_contains_cursor: bool,
-        editor: View<Editor>,
+        editor: Model<Editor>,
         cx: &mut WindowContext,
     ) -> Option<AnyElement> {
         let folded = self.is_line_folded(buffer_row);

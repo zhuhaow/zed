@@ -8,7 +8,7 @@ use crate::{
 use gpui::{
     div, px, AnyElement, AsyncWindowContext, FontWeight, Hsla, InteractiveElement, IntoElement,
     MouseButton, ParentElement, Pixels, ScrollHandle, Size, Stateful, StatefulInteractiveElement,
-    StyleRefinement, Styled, Task, TextStyleRefinement, View, ViewContext,
+    StyleRefinement, Styled, Task, TextStyleRefinement, Model, ViewContext,
 };
 use itertools::Itertools;
 use language::{Diagnostic, DiagnosticEntry, Language, LanguageRegistry};
@@ -527,7 +527,7 @@ async fn parse_blocks(
     language_registry: &Arc<LanguageRegistry>,
     language: Option<Arc<Language>>,
     cx: &mut AsyncWindowContext,
-) -> Option<View<Markdown>> {
+) -> Option<Model<Markdown>> {
     let fallback_language_name = if let Some(ref l) = language {
         let l = Arc::clone(l);
         Some(l.lsp_id().clone())
@@ -694,7 +694,7 @@ impl HoverState {
 #[derive(Debug, Clone)]
 pub(crate) struct InfoPopover {
     pub(crate) symbol_range: RangeInEditor,
-    pub(crate) parsed_content: Option<View<Markdown>>,
+    pub(crate) parsed_content: Option<Model<Markdown>>,
     pub(crate) scroll_handle: ScrollHandle,
     pub(crate) scrollbar_state: ScrollbarState,
     pub(crate) keyboard_grace: Rc<RefCell<bool>>,
@@ -784,7 +784,7 @@ impl InfoPopover {
 pub struct DiagnosticPopover {
     local_diagnostic: DiagnosticEntry<Anchor>,
     primary_diagnostic: Option<DiagnosticEntry<Anchor>>,
-    parsed_content: Option<View<Markdown>>,
+    parsed_content: Option<Model<Markdown>>,
     border_color: Option<Hsla>,
     background_color: Option<Hsla>,
     pub keyboard_grace: Rc<RefCell<bool>>,

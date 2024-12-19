@@ -17,7 +17,7 @@ use editor::{
 use gpui::{
     actions, div, svg, AnyElement, AnyView, AppContext, Context, EventEmitter, FocusHandle,
     FocusableView, Global, HighlightStyle, InteractiveElement, IntoElement, Model, ParentElement,
-    Render, SharedString, Styled, StyledText, Subscription, Task, View, ViewContext, VisualContext,
+    Render, SharedString, Styled, StyledText, Subscription, Task, Model, ViewContext, VisualContext,
     WeakView, WindowContext,
 };
 use language::{
@@ -60,7 +60,7 @@ struct ProjectDiagnosticsEditor {
     project: Model<Project>,
     workspace: WeakView<Workspace>,
     focus_handle: FocusHandle,
-    editor: View<Editor>,
+    editor: Model<Editor>,
     summary: DiagnosticSummary,
     excerpts: Model<MultiBuffer>,
     path_states: Vec<PathState>,
@@ -744,7 +744,7 @@ impl Item for ProjectDiagnosticsEditor {
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>>
+    ) -> Option<Model<Self>>
     where
         Self: Sized,
     {
@@ -799,7 +799,7 @@ impl Item for ProjectDiagnosticsEditor {
     fn act_as_type<'a>(
         &'a self,
         type_id: TypeId,
-        self_handle: &'a View<Self>,
+        self_handle: &'a Model<Self>,
         _: &'a AppContext,
     ) -> Option<AnyView> {
         if type_id == TypeId::of::<Self>() {
@@ -811,7 +811,7 @@ impl Item for ProjectDiagnosticsEditor {
         }
     }
 
-    fn as_searchable(&self, _: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, _: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         Some(Box::new(self.editor.clone()))
     }
 

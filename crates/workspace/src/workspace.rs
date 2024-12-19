@@ -36,7 +36,7 @@ use gpui::{
     AsyncWindowContext, Bounds, CursorStyle, Decorations, DragMoveEvent, Entity as _, EntityId,
     EventEmitter, Flatten, FocusHandle, FocusableView, Global, Hsla, KeyContext, Keystroke,
     ManagedView, Model, ModelContext, MouseButton, PathPromptOptions, Point, PromptLevel, Render,
-    ResizeEdge, Size, Stateful, Subscription, Task, Tiling, View, WeakView, WindowBounds,
+    ResizeEdge, Size, Stateful, Subscription, Task, Tiling, Model, WeakView, WindowBounds,
     WindowHandle, WindowId, WindowOptions,
 };
 pub use item::{
@@ -423,7 +423,7 @@ pub struct FollowableViewRegistry(HashMap<TypeId, FollowableViewDescriptor>);
 
 struct FollowableViewDescriptor {
     from_state_proto: fn(
-        View<Workspace>,
+        Model<Workspace>,
         ViewId,
         &mut Option<proto::view::Variant>,
         &mut WindowContext,
@@ -450,7 +450,7 @@ impl FollowableViewRegistry {
     }
 
     pub fn from_state_proto(
-        workspace: View<Workspace>,
+        workspace: Model<Workspace>,
         view_id: ViewId,
         mut state: Option<proto::view::Variant>,
         cx: &mut WindowContext,
@@ -688,7 +688,7 @@ impl DelayedDebouncedEditAction {
 }
 
 pub enum Event {
-    PaneAdded(View<Pane>),
+    PaneAdded(Model<Pane>),
     PaneRemoved,
     ItemAdded {
         item: Box<dyn ItemHandle>,
@@ -745,16 +745,16 @@ pub struct Workspace {
     zoomed: Option<AnyWeakView>,
     zoomed_position: Option<DockPosition>,
     center: PaneGroup,
-    left_dock: View<Dock>,
-    bottom_dock: View<Dock>,
-    right_dock: View<Dock>,
-    panes: Vec<View<Pane>>,
+    left_dock: Model<Dock>,
+    bottom_dock: Model<Dock>,
+    right_dock: Model<Dock>,
+    panes: Vec<Model<Pane>>,
     panes_by_item: HashMap<EntityId, WeakView<Pane>>,
-    active_pane: View<Pane>,
+    active_pane: Model<Pane>,
     last_active_center_pane: Option<WeakView<Pane>>,
     last_active_view_id: Option<proto::ViewId>,
-    status_bar: View<StatusBar>,
-    modal_layer: View<ModalLayer>,
+    status_bar: Model<StatusBar>,
+    modal_layer: Model<ModalLayer>,
     titlebar_item: Option<AnyView>,
     notifications: Vec<(NotificationId, Box<dyn NotificationHandle>)>,
     project: Model<Project>,
@@ -791,8 +791,8 @@ pub struct ViewId {
 }
 
 pub struct FollowerState {
-    center_pane: View<Pane>,
-    dock_pane: Option<View<Pane>>,
+    center_pane: Model<Pane>,
+    dock_pane: Option<Model<Pane>>,
     active_view_id: Option<ViewId>,
     items_by_leader_view_id: HashMap<ViewId, FollowerView>,
 }
@@ -1257,15 +1257,15 @@ impl Workspace {
         self.weak_self.clone()
     }
 
-    pub fn left_dock(&self) -> &View<Dock> {
+    pub fn left_dock(&self) -> &Model<Dock> {
         &self.left_dock
     }
 
-    pub fn bottom_dock(&self) -> &View<Dock> {
+    pub fn bottom_dock(&self) -> &Model<Dock> {
         &self.bottom_dock
     }
 
-    pub fn right_dock(&self) -> &View<Dock> {
+    pub fn right_dock(&self) -> &Model<Dock> {
         &self.right_dock
     }
 
@@ -1273,7 +1273,7 @@ impl Workspace {
         self.window_edited
     }
 
-    pub fn add_panel<T: Panel>(&mut self, panel: View<T>, cx: &mut ViewContext<Self>) {
+    pub fn add_panel<T: Panel>(&mut self, panel: Model<T>, cx: &mut ViewContext<Self>) {
         let focus_handle = panel.focus_handle(cx);
         cx.on_focus_in(&focus_handle, Self::handle_panel_focused)
             .detach();
@@ -1289,7 +1289,7 @@ impl Workspace {
         });
     }
 
-    pub fn status_bar(&self) -> &View<StatusBar> {
+    pub fn status_bar(&self) -> &Model<StatusBar> {
         &self.status_bar
     }
 
@@ -2158,14 +2158,14 @@ impl Workspace {
         self.panes.iter().flat_map(|pane| pane.read(cx).items())
     }
 
-    pub fn item_of_type<T: Item>(&self, cx: &AppContext) -> Option<View<T>> {
+    pub fn item_of_type<T: Item>(&self, cx: &AppContext) -> Option<Model<T>> {
         self.items_of_type(cx).max_by_key(|item| item.item_id())
     }
 
     pub fn items_of_type<'a, T: Item>(
         &'a self,
         cx: &'a AppContext,
-    ) -> impl 'a + Iterator<Item = View<T>> {
+    ) -> impl 'a + Iterator<Item = Model<T>> {
         self.panes
             .iter()
             .flat_map(|pane| pane.read(cx).items_of_type())
@@ -2175,7 +2175,7 @@ impl Workspace {
         self.active_pane().read(cx).active_item()
     }
 
-    pub fn active_item_as<I: 'static>(&self, cx: &AppContext) -> Option<View<I>> {
+    pub fn active_item_as<I: 'static>(&self, cx: &AppContext) -> Option<Model<I>> {
         let item = self.active_item(cx)?;
         item.to_any().downcast::<I>().ok()
     }
@@ -2337,7 +2337,7 @@ impl Workspace {
     }
 
     /// Transfer focus to the panel of the given type.
-    pub fn focus_panel<T: Panel>(&mut self, cx: &mut ViewContext<Self>) -> Option<View<T>> {
+    pub fn focus_panel<T: Panel>(&mut self, cx: &mut ViewContext<Self>) -> Option<Model<T>> {
         let panel = self.focus_or_unfocus_panel::<T>(cx, |_, _| true)?;
         panel.to_any().downcast().ok()
     }
@@ -2431,7 +2431,7 @@ impl Workspace {
         }
     }
 
-    pub fn panel<T: Panel>(&self, cx: &WindowContext) -> Option<View<T>> {
+    pub fn panel<T: Panel>(&self, cx: &WindowContext) -> Option<Model<T>> {
         [&self.left_dock, &self.bottom_dock, &self.right_dock]
             .iter()
             .find_map(|dock| dock.read(cx).panel::<T>())
@@ -2477,7 +2477,7 @@ impl Workspace {
         cx.notify();
     }
 
-    fn add_pane(&mut self, cx: &mut ViewContext<Self>) -> View<Pane> {
+    fn add_pane(&mut self, cx: &mut ViewContext<Self>) -> Model<Pane> {
         let pane = cx.new_view(|cx| {
             let mut pane = Pane::new(
                 self.weak_handle(),
@@ -2533,7 +2533,7 @@ impl Workspace {
 
     pub fn add_item(
         &mut self,
-        pane: View<Pane>,
+        pane: Model<Pane>,
         item: Box<dyn ItemHandle>,
         destination_index: Option<usize>,
         activate_pane: bool,
@@ -2727,10 +2727,10 @@ impl Workspace {
 
     pub fn find_project_item<T>(
         &self,
-        pane: &View<Pane>,
+        pane: &Model<Pane>,
         project_item: &Model<T::Item>,
         cx: &AppContext,
-    ) -> Option<View<T>>
+    ) -> Option<Model<T>>
     where
         T: ProjectItem,
     {
@@ -2754,7 +2754,7 @@ impl Workspace {
 
     pub fn is_project_item_open<T>(
         &self,
-        pane: &View<Pane>,
+        pane: &Model<Pane>,
         project_item: &Model<T::Item>,
         cx: &AppContext,
     ) -> bool
@@ -2767,12 +2767,12 @@ impl Workspace {
 
     pub fn open_project_item<T>(
         &mut self,
-        pane: View<Pane>,
+        pane: Model<Pane>,
         project_item: Model<T::Item>,
         activate_pane: bool,
         focus_item: bool,
         cx: &mut ViewContext<Self>,
-    ) -> View<T>
+    ) -> Model<T>
     where
         T: ProjectItem,
     {
@@ -2913,7 +2913,7 @@ impl Workspace {
         };
 
         let try_dock =
-            |dock: &View<Dock>| dock.read(cx).is_open().then(|| Target::Dock(dock.clone()));
+            |dock: &Model<Dock>| dock.read(cx).is_open().then(|| Target::Dock(dock.clone()));
 
         let target = match (origin, direction) {
             // We're in the center, so we first try to go to a different pane,
@@ -2982,7 +2982,7 @@ impl Workspace {
         }
     }
 
-    pub fn bounding_box_for_pane(&self, pane: &View<Pane>) -> Option<Bounds<Pixels>> {
+    pub fn bounding_box_for_pane(&self, pane: &Model<Pane>) -> Option<Bounds<Pixels>> {
         self.center.bounding_box_for_pane(pane)
     }
 
@@ -2990,7 +2990,7 @@ impl Workspace {
         &mut self,
         direction: SplitDirection,
         cx: &WindowContext,
-    ) -> Option<View<Pane>> {
+    ) -> Option<Model<Pane>> {
         self.center
             .find_pane_in_direction(&self.active_pane, direction, cx)
             .cloned()
@@ -3018,7 +3018,7 @@ impl Workspace {
         cx.notify();
     }
 
-    fn handle_pane_focused(&mut self, pane: View<Pane>, cx: &mut ViewContext<Self>) {
+    fn handle_pane_focused(&mut self, pane: Model<Pane>, cx: &mut ViewContext<Self>) {
         // This is explicitly hoisted out of the following check for pane identity as
         // terminal panel panes are not registered as a center panes.
         self.status_bar.update(cx, |status_bar, cx| {
@@ -3048,7 +3048,7 @@ impl Workspace {
         cx.notify();
     }
 
-    fn set_active_pane(&mut self, pane: &View<Pane>, cx: &mut ViewContext<Self>) {
+    fn set_active_pane(&mut self, pane: &Model<Pane>, cx: &mut ViewContext<Self>) {
         self.active_pane = pane.clone();
         self.active_item_path_changed(cx);
         self.last_active_center_pane = Some(pane.downgrade());
@@ -3060,7 +3060,7 @@ impl Workspace {
 
     fn handle_pane_event(
         &mut self,
-        pane: View<Pane>,
+        pane: Model<Pane>,
         event: &pane::Event,
         cx: &mut ViewContext<Self>,
     ) {
@@ -3148,7 +3148,7 @@ impl Workspace {
 
     pub fn unfollow_in_pane(
         &mut self,
-        pane: &View<Pane>,
+        pane: &Model<Pane>,
         cx: &mut ViewContext<Workspace>,
     ) -> Option<PeerId> {
         let leader_id = self.leader_for_pane(pane)?;
@@ -3158,10 +3158,10 @@ impl Workspace {
 
     pub fn split_pane(
         &mut self,
-        pane_to_split: View<Pane>,
+        pane_to_split: Model<Pane>,
         split_direction: SplitDirection,
         cx: &mut ViewContext<Self>,
-    ) -> View<Pane> {
+    ) -> Model<Pane> {
         let new_pane = self.add_pane(cx);
         self.center
             .split(&pane_to_split, &new_pane, split_direction)
@@ -3172,10 +3172,10 @@ impl Workspace {
 
     pub fn split_and_clone(
         &mut self,
-        pane: View<Pane>,
+        pane: Model<Pane>,
         direction: SplitDirection,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Pane>> {
+    ) -> Option<Model<Pane>> {
         let item = pane.read(cx).active_item()?;
         let maybe_pane_handle = if let Some(clone) = item.clone_on_split(self.database_id(), cx) {
             let new_pane = self.add_pane(cx);
@@ -3244,7 +3244,7 @@ impl Workspace {
         cx.notify();
     }
 
-    pub fn join_pane_into_next(&mut self, pane: View<Pane>, cx: &mut ViewContext<Self>) {
+    pub fn join_pane_into_next(&mut self, pane: Model<Pane>, cx: &mut ViewContext<Self>) {
         let next_pane = self
             .find_pane_in_direction(SplitDirection::Right, cx)
             .or_else(|| self.find_pane_in_direction(SplitDirection::Down, cx))
@@ -3259,8 +3259,8 @@ impl Workspace {
 
     fn remove_pane(
         &mut self,
-        pane: View<Pane>,
-        focus_on: Option<View<Pane>>,
+        pane: Model<Pane>,
+        focus_on: Option<Model<Pane>>,
         cx: &mut ViewContext<Self>,
     ) {
         if self.center.remove(&pane).unwrap() {
@@ -3278,15 +3278,15 @@ impl Workspace {
         cx.emit(Event::PaneRemoved);
     }
 
-    pub fn panes(&self) -> &[View<Pane>] {
+    pub fn panes(&self) -> &[Model<Pane>] {
         &self.panes
     }
 
-    pub fn active_pane(&self) -> &View<Pane> {
+    pub fn active_pane(&self) -> &Model<Pane> {
         &self.active_pane
     }
 
-    pub fn focused_pane(&self, cx: &WindowContext) -> View<Pane> {
+    pub fn focused_pane(&self, cx: &WindowContext) -> Model<Pane> {
         for dock in [&self.left_dock, &self.right_dock, &self.bottom_dock] {
             if dock.focus_handle(cx).contains_focused(cx) {
                 if let Some(pane) = dock
@@ -3301,14 +3301,14 @@ impl Workspace {
         self.active_pane().clone()
     }
 
-    pub fn adjacent_pane(&mut self, cx: &mut ViewContext<Self>) -> View<Pane> {
+    pub fn adjacent_pane(&mut self, cx: &mut ViewContext<Self>) -> Model<Pane> {
         self.find_pane_in_direction(SplitDirection::Right, cx)
             .or_else(|| self.find_pane_in_direction(SplitDirection::Left, cx))
             .unwrap_or_else(|| self.split_pane(self.active_pane.clone(), SplitDirection::Right, cx))
             .clone()
     }
 
-    pub fn pane_for(&self, handle: &dyn ItemHandle) -> Option<View<Pane>> {
+    pub fn pane_for(&self, handle: &dyn ItemHandle) -> Option<Model<Pane>> {
         let weak_pane = self.panes_by_item.get(&handle.item_id())?;
         weak_pane.upgrade()
     }
@@ -3896,7 +3896,7 @@ impl Workspace {
         })
     }
 
-    pub fn leader_for_pane(&self, pane: &View<Pane>) -> Option<PeerId> {
+    pub fn leader_for_pane(&self, pane: &Model<Pane>) -> Option<PeerId> {
         self.follower_states.iter().find_map(|(leader_id, state)| {
             if state.center_pane == *pane || state.dock_pane.as_ref() == Some(pane) {
                 Some(*leader_id)
@@ -3980,9 +3980,9 @@ impl Workspace {
     fn shared_screen_for_peer(
         &self,
         _peer_id: PeerId,
-        _pane: &View<Pane>,
+        _pane: &Model<Pane>,
         _cx: &mut WindowContext,
-    ) -> Option<View<SharedScreen>> {
+    ) -> Option<Model<SharedScreen>> {
         None
     }
 
@@ -3990,9 +3990,9 @@ impl Workspace {
     fn shared_screen_for_peer(
         &self,
         peer_id: PeerId,
-        pane: &View<Pane>,
+        pane: &Model<Pane>,
         cx: &mut WindowContext,
-    ) -> Option<View<SharedScreen>> {
+    ) -> Option<Model<SharedScreen>> {
         let call = self.active_call()?;
         let room = call.read(cx).room()?.read(cx);
         let participant = room.remote_participant_for_peer_id(peer_id)?;
@@ -4095,8 +4095,8 @@ impl Workspace {
 
     fn force_remove_pane(
         &mut self,
-        pane: &View<Pane>,
-        focus_on: &Option<View<Pane>>,
+        pane: &Model<Pane>,
+        focus_on: &Option<Model<Pane>>,
         cx: &mut ViewContext<Workspace>,
     ) {
         self.panes.retain(|p| p != pane);
@@ -4134,7 +4134,7 @@ impl Workspace {
             return Task::ready(());
         };
 
-        fn serialize_pane_handle(pane_handle: &View<Pane>, cx: &WindowContext) -> SerializedPane {
+        fn serialize_pane_handle(pane_handle: &Model<Pane>, cx: &WindowContext) -> SerializedPane {
             let (items, active, pinned_count) = {
                 let pane = pane_handle.read(cx);
                 let active_item_id = pane.active_item().map(|item| item.item_id());
@@ -4565,7 +4565,7 @@ impl Workspace {
         self.modal_layer.read(cx).has_active_modal()
     }
 
-    pub fn active_modal<V: ManagedView + 'static>(&self, cx: &AppContext) -> Option<View<V>> {
+    pub fn active_modal<V: ManagedView + 'static>(&self, cx: &AppContext) -> Option<Model<V>> {
         self.modal_layer.read(cx).active_modal()
     }
 
@@ -4596,7 +4596,7 @@ impl Workspace {
     fn render_dock(
         &self,
         position: DockPosition,
-        dock: &View<Dock>,
+        dock: &Model<Dock>,
         cx: &WindowContext,
     ) -> Option<Div> {
         if self.zoomed_position == Some(position) {
@@ -4619,7 +4619,7 @@ impl Workspace {
         )
     }
 
-    pub fn for_window(cx: &mut WindowContext) -> Option<View<Workspace>> {
+    pub fn for_window(cx: &mut WindowContext) -> Option<Model<Workspace>> {
         let window = cx.window_handle().downcast::<Workspace>()?;
         cx.read_window(&window, |workspace, _| workspace).ok()
     }
@@ -4631,7 +4631,7 @@ impl Workspace {
 
 fn leader_border_for_pane(
     follower_states: &HashMap<PeerId, FollowerState>,
-    pane: &View<Pane>,
+    pane: &Model<Pane>,
     cx: &WindowContext,
 ) -> Option<Div> {
     let (leader_id, _follower_state) = follower_states.iter().find_map(|(leader_id, state)| {
@@ -4769,8 +4769,8 @@ fn open_items(
 }
 
 enum ActivateInDirectionTarget {
-    Pane(View<Pane>),
-    Dock(View<Dock>),
+    Pane(Model<Pane>),
+    Dock(Model<Dock>),
 }
 
 fn notify_if_database_failed(workspace: WindowHandle<Workspace>, cx: &mut AsyncAppContext) {
@@ -5151,7 +5151,7 @@ impl ViewId {
 }
 
 impl FollowerState {
-    fn pane(&self) -> &View<Pane> {
+    fn pane(&self) -> &Model<Pane> {
         self.dock_pane.as_ref().unwrap_or(&self.center_pane)
     }
 }
@@ -5160,7 +5160,7 @@ pub trait WorkspaceHandle {
     fn file_project_paths(&self, cx: &AppContext) -> Vec<ProjectPath>;
 }
 
-impl WorkspaceHandle for View<Workspace> {
+impl WorkspaceHandle for Model<Workspace> {
     fn file_project_paths(&self, cx: &AppContext) -> Vec<ProjectPath> {
         self.read(cx)
             .worktrees(cx)
@@ -6149,7 +6149,7 @@ fn resize_edge(
     }
 }
 
-fn join_pane_into_active(active_pane: &View<Pane>, pane: &View<Pane>, cx: &mut WindowContext<'_>) {
+fn join_pane_into_active(active_pane: &Model<Pane>, pane: &Model<Pane>, cx: &mut WindowContext<'_>) {
     if pane == active_pane {
         return;
     } else if pane.read(cx).items_len() == 0 {
@@ -6163,7 +6163,7 @@ fn join_pane_into_active(active_pane: &View<Pane>, pane: &View<Pane>, cx: &mut W
     }
 }
 
-fn move_all_items(from_pane: &View<Pane>, to_pane: &View<Pane>, cx: &mut WindowContext<'_>) {
+fn move_all_items(from_pane: &Model<Pane>, to_pane: &Model<Pane>, cx: &mut WindowContext<'_>) {
     let destination_is_different = from_pane != to_pane;
     let mut moved_items = 0;
     for (item_ix, item_handle) in from_pane
@@ -6191,8 +6191,8 @@ fn move_all_items(from_pane: &View<Pane>, to_pane: &View<Pane>, cx: &mut WindowC
 }
 
 pub fn move_item(
-    source: &View<Pane>,
-    destination: &View<Pane>,
+    source: &Model<Pane>,
+    destination: &Model<Pane>,
     item_id_to_move: EntityId,
     destination_index: usize,
     cx: &mut WindowContext<'_>,
@@ -6223,8 +6223,8 @@ pub fn move_item(
 }
 
 pub fn move_active_item(
-    source: &View<Pane>,
-    destination: &View<Pane>,
+    source: &Model<Pane>,
+    destination: &Model<Pane>,
     focus_destination: bool,
     close_if_empty: bool,
     cx: &mut WindowContext<'_>,
@@ -7168,9 +7168,9 @@ mod tests {
 
     fn add_an_item_to_active_pane(
         cx: &mut VisualTestContext,
-        workspace: &View<Workspace>,
+        workspace: &Model<Workspace>,
         item_id: u64,
-    ) -> View<TestItem> {
+    ) -> Model<TestItem> {
         let item = cx.new_view(|cx| {
             TestItem::new(cx).with_project_items(&[TestProjectItem::new(
                 item_id,
@@ -7184,7 +7184,7 @@ mod tests {
         return item;
     }
 
-    fn split_pane(cx: &mut VisualTestContext, workspace: &View<Workspace>) -> View<Pane> {
+    fn split_pane(cx: &mut VisualTestContext, workspace: &Model<Workspace>) -> Model<Pane> {
         return workspace.update(cx, |workspace, cx| {
             let new_pane =
                 workspace.split_pane(workspace.active_pane().clone(), SplitDirection::Right, cx);

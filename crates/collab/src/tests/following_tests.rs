@@ -9,7 +9,7 @@ use collab_ui::{
 use editor::{Editor, ExcerptRange, MultiBuffer};
 use gpui::{
     point, BackgroundExecutor, BorrowAppContext, Context, Entity, SharedString, TestAppContext,
-    View, VisualContext, VisualTestContext,
+    Model, VisualContext, VisualTestContext,
 };
 use language::Capability;
 use project::WorktreeSettings;
@@ -605,7 +605,7 @@ async fn test_following_tab_order(
         .await
         .unwrap();
 
-    let pane_paths = |pane: &View<workspace::Pane>, cx: &mut VisualTestContext| {
+    let pane_paths = |pane: &Model<workspace::Pane>, cx: &mut VisualTestContext| {
         pane.update(cx, |pane, cx| {
             pane.items()
                 .map(|item| {
@@ -1776,7 +1776,7 @@ async fn test_following_into_excluded_file(
 
 fn visible_push_notifications(
     cx: &mut TestAppContext,
-) -> Vec<gpui::View<ProjectSharedNotification>> {
+) -> Vec<gpui::Model<ProjectSharedNotification>> {
     let mut ret = Vec::new();
     for window in cx.windows() {
         window
@@ -1821,7 +1821,7 @@ fn followers_by_leader(project_id: u64, cx: &TestAppContext) -> Vec<(PeerId, Vec
     })
 }
 
-fn pane_summaries(workspace: &View<Workspace>, cx: &mut VisualTestContext) -> Vec<PaneSummary> {
+fn pane_summaries(workspace: &Model<Workspace>, cx: &mut VisualTestContext) -> Vec<PaneSummary> {
     workspace.update(cx, |workspace, cx| {
         let active_pane = workspace.active_pane();
         workspace
@@ -2027,7 +2027,7 @@ pub(crate) async fn join_channel(
 }
 
 async fn share_workspace(
-    workspace: &View<Workspace>,
+    workspace: &Model<Workspace>,
     cx: &mut VisualTestContext,
 ) -> anyhow::Result<u64> {
     let project = workspace.update(cx, |workspace, _| workspace.project().clone());

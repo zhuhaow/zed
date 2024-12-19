@@ -890,7 +890,7 @@ struct ExcerptInfo {
 }
 
 fn get_diagnostics_excerpts(
-    view: &View<ProjectDiagnosticsEditor>,
+    view: &Model<ProjectDiagnosticsEditor>,
     cx: &mut VisualTestContext,
 ) -> Vec<ExcerptInfo> {
     view.update(cx, |view, cx| {
@@ -1016,7 +1016,7 @@ const FILE_HEADER: &str = "file header";
 const EXCERPT_HEADER: &str = "excerpt header";
 
 fn editor_blocks(
-    editor: &View<Editor>,
+    editor: &Model<Editor>,
     cx: &mut VisualTestContext,
 ) -> Vec<(DisplayRow, SharedString)> {
     let mut blocks = Vec::new();

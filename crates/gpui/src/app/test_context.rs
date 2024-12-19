@@ -4,7 +4,7 @@ use crate::{
     Element, Empty, Entity, EventEmitter, ForegroundExecutor, Global, InputEvent, Keystroke, Model,
     ModelContext, Modifiers, ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent,
     MouseUpEvent, Pixels, Platform, Point, Render, Result, Size, Task, TestDispatcher,
-    TestPlatform, TestScreenCaptureSource, TestWindow, TextSystem, View, ViewContext,
+    TestPlatform, TestScreenCaptureSource, TestWindow, TextSystem, Model, ViewContext,
     VisualContext, WindowBounds, WindowContext, WindowHandle, WindowOptions,
 };
 use anyhow::{anyhow, bail};
@@ -86,7 +86,7 @@ impl Context for TestAppContext {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
+        read: impl FnOnce(Model<T>, &AppContext) -> R,
     ) -> Result<R>
     where
         T: 'static,
@@ -218,7 +218,7 @@ impl TestAppContext {
     /// Adds a new window, and returns its root view and a `VisualTestContext` which can be used
     /// as a `WindowContext` for the rest of the test. Typically you would shadow this context with
     /// the returned one. `let (view, cx) = cx.add_window_view(...);`
-    pub fn add_window_view<F, V>(&mut self, build_root_view: F) -> (View<V>, &mut VisualTestContext)
+    pub fn add_window_view<F, V>(&mut self, build_root_view: F) -> (Model<V>, &mut VisualTestContext)
     where
         F: FnOnce(&mut ViewContext<V>) -> V,
         V: 'static + Render,
@@ -542,7 +542,7 @@ impl<T: 'static> Model<T> {
     }
 }
 
-impl<V: 'static> View<V> {
+impl<V: 'static> Model<V> {
     /// Returns a future that resolves when the view is next updated.
     pub fn next_notification(
         &self,
@@ -574,7 +574,7 @@ impl<V: 'static> View<V> {
     }
 }
 
-impl<V> View<V> {
+impl<V> Model<V> {
     /// Returns a future that resolves when the condition becomes true.
     pub fn condition<Evt>(
         &self,
@@ -924,7 +924,7 @@ impl Context for VisualTestContext {
     fn read_window<T, R>(
         &self,
         window: &WindowHandle<T>,
-        read: impl FnOnce(View<T>, &AppContext) -> R,
+        read: impl FnOnce(Model<T>, &AppContext) -> R,
     ) -> Result<R>
     where
         T: 'static,
@@ -937,7 +937,7 @@ impl VisualContext for VisualTestContext {
     fn new_view<V>(
         &mut self,
         build_view: impl FnOnce(&mut ViewContext<'_, V>) -> V,
-    ) -> Self::Result<View<V>>
+    ) -> Self::Result<Model<V>>
     where
         V: 'static + Render,
     {
@@ -948,7 +948,7 @@ impl VisualContext for VisualTestContext {
 
     fn update_view<V: 'static, R>(
         &mut self,
-        view: &View<V>,
+        view: &Model<V>,
         update: impl FnOnce(&mut V, &mut ViewContext<'_, V>) -> R,
     ) -> Self::Result<R> {
         self.window
@@ -959,7 +959,7 @@ impl VisualContext for VisualTestContext {
     fn replace_root_view<V>(
         &mut self,
         build_view: impl FnOnce(&mut ViewContext<'_, V>) -> V,
-    ) -> Self::Result<View<V>>
+    ) -> Self::Result<Model<V>>
     where
         V: 'static + Render,
     {
@@ -968,7 +968,7 @@ impl VisualContext for VisualTestContext {
             .unwrap()
     }
 
-    fn focus_view<V: crate::FocusableView>(&mut self, view: &View<V>) -> Self::Result<()> {
+    fn focus_view<V: crate::FocusableView>(&mut self, view: &Model<V>) -> Self::Result<()> {
         self.window
             .update(&mut self.cx, |_, cx| {
                 view.read(cx).focus_handle(cx).clone().focus(cx)
@@ -976,7 +976,7 @@ impl VisualContext for VisualTestContext {
             .unwrap()
     }
 
-    fn dismiss_view<V>(&mut self, view: &View<V>) -> Self::Result<()>
+    fn dismiss_view<V>(&mut self, view: &Model<V>) -> Self::Result<()>
     where
         V: crate::ManagedView,
     {
@@ -994,7 +994,7 @@ impl AnyWindowHandle {
         &self,
         cx: &mut TestAppContext,
         build_view: impl FnOnce(&mut ViewContext<'_, V>) -> V,
-    ) -> View<V> {
+    ) -> Model<V> {
         self.update(cx, |_, cx| cx.new_view(build_view)).unwrap()
     }
 }

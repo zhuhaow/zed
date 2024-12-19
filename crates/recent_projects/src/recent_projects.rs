@@ -7,7 +7,7 @@ use disconnected_overlay::DisconnectedOverlay;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     Action, AnyElement, AppContext, DismissEvent, EventEmitter, FocusHandle, FocusableView,
-    Subscription, Task, View, ViewContext, WeakView,
+    Subscription, Task, Model, ViewContext, WeakView,
 };
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
@@ -39,7 +39,7 @@ pub fn init(cx: &mut AppContext) {
 }
 
 pub struct RecentProjects {
-    pub picker: View<Picker<RecentProjectsDelegate>>,
+    pub picker: Model<Picker<RecentProjectsDelegate>>,
     rem_width: f32,
     _subscription: Subscription,
 }
@@ -700,7 +700,7 @@ mod tests {
     fn open_recent_projects(
         workspace: &WindowHandle<Workspace>,
         cx: &mut TestAppContext,
-    ) -> View<Picker<RecentProjectsDelegate>> {
+    ) -> Model<Picker<RecentProjectsDelegate>> {
         cx.dispatch_action(
             (*workspace).into(),
             OpenRecent {

@@ -8,7 +8,7 @@ use futures::{stream::FuturesUnordered, StreamExt};
 use gpui::{
     anchored, deferred, div, impl_actions, AnyElement, AppContext, DismissEvent, EventEmitter,
     FocusHandle, FocusableView, KeyContext, KeyDownEvent, Keystroke, Model, MouseButton,
-    MouseDownEvent, Pixels, Render, ScrollWheelEvent, Styled, Subscription, Task, View,
+    MouseDownEvent, Pixels, Render, ScrollWheelEvent, Styled, Subscription, Task, Model,
     VisualContext, WeakModel, WeakView,
 };
 use language::Bias;
@@ -101,7 +101,7 @@ pub struct TerminalView {
     focus_handle: FocusHandle,
     //Currently using iTerm bell, show bell emoji in tab until input is received
     has_bell: bool,
-    context_menu: Option<(View<ContextMenu>, gpui::Point<Pixels>, Subscription)>,
+    context_menu: Option<(Model<ContextMenu>, gpui::Point<Pixels>, Subscription)>,
     cursor_shape: CursorShape,
     blink_state: bool,
     blinking_terminal_enabled: bool,
@@ -1080,7 +1080,7 @@ impl Item for TerminalView {
         &self,
         workspace_id: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>> {
+    ) -> Option<Model<Self>> {
         let window = cx.window_handle();
         let terminal = self
             .project
@@ -1126,7 +1126,7 @@ impl Item for TerminalView {
         true
     }
 
-    fn as_searchable(&self, handle: &View<Self>) -> Option<Box<dyn SearchableItemHandle>> {
+    fn as_searchable(&self, handle: &Model<Self>) -> Option<Box<dyn SearchableItemHandle>> {
         Some(Box::new(handle.clone()))
     }
 
@@ -1208,7 +1208,7 @@ impl SerializableItem for TerminalView {
         workspace_id: workspace::WorkspaceId,
         item_id: workspace::ItemId,
         cx: &mut WindowContext,
-    ) -> Task<anyhow::Result<View<Self>>> {
+    ) -> Task<anyhow::Result<Model<Self>>> {
         let window = cx.window_handle();
         cx.spawn(|mut cx| async move {
             let cwd = cx
@@ -1514,7 +1514,7 @@ mod tests {
     }
 
     /// Creates a worktree with 1 file: /root.txt
-    pub async fn init_test(cx: &mut TestAppContext) -> (Model<Project>, View<Workspace>) {
+    pub async fn init_test(cx: &mut TestAppContext) -> (Model<Project>, Model<Workspace>) {
         let params = cx.update(AppState::test);
         cx.update(|cx| {
             terminal::init(cx);

@@ -2,7 +2,7 @@ use editor::{scroll::Autoscroll, Anchor, Editor, ExcerptId};
 use gpui::{
     actions, div, rems, uniform_list, AppContext, Div, EventEmitter, FocusHandle, FocusableView,
     Hsla, InteractiveElement, IntoElement, Model, MouseButton, MouseDownEvent, MouseMoveEvent,
-    ParentElement, Render, ScrollStrategy, SharedString, Styled, UniformListScrollHandle, View,
+    ParentElement, Render, ScrollStrategy, SharedString, Styled, UniformListScrollHandle, Model,
     ViewContext, VisualContext, WeakView, WindowContext,
 };
 use language::{Buffer, OwnedSyntaxLayer};
@@ -40,12 +40,12 @@ pub struct SyntaxTreeView {
 }
 
 pub struct SyntaxTreeToolbarItemView {
-    tree_view: Option<View<SyntaxTreeView>>,
+    tree_view: Option<Model<SyntaxTreeView>>,
     subscription: Option<gpui::Subscription>,
 }
 
 struct EditorState {
-    editor: View<Editor>,
+    editor: Model<Editor>,
     active_buffer: Option<BufferState>,
     _subscription: gpui::Subscription,
 }
@@ -98,7 +98,7 @@ impl SyntaxTreeView {
         }
     }
 
-    fn set_editor(&mut self, editor: View<Editor>, cx: &mut ViewContext<Self>) {
+    fn set_editor(&mut self, editor: Model<Editor>, cx: &mut ViewContext<Self>) {
         if let Some(state) = &self.editor {
             if state.editor == editor {
                 return;
@@ -394,7 +394,7 @@ impl Item for SyntaxTreeView {
         &self,
         _: Option<workspace::WorkspaceId>,
         cx: &mut ViewContext<Self>,
-    ) -> Option<View<Self>>
+    ) -> Option<Model<Self>>
     where
         Self: Sized,
     {

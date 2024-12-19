@@ -6,7 +6,7 @@ use editor::{AnchorRangeExt, CompletionProvider, Editor, EditorElement, EditorSt
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     AsyncWindowContext, FocusableView, FontStyle, FontWeight, HighlightStyle, IntoElement, Model,
-    Render, Task, TextStyle, View, ViewContext, WeakView,
+    Render, Task, TextStyle, Model, ViewContext, WeakView,
 };
 use language::{
     language_settings::SoftWrap, Anchor, Buffer, BufferSnapshot, CodeLabel, LanguageRegistry,
@@ -42,7 +42,7 @@ static MENTIONS_SEARCH: LazyLock<SearchQuery> = LazyLock::new(|| {
 });
 
 pub struct MessageEditor {
-    pub editor: View<Editor>,
+    pub editor: Model<Editor>,
     user_store: Model<UserStore>,
     channel_chat: Option<Model<ChannelChat>>,
     mentions: Vec<UserId>,
@@ -106,7 +106,7 @@ impl MessageEditor {
         language_registry: Arc<LanguageRegistry>,
         user_store: Model<UserStore>,
         channel_chat: Option<Model<ChannelChat>>,
-        editor: View<Editor>,
+        editor: Model<Editor>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let this = cx.view().downgrade();

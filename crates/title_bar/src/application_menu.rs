@@ -1,4 +1,4 @@
-use gpui::{OwnedMenu, OwnedMenuItem, View};
+use gpui::{OwnedMenu, OwnedMenuItem, Model};
 use smallvec::SmallVec;
 use ui::{prelude::*, ContextMenu, PopoverMenu, PopoverMenuHandle, Tooltip};
 
@@ -60,7 +60,7 @@ impl ApplicationMenu {
         cleaned
     }
 
-    fn build_menu_from_items(entry: MenuEntry, cx: &mut WindowContext<'_>) -> View<ContextMenu> {
+    fn build_menu_from_items(entry: MenuEntry, cx: &mut WindowContext<'_>) -> Model<ContextMenu> {
         ContextMenu::build(cx, |menu, cx| {
             let menu = menu.when_some(cx.focused(), |menu, focused| menu.context(focused));
             let sanitized_items = Self::sanitize_menu_items(entry.menu.items);

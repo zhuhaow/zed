@@ -5,7 +5,7 @@ use futures::{
     stream::{SelectAll, StreamExt},
     AsyncBufReadExt as _, SinkExt as _,
 };
-use gpui::{EntityId, Task, View, WindowContext};
+use gpui::{EntityId, Task, Model, WindowContext};
 use jupyter_protocol::{
     connection_info::{ConnectionInfo, Transport},
     ExecutionState, JupyterKernelspec, JupyterMessage, JupyterMessageContent, KernelInfoReply,
@@ -114,7 +114,7 @@ impl NativeRunningKernel {
         working_directory: PathBuf,
         fs: Arc<dyn Fs>,
         // todo: convert to weak view
-        session: View<Session>,
+        session: Model<Session>,
         cx: &mut WindowContext,
     ) -> Task<Result<Box<dyn RunningKernel>>> {
         cx.spawn(|cx| async move {

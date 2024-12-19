@@ -1,7 +1,7 @@
 use super::base_keymap_setting::BaseKeymap;
 use fuzzy::{match_strings, StringMatch, StringMatchCandidate};
 use gpui::{
-    actions, AppContext, DismissEvent, EventEmitter, FocusableView, Render, Task, View,
+    actions, AppContext, DismissEvent, EventEmitter, FocusableView, Render, Task, Model,
     ViewContext, VisualContext, WeakView,
 };
 use picker::{Picker, PickerDelegate};
@@ -36,7 +36,7 @@ pub fn toggle(
 }
 
 pub struct BaseKeymapSelector {
-    picker: View<Picker<BaseKeymapSelectorDelegate>>,
+    picker: Model<Picker<BaseKeymapSelectorDelegate>>,
 }
 
 impl FocusableView for BaseKeymapSelector {

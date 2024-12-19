@@ -4,7 +4,7 @@ use futures::channel::oneshot;
 
 use crate::{
     div, opaque_grey, white, AnyView, EventEmitter, FocusHandle, FocusableView, InteractiveElement,
-    IntoElement, ParentElement, PromptLevel, Render, StatefulInteractiveElement, Styled, View,
+    IntoElement, ParentElement, PromptLevel, Render, StatefulInteractiveElement, Styled, Model,
     ViewContext, VisualContext, WindowContext,
 };
 
@@ -31,7 +31,7 @@ impl PromptHandle {
     /// Construct a new prompt handle from a view of the appropriate types
     pub fn with_view<V: Prompt>(
         self,
-        view: View<V>,
+        view: Model<V>,
         cx: &mut WindowContext,
     ) -> RenderablePromptHandle {
         let mut sender = Some(self.sender);
@@ -181,7 +181,7 @@ pub(crate) trait PromptViewHandle {
     fn any_view(&self) -> AnyView;
 }
 
-impl<V: Prompt> PromptViewHandle for View<V> {
+impl<V: Prompt> PromptViewHandle for Model<V> {
     fn any_view(&self) -> AnyView {
         self.clone().into()
     }

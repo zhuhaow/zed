@@ -1,5 +1,5 @@
 use gpui::{
-    actions, div, prelude::*, FocusHandle, KeyBinding, Render, Subscription, View, WindowContext,
+    actions, div, prelude::*, FocusHandle, KeyBinding, Render, Subscription, Model, WindowContext,
 };
 use ui::prelude::*;
 
@@ -13,7 +13,7 @@ pub struct FocusStory {
 }
 
 impl FocusStory {
-    pub fn view(cx: &mut WindowContext) -> View<Self> {
+    pub fn view(cx: &mut WindowContext) -> Model<Self> {
         cx.bind_keys([
             KeyBinding::new("cmd-a", ActionA, Some("parent")),
             KeyBinding::new("cmd-a", ActionB, Some("child-1")),
