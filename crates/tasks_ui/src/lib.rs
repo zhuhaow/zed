@@ -16,7 +16,7 @@ pub use modal::{Rerun, Spawn};
 pub fn init(cx: &mut AppContext) {
     settings::TaskSettings::register(cx);
     cx.observe_new_views(
-        |workspace: &mut Workspace, _: &mut ViewContext<Workspace>| {
+        |workspace: &mut Workspace, _: &mut Window, _: &mut ViewContext<Workspace>| {
             workspace
                 .register_action(|workspace, action, window, cx| {
                     spawn_task_or_modal(workspace, action, cx)
@@ -117,10 +117,11 @@ fn toggle_modal(
     });
     if can_open_modal {
         let context_task = task_context(workspace, cx);
+        let window_handle = cx.window_handle();
         cx.spawn(|workspace, mut cx| async move {
             let task_context = context_task.await;
             workspace
-                .update(&mut cx, |workspace, cx| {
+                .update_in_window(window_handle, &mut cx, |workspace, window, cx| {
                     workspace.toggle_modal(cx, |cx| {
                         TasksModal::new(
                             task_store.clone(),
@@ -129,6 +130,7 @@ fn toggle_modal(
                                 reveal_target: Some(target),
                             }),
                             workspace_handle,
+                            window,
                             cx,
                         )
                     })
@@ -327,7 +329,8 @@ mod tests {
         let worktree_id = project.update(cx, |project, cx| {
             project.worktrees(cx).next().unwrap().read(cx).id()
         });
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         let buffer1 = workspace
             .update(cx, |this, cx| {
@@ -382,7 +385,7 @@ mod tests {
 
         // And now, let's select an identifier.
         editor2.update(cx, |editor, cx| {
-            editor.change_selections(None, cx, |selections| selections.select_ranges([14..18]))
+            editor.change_selections(None, window, cx, |selections| selections.select_ranges([14..18]))
         });
 
         assert_eq!(

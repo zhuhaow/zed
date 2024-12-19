@@ -47,28 +47,34 @@ pub struct RecentProjects {
 impl ModalView for RecentProjects {}
 
 impl RecentProjects {
-    fn new(delegate: RecentProjectsDelegate, rem_width: f32, cx: &mut ViewContext<Self>) -> Self {
+    fn new(
+        delegate: RecentProjectsDelegate,
+        rem_width: f32,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Self {
         let picker = cx.new_view(|cx| {
             // We want to use a list when we render paths, because the items can have different heights (multiple paths).
             if delegate.render_paths {
-                Picker::list(delegate, cx)
+                Picker::list(delegate, window, cx)
             } else {
-                Picker::uniform_list(delegate, cx)
+                Picker::uniform_list(delegate, window, cx)
             }
         });
         let _subscription = cx.subscribe(&picker, |_, _, _, cx| cx.emit(DismissEvent));
         // We do not want to block the UI on a potentially lengthy call to DB, so we're gonna swap
         // out workspace locations once the future runs to completion.
+        let window_handle = window.handle();
         cx.spawn(|this, mut cx| async move {
             let workspaces = WORKSPACE_DB
                 .recent_workspaces_on_disk()
                 .await
                 .log_err()
                 .unwrap_or_default();
-            this.update(&mut cx, move |this, cx| {
+            this.update_in_window(window_handle, &mut cx, move |this, window, cx| {
                 this.picker.update(cx, move |picker, cx| {
                     picker.delegate.set_workspaces(workspaces);
-                    picker.update_matches(picker.query(cx), cx)
+                    picker.update_matches(picker.query(cx), window, cx)
                 })
             })
             .ok()
@@ -81,10 +87,10 @@ impl RecentProjects {
         }
     }
 
-    fn register(workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>) {
+    fn register(workspace: &mut Workspace, _window: &mut Window, _cx: &mut ViewContext<Workspace>) {
         workspace.register_action(|workspace, open_recent: &OpenRecent, window, cx| {
             let Some(recent_projects) = workspace.active_modal::<Self>(cx) else {
-                Self::open(workspace, open_recent.create_new_window, cx);
+                Self::open(workspace, open_recent.create_new_window, window, cx);
                 return;
             };
 
@@ -99,13 +105,14 @@ impl RecentProjects {
     pub fn open(
         workspace: &mut Workspace,
         create_new_window: bool,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         let weak = cx.view().downgrade();
         workspace.toggle_modal(cx, |cx| {
             let delegate = RecentProjectsDelegate::new(weak, create_new_window, true);
 
-            Self::new(delegate, 34., cx)
+            Self::new(delegate, 34., window, cx)
         })
     }
 }
@@ -123,7 +130,7 @@ impl Render for RecentProjects {
         v_flex()
             .w(rems(self.rem_width))
             .child(self.picker.clone())
-            .on_mouse_down_out(cx.listener(|this, _, window, cx| {
+            .on_mouse_down_out(cx.listener2(|this, _, window, cx| {
                 this.picker.update(cx, |this, cx| {
                     this.cancel(&Default::default(), cx);
                 })
@@ -255,7 +262,12 @@ impl PickerDelegate for RecentProjectsDelegate {
         Task::ready(())
     }
 
-    fn confirm(&mut self, secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some((selected_match, workspace)) = self
             .matches
             .get(self.selected_index())
@@ -277,23 +289,32 @@ impl PickerDelegate for RecentProjectsDelegate {
                             SerializedWorkspaceLocation::Local(paths, _) => {
                                 let paths = paths.paths().to_vec();
                                 if replace_current_window {
+                                    let window_handle = window.handle();
                                     cx.spawn(move |workspace, mut cx| async move {
                                         let continue_replacing = workspace
-                                            .update(&mut cx, |workspace, cx| {
-                                                workspace.prepare_to_close(
-                                                    CloseIntent::ReplaceWindow,
-                                                    window,
-                                                    cx,
-                                                )
-                                            })?
+                                            .update_in_window(
+                                                window_handle,
+                                                &mut cx,
+                                                |workspace, window, cx| {
+                                                    workspace.prepare_to_close(
+                                                        CloseIntent::ReplaceWindow,
+                                                        window,
+                                                        cx,
+                                                    )
+                                                },
+                                            )?
                                             .await?;
                                         if continue_replacing {
                                             workspace
-                                                .update(&mut cx, |workspace, cx| {
-                                                    workspace.open_workspace_for_paths(
-                                                        true, paths, window, cx,
-                                                    )
-                                                })?
+                                                .update_in_window(
+                                                    window_handle,
+                                                    &mut cx,
+                                                    |workspace, window, cx| {
+                                                        workspace.open_workspace_for_paths(
+                                                            true, paths, window, cx,
+                                                        )
+                                                    },
+                                                )?
                                                 .await
                                         } else {
                                             Ok(())
@@ -429,11 +450,11 @@ impl PickerDelegate for RecentProjectsDelegate {
                         .child(
                             IconButton::new("delete", IconName::Close)
                                 .icon_size(IconSize::Small)
-                                .on_click(cx.listener(move |this, _event, window, cx| {
+                                .on_click(cx.listener2(move |this, _event, window, cx| {
                                     cx.stop_propagation();
                                     cx.prevent_default();
 
-                                    this.delegate.delete_recent_project(ix, cx)
+                                    this.delegate.delete_recent_project(ix, window, cx)
                                 }))
                                 .tooltip(|window, cx| {
                                     Tooltip::text("Delete from Recent Projects...", cx)
@@ -533,20 +554,26 @@ fn highlights_for_path(
     )
 }
 impl RecentProjectsDelegate {
-    fn delete_recent_project(&self, ix: usize, cx: &mut ViewContext<Picker<Self>>) {
+    fn delete_recent_project(
+        &self,
+        ix: usize,
+        window: &Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some(selected_match) = self.matches.get(ix) {
             let (workspace_id, _) = self.workspaces[selected_match.candidate_id];
+            let window_handle = window.handle();
             cx.spawn(move |this, mut cx| async move {
                 let _ = WORKSPACE_DB.delete_workspace_by_id(workspace_id).await;
                 let workspaces = WORKSPACE_DB
                     .recent_workspaces_on_disk()
                     .await
                     .unwrap_or_default();
-                this.update(&mut cx, move |picker, cx| {
+                this.update_in_window(window_handle, &mut cx, move |picker, window, cx| {
                     picker.delegate.set_workspaces(workspaces);
                     picker.delegate.set_selected_index(ix.saturating_sub(1), cx);
                     picker.delegate.reset_selected_match_index = false;
-                    picker.update_matches(picker.query(cx), cx)
+                    picker.update_matches(picker.query(cx), window, cx)
                 })
             })
             .detach();

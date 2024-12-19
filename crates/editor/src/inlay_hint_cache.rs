@@ -1346,7 +1346,7 @@ pub mod tests {
 
         editor
             .update(cx, |editor, window, cx| {
-                editor.change_selections(None, cx, |s| s.select_ranges([13..13]));
+                editor.change_selections(None, window, cx, |s| s.select_ranges([13..13]));
                 editor.handle_input("some change", cx);
                 edits_made += 1;
             })
@@ -2160,7 +2160,7 @@ pub mod tests {
         ] {
             editor
                 .update(cx, |editor, window, cx| {
-                    editor.change_selections(None, cx, |s| s.select_ranges([13..13]));
+                    editor.change_selections(None, window, cx, |s| s.select_ranges([13..13]));
                     editor.handle_input(change_after_opening, cx);
                 })
                 .unwrap();
@@ -2202,7 +2202,7 @@ pub mod tests {
             edits.push(cx.spawn(|mut cx| async move {
                 task_editor
                     .update(&mut cx, |editor, window, cx| {
-                        editor.change_selections(None, cx, |s| s.select_ranges([13..13]));
+                        editor.change_selections(None, window, cx, |s| s.select_ranges([13..13]));
                         editor.handle_input(async_later_change, cx);
                     })
                     .unwrap();
@@ -2659,7 +2659,7 @@ pub mod tests {
 
         cx.executor().run_until_parked();
         let editor = cx.add_window(|window, cx| {
-            Editor::for_multibuffer(multibuffer, Some(project.clone()), true, cx)
+            Editor::for_multibuffer(multibuffer, Some(project.clone()), true, window, cx)
         });
 
         let editor_edited = Arc::new(AtomicBool::new(false));
@@ -2752,13 +2752,13 @@ pub mod tests {
 
         editor
             .update(cx, |editor, window, cx| {
-                editor.change_selections(Some(Autoscroll::Next), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::Next), cx, |s| {
                     s.select_ranges([Point::new(4, 0)..Point::new(4, 0)])
                 });
-                editor.change_selections(Some(Autoscroll::Next), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::Next), cx, |s| {
                     s.select_ranges([Point::new(22, 0)..Point::new(22, 0)])
                 });
-                editor.change_selections(Some(Autoscroll::Next), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::Next), cx, |s| {
                     s.select_ranges([Point::new(50, 0)..Point::new(50, 0)])
                 });
             })
@@ -2785,7 +2785,7 @@ pub mod tests {
 
         editor
             .update(cx, |editor, window, cx| {
-                editor.change_selections(Some(Autoscroll::Next), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::Next), cx, |s| {
                     s.select_ranges([Point::new(100, 0)..Point::new(100, 0)])
                 });
             })
@@ -2818,7 +2818,7 @@ pub mod tests {
 
         editor
             .update(cx, |editor, window, cx| {
-                editor.change_selections(Some(Autoscroll::Next), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::Next), cx, |s| {
                     s.select_ranges([Point::new(4, 0)..Point::new(4, 0)])
                 });
             })
@@ -2851,7 +2851,7 @@ pub mod tests {
         editor_edited.store(true, Ordering::Release);
         editor
             .update(cx, |editor, window, cx| {
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.select_ranges([Point::new(57, 0)..Point::new(57, 0)])
                 });
                 editor.handle_input("++++more text++++", cx);
@@ -2966,7 +2966,7 @@ pub mod tests {
 
         cx.executor().run_until_parked();
         let editor = cx.add_window(|window, cx| {
-            Editor::for_multibuffer(multibuffer, Some(project.clone()), true, cx)
+            Editor::for_multibuffer(multibuffer, Some(project.clone()), true, window, cx)
         });
         let editor_edited = Arc::new(AtomicBool::new(false));
         let fake_server = fake_servers.next().await.unwrap();
@@ -3186,7 +3186,8 @@ pub mod tests {
             })
             .await
             .unwrap();
-        let editor = cx.add_window(|window, cx| Editor::for_buffer(buffer, Some(project), cx));
+        let editor =
+            cx.add_window(|window, cx| Editor::for_buffer(buffer, Some(project), window, cx));
 
         cx.executor().run_until_parked();
         cx.executor().start_waiting();
@@ -3194,7 +3195,7 @@ pub mod tests {
         cx.executor().run_until_parked();
         editor
             .update(cx, |editor, window, cx| {
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.select_ranges([Point::new(10, 0)..Point::new(10, 0)])
                 })
             })
@@ -3405,7 +3406,8 @@ pub mod tests {
             })
             .await
             .unwrap();
-        let editor = cx.add_window(|window, cx| Editor::for_buffer(buffer, Some(project), cx));
+        let editor =
+            cx.add_window(|window, cx| Editor::for_buffer(buffer, Some(project), window, cx));
 
         editor
             .update(cx, |editor, window, cx| {

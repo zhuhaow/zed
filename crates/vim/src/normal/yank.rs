@@ -35,7 +35,7 @@ impl Vim {
                     });
                 });
                 vim.yank_selections_content(editor, motion.linewise(), cx);
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.move_with(|_, selection| {
                         let (head, goal) = original_positions.remove(&selection.id).unwrap();
                         selection.collapse_to(head, goal);
@@ -59,7 +59,7 @@ impl Vim {
                     });
                 });
                 vim.yank_selections_content(editor, false, cx);
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.move_with(|_, selection| {
                         let (head, goal) = original_positions.remove(&selection.id).unwrap();
                         selection.collapse_to(head, goal);

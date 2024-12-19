@@ -75,7 +75,7 @@ pub fn init(
     cx: &mut AppContext,
 ) {
     cx.set_global(InlineAssistant::new(fs, prompt_builder, telemetry));
-    cx.observe_new_views(|_workspace: &mut Workspace, cx| {
+    cx.observe_new_views(|_workspace: &mut Workspace, window, cx| {
         let workspace = cx.view().clone();
         InlineAssistant::update_global(cx, |inline_assistant, cx| {
             inline_assistant.register_workspace(&workspace, cx)
@@ -196,6 +196,7 @@ impl InlineAssistant {
                         workspace: workspace.downgrade(),
                         thread_store,
                     }),
+                    window,
                     cx,
                 );
             });
@@ -386,6 +387,7 @@ impl InlineAssistant {
                     context_store,
                     workspace.clone(),
                     thread_store.clone(),
+                    window,
                     cx,
                 )
             });
@@ -454,6 +456,7 @@ impl InlineAssistant {
         focus: bool,
         workspace: WeakView<Workspace>,
         thread_store: Option<WeakModel<ThreadStore>>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> InlineAssistId {
         let assist_group_id = self.next_assist_group_id.post_inc();
@@ -495,6 +498,7 @@ impl InlineAssistant {
                 context_store,
                 workspace.clone(),
                 thread_store,
+                window,
                 cx,
             )
         });
@@ -1024,7 +1028,7 @@ impl InlineAssistant {
 
         let position = assist.range.start;
         editor.update(cx, |editor, cx| {
-            editor.change_selections(None, cx, |selections| {
+            editor.change_selections(None, window, cx, |selections| {
                 selections.select_anchor_ranges([position..position])
             });
 
@@ -1269,7 +1273,7 @@ impl InlineAssistant {
                     });
 
                     enum DeletedLines {}
-                    let mut editor = Editor::for_multibuffer(multi_buffer, None, true, cx);
+                    let mut editor = Editor::for_multibuffer(multi_buffer, None, true, window, cx);
                     editor.set_soft_wrap_mode(language::language_settings::SoftWrap::None, cx);
                     editor.set_show_wrap_guides(false, cx);
                     editor.set_show_gutter(false, cx);
@@ -1525,7 +1529,7 @@ impl Render for PromptEditor {
                         .tooltip(|window, cx| {
                             Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
                         })
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
                         .into_any_element(),
@@ -1533,7 +1537,7 @@ impl Render for PromptEditor {
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|window, cx| Tooltip::for_action("Transform", &menu::Confirm, cx))
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::StartRequested)
                         }))
                         .into_any_element(),
@@ -1545,7 +1549,7 @@ impl Render for PromptEditor {
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|window, cx| Tooltip::text("Cancel Assist", cx))
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
                         .into_any_element(),
@@ -1560,11 +1564,9 @@ impl Render for PromptEditor {
                                 cx,
                             )
                         })
-                        .on_click(
-                            cx.listener(|_, _, window, cx| {
-                                cx.emit(PromptEditorEvent::StopRequested)
-                            }),
-                        )
+                        .on_click(cx.listener2(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::StopRequested)
+                        }))
                         .into_any_element(),
                 ]
             }
@@ -1576,7 +1578,7 @@ impl Render for PromptEditor {
                         .tooltip(|window, cx| {
                             Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
                         })
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
                         .into_any_element(),
@@ -1592,7 +1594,7 @@ impl Render for PromptEditor {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(|_, _, window, cx| {
+                            .on_click(cx.listener2(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::StartRequested);
                             }))
                             .into_any_element()
@@ -1603,7 +1605,7 @@ impl Render for PromptEditor {
                             .tooltip(|window, cx| {
                                 Tooltip::for_action("Confirm Assist", &menu::Confirm, cx)
                             })
-                            .on_click(cx.listener(|_, _, window, cx| {
+                            .on_click(cx.listener2(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested);
                             }))
                             .into_any_element()
@@ -1623,13 +1625,13 @@ impl Render for PromptEditor {
                     .bg(cx.theme().colors().editor_background)
                     .block_mouse_down()
                     .cursor(CursorStyle::Arrow)
-                    .on_action(cx.listener2(Self::toggle_context_picker))
-                    .on_action(cx.listener2(Self::confirm))
-                    .on_action(cx.listener2(Self::cancel))
-                    .on_action(cx.listener2(Self::move_up))
-                    .on_action(cx.listener2(Self::move_down))
-                    .capture_action(cx.listener2(Self::cycle_prev))
-                    .capture_action(cx.listener2(Self::cycle_next))
+                    .on_action(cx.listener(Self::toggle_context_picker))
+                    .on_action(cx.listener(Self::confirm))
+                    .on_action(cx.listener(Self::cancel))
+                    .on_action(cx.listener(Self::move_up))
+                    .on_action(cx.listener(Self::move_down))
+                    .capture_action(cx.listener(Self::cycle_prev))
+                    .capture_action(cx.listener(Self::cycle_next))
                     .child(
                         h_flex()
                             .w(gutter_dimensions.full_width() + (gutter_dimensions.margin / 2.0))
@@ -1677,7 +1679,7 @@ impl Render for PromptEditor {
                                                 .shape(IconButtonShape::Square)
                                                 .icon_size(IconSize::Small)
                                                 .on_click(
-                                                    cx.listener2(Self::toggle_rate_limit_notice),
+                                                    cx.listener(Self::toggle_rate_limit_notice),
                                                 ),
                                             )
                                             .children(self.show_rate_limit_notice.then(|| {
@@ -1744,6 +1746,7 @@ impl PromptEditor {
         context_store: Model<ContextStore>,
         workspace: WeakView<Workspace>,
         thread_store: Option<WeakModel<ThreadStore>>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let prompt_editor = cx.new_view(|cx| {
@@ -1754,6 +1757,7 @@ impl PromptEditor {
                 prompt_buffer,
                 None,
                 false,
+                window,
                 cx,
             );
             editor.set_soft_wrap_mode(language::language_settings::SoftWrap::EditorWidth, cx);
@@ -1790,6 +1794,7 @@ impl PromptEditor {
                             move |settings, _| settings.set_model(model.clone()),
                         );
                     },
+                    window,
                     cx,
                 )
             }),
@@ -1803,14 +1808,17 @@ impl PromptEditor {
             codegen,
             show_rate_limit_notice: false,
         };
-        this.subscribe_to_editor(cx);
+        this.subscribe_to_editor(window, cx);
         this
     }
 
-    fn subscribe_to_editor(&mut self, cx: &mut ViewContext<Self>) {
+    fn subscribe_to_editor(&mut self, window: &Window, cx: &mut ViewContext<Self>) {
         self.editor_subscriptions.clear();
-        self.editor_subscriptions
-            .push(cx.subscribe(&self.editor, Self::handle_prompt_editor_events));
+        self.editor_subscriptions.push(cx.subscribe_in_window(
+            &self.editor,
+            window,
+            Self::handle_prompt_editor_events,
+        ));
     }
 
     fn set_show_cursor_when_unfocused(
@@ -1827,7 +1835,7 @@ impl PromptEditor {
         let prompt = self.prompt(cx);
         let focus = self.editor.focus_handle(cx).contains_focused(cx);
         self.editor = cx.new_view(|cx| {
-            let mut editor = Editor::auto_height(Self::MAX_LINES as usize, cx);
+            let mut editor = Editor::auto_height(Self::MAX_LINES as usize, window, cx);
             editor.set_soft_wrap_mode(language::language_settings::SoftWrap::EditorWidth, cx);
             editor.set_placeholder_text(Self::placeholder_text(self.codegen.read(cx)), cx);
             editor.set_placeholder_text("Add a prompt…", cx);
@@ -1837,7 +1845,7 @@ impl PromptEditor {
             }
             editor
         });
-        self.subscribe_to_editor(cx);
+        self.subscribe_to_editor(window, cx);
     }
 
     fn placeholder_text(codegen: &Codegen) -> String {
@@ -1866,6 +1874,7 @@ impl PromptEditor {
         &mut self,
         _: View<Editor>,
         event: &EditorEvent,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         match event {
@@ -2081,7 +2090,7 @@ impl PromptEditor {
                             .into()
                         }
                     })
-                    .on_click(cx.listener(|this, _, window, cx| {
+                    .on_click(cx.listener2(|this, _, window, cx| {
                         this.codegen
                             .update(cx, |codegen, cx| codegen.cycle_prev(cx))
                     })),
@@ -2123,7 +2132,7 @@ impl PromptEditor {
                             .into()
                         }
                     })
-                    .on_click(cx.listener(|this, _, window, cx| {
+                    .on_click(cx.listener2(|this, _, window, cx| {
                         this.codegen
                             .update(cx, |codegen, cx| codegen.cycle_next(cx))
                     })),
@@ -2171,7 +2180,7 @@ impl PromptEditor {
                                 .child(
                                     Button::new("dismiss", "Dismiss")
                                         .style(ButtonStyle::Transparent)
-                                        .on_click(cx.listener2(Self::toggle_rate_limit_notice)),
+                                        .on_click(cx.listener(Self::toggle_rate_limit_notice)),
                                 )
                                 .child(Button::new("more-info", "More Info").on_click(
                                     |_event, window, cx| {
@@ -3440,62 +3449,69 @@ impl CodeActionProvider for AssistantCodeActionProvider {
         action: CodeAction,
         excerpt_id: ExcerptId,
         _push_to_history: bool,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Task<Result<ProjectTransaction>> {
         let editor = self.editor.clone();
         let workspace = self.workspace.clone();
         let thread_store = self.thread_store.clone();
+        let window_handle = window.handle();
         cx.spawn(|mut cx| async move {
             let editor = editor.upgrade().context("editor was released")?;
-            let range = editor
-                .update(&mut cx, |editor, cx| {
-                    editor.buffer().update(cx, |multibuffer, cx| {
-                        let buffer = buffer.read(cx);
-                        let multibuffer_snapshot = multibuffer.read(cx);
+            let range = window_handle
+                .update(&mut cx, |_, window, cx| {
+                    editor.update(cx, |editor, cx| {
+                        editor.buffer().update(cx, |multibuffer, cx| {
+                            let buffer = buffer.read(cx);
+                            let multibuffer_snapshot = multibuffer.read(cx);
 
-                        let old_context_range =
-                            multibuffer_snapshot.context_range_for_excerpt(excerpt_id)?;
-                        let mut new_context_range = old_context_range.clone();
-                        if action
-                            .range
-                            .start
-                            .cmp(&old_context_range.start, buffer)
-                            .is_lt()
-                        {
-                            new_context_range.start = action.range.start;
-                        }
-                        if action.range.end.cmp(&old_context_range.end, buffer).is_gt() {
-                            new_context_range.end = action.range.end;
-                        }
-                        drop(multibuffer_snapshot);
+                            let old_context_range =
+                                multibuffer_snapshot.context_range_for_excerpt(excerpt_id)?;
+                            let mut new_context_range = old_context_range.clone();
+                            if action
+                                .range
+                                .start
+                                .cmp(&old_context_range.start, buffer)
+                                .is_lt()
+                            {
+                                new_context_range.start = action.range.start;
+                            }
+                            if action.range.end.cmp(&old_context_range.end, buffer).is_gt() {
+                                new_context_range.end = action.range.end;
+                            }
+                            drop(multibuffer_snapshot);
 
-                        if new_context_range != old_context_range {
-                            multibuffer.resize_excerpt(excerpt_id, new_context_range, cx);
-                        }
+                            if new_context_range != old_context_range {
+                                multibuffer.resize_excerpt(excerpt_id, new_context_range, cx);
+                            }
 
-                        let multibuffer_snapshot = multibuffer.read(cx);
-                        Some(
-                            multibuffer_snapshot
-                                .anchor_in_excerpt(excerpt_id, action.range.start)?
-                                ..multibuffer_snapshot
-                                    .anchor_in_excerpt(excerpt_id, action.range.end)?,
-                        )
+                            let multibuffer_snapshot = multibuffer.read(cx);
+                            Some(
+                                multibuffer_snapshot
+                                    .anchor_in_excerpt(excerpt_id, action.range.start)?
+                                    ..multibuffer_snapshot
+                                        .anchor_in_excerpt(excerpt_id, action.range.end)?,
+                            )
+                        })
                     })
                 })?
                 .context("invalid range")?;
 
-            cx.update_global(|assistant: &mut InlineAssistant, cx| {
-                let assist_id = assistant.suggest_assist(
-                    &editor,
-                    range,
-                    "Fix Diagnostics".into(),
-                    None,
-                    true,
-                    workspace,
-                    thread_store,
-                    cx,
-                );
-                assistant.start_assist(assist_id, cx);
+            window_handle.update(&mut cx, |_, window, cx| {
+                cx.update_global(|assistant: &mut InlineAssistant, cx| {
+                    let assist_id = assistant.suggest_assist(
+                        &editor,
+                        range,
+                        "Fix Diagnostics".into(),
+                        None,
+                        true,
+                        workspace,
+                        thread_store,
+                        window,
+                        cx,
+                    );
+                    assistant.start_assist(assist_id, cx);
+                });
             })?;
 
             Ok(ProjectTransaction::default())

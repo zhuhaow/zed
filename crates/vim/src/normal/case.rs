@@ -3,6 +3,7 @@ use editor::{display_map::ToDisplayPoint, scroll::Autoscroll};
 use gpui::ViewContext;
 use language::{Bias, Point, SelectionGoal};
 use multi_buffer::MultiBufferRow;
+use ui::prelude::Window;
 
 use crate::{
     motion::Motion,
@@ -94,7 +95,7 @@ impl Vim {
         });
     }
 
-    pub fn change_case(&mut self, _: &ChangeCase, cx: &mut ViewContext<Self>) {
+    pub fn change_case(&mut self, _: &ChangeCase, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.manipulate_text(cx, |c| {
             if c.is_lowercase() {
                 c.to_uppercase().collect::<Vec<char>>()
@@ -104,11 +105,21 @@ impl Vim {
         })
     }
 
-    pub fn convert_to_upper_case(&mut self, _: &ConvertToUpperCase, cx: &mut ViewContext<Self>) {
+    pub fn convert_to_upper_case(
+        &mut self,
+        _: &ConvertToUpperCase,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.manipulate_text(cx, |c| c.to_uppercase().collect::<Vec<char>>())
     }
 
-    pub fn convert_to_lower_case(&mut self, _: &ConvertToLowerCase, cx: &mut ViewContext<Self>) {
+    pub fn convert_to_lower_case(
+        &mut self,
+        _: &ConvertToLowerCase,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.manipulate_text(cx, |c| c.to_lowercase().collect::<Vec<char>>())
     }
 
@@ -172,7 +183,7 @@ impl Vim {
                         .collect::<String>();
                     editor.edit([(range, text)], cx)
                 }
-                editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                     s.select_ranges(cursor_positions)
                 })
             });

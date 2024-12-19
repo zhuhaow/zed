@@ -1234,7 +1234,7 @@ mod tests {
             let snapshot = editor.buffer().read(cx).snapshot(cx);
             let anchor_range = snapshot.anchor_before(selection_range.start)
                 ..snapshot.anchor_after(selection_range.end);
-            editor.change_selections(Some(crate::Autoscroll::fit()), cx, |s| {
+            editor.change_selections(Some, window(crate::Autoscroll::fit()), cx, |s| {
                 s.set_pending_anchor_range(anchor_range, crate::SelectMode::Character)
             });
         });

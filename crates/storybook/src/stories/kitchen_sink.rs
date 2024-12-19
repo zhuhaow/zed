@@ -16,7 +16,7 @@ impl KitchenSinkStory {
 impl Render for KitchenSinkStory {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let component_stories = ComponentStory::iter()
-            .map(|selector| selector.story(cx))
+            .map(|selector| selector.story(todo!(), cx))
             .collect::<Vec<_>>();
 
         Story::container()

@@ -91,7 +91,7 @@ impl Render for HelloWorld {
             .child(
                 div()
                     .id("panel")
-                    .on_click(cx.listener(Self::change_opacity))
+                    .on_click(cx.listener2(Self::change_opacity))
                     .absolute()
                     .top_8()
                     .left_8()

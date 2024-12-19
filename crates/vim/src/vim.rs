@@ -42,7 +42,7 @@ use state::{Mode, Operator, RecordedSelection, SearchState, VimGlobals};
 use std::{mem, ops::Range, sync::Arc};
 use surrounds::SurroundsType;
 use theme::ThemeSettings;
-use ui::{px, IntoElement, VisualContext};
+use ui::{prelude::Window, px, IntoElement, VisualContext};
 use vim_mode_setting::VimModeSetting;
 use workspace::{self, Pane, ResizeIntent, Workspace};
 
@@ -100,10 +100,10 @@ pub fn init(cx: &mut AppContext) {
     VimSettings::register(cx);
     VimGlobals::register(cx);
 
-    cx.observe_new_views(|editor: &mut Editor, cx| Vim::register(editor, cx))
+    cx.observe_new_views(|editor: &mut Editor, _, cx| Vim::register(editor, cx))
         .detach();
 
-    cx.observe_new_views(|workspace: &mut Workspace, _| {
+    cx.observe_new_views(|workspace: &mut Workspace, _, _| {
         workspace.register_action(|workspace, _: &ToggleVimMode, window, cx| {
             let fs = workspace.app_state().fs.clone();
             let currently_enabled = Vim::enabled(cx);
@@ -173,8 +173,14 @@ pub fn init(cx: &mut AppContext) {
                 .and_then(|item| item.act_as::<Editor>(cx))
                 .and_then(|editor| editor.read(cx).addon::<VimAddon>().cloned());
             let Some(vim) = vim else { return };
-            vim.view
-                .update(cx, |_, cx| cx.defer(|vim, cx| vim.search_submit(cx)))
+            let window_handle = window.handle();
+            vim.view.update(cx, |_, cx| {
+                cx.defer(move |vim, cx| {
+                    window_handle
+                        .update(cx, |_, window, cx| vim.search_submit(window, todo!()))
+                        .ok();
+                })
+            })
         });
     })
     .detach();
@@ -315,24 +321,24 @@ impl Vim {
         editor.register_addon(VimAddon { view: vim.clone() });
 
         vim.update(cx, |_, cx| {
-            Vim::action(editor, cx, |vim, action: &SwitchMode, cx| {
+            Vim::action(editor, cx, |vim, action: &SwitchMode, window, cx| {
                 vim.switch_mode(action.0, false, cx)
             });
 
-            Vim::action(editor, cx, |vim, action: &PushOperator, cx| {
+            Vim::action(editor, cx, |vim, action: &PushOperator, window, cx| {
                 vim.push_operator(action.0.clone(), cx)
             });
 
-            Vim::action(editor, cx, |vim, _: &ClearOperators, cx| {
+            Vim::action(editor, cx, |vim, _: &ClearOperators, window, cx| {
                 vim.clear_operator(cx)
             });
-            Vim::action(editor, cx, |vim, n: &Number, cx| {
+            Vim::action(editor, cx, |vim, n: &Number, window, cx| {
                 vim.push_count_digit(n.0, cx);
             });
-            Vim::action(editor, cx, |vim, _: &Tab, cx| {
+            Vim::action(editor, cx, |vim, _: &Tab, window, cx| {
                 vim.input_ignored(" ".into(), cx)
             });
-            Vim::action(editor, cx, |vim, _: &Enter, cx| {
+            Vim::action(editor, cx, |vim, _: &Enter, window, cx| {
                 vim.input_ignored("\n".into(), cx)
             });
 
@@ -375,7 +381,7 @@ impl Vim {
     pub fn action<A: Action>(
         editor: &mut Editor,
         cx: &mut ViewContext<Vim>,
-        f: impl Fn(&mut Vim, &A, &mut ViewContext<Vim>) + 'static,
+        f: impl Fn(&mut Vim, &A, &mut Window, &mut ViewContext<Vim>) + 'static,
     ) {
         let subscription = editor.register_action(cx.listener2(f));
         cx.on_release(|_, _, _| drop(subscription)).detach();
@@ -385,15 +391,19 @@ impl Vim {
         self.editor.upgrade()
     }
 
-    pub fn workspace(&self, cx: &mut ViewContext<Self>) -> Option<View<Workspace>> {
+    pub fn workspace(
+        &self,
+        window: &Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Option<View<Workspace>> {
         window
             .handle()
             .downcast::<Workspace>()
             .and_then(|handle| handle.root(cx).ok())
     }
 
-    pub fn pane(&self, cx: &mut ViewContext<Self>) -> Option<View<Pane>> {
-        self.workspace(cx)
+    pub fn pane(&self, window: &Window, cx: &mut ViewContext<Self>) -> Option<View<Pane>> {
+        self.workspace(window, cx)
             .map(|workspace| workspace.read(cx).focused_pane(cx))
     }
 

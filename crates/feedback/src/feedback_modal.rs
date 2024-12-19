@@ -157,7 +157,7 @@ impl FeedbackModal {
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let email_address_editor = cx.new_view(|cx| {
-            let mut editor = Editor::single_line(cx);
+            let mut editor = Editor::single_line(window, cx);
             editor.set_placeholder_text("Email address (optional)", cx);
 
             if let Ok(Some(email_address)) = KEY_VALUE_STORE.read_kvp(DATABASE_KEY_NAME) {
@@ -168,7 +168,7 @@ impl FeedbackModal {
         });
 
         let feedback_editor = cx.new_view(|cx| {
-            let mut editor = Editor::for_buffer(buffer, Some(project.clone()), cx);
+            let mut editor = Editor::for_buffer(buffer, Some(project.clone()), window, cx);
             editor.set_placeholder_text(
                 "You can use markdown to organize your feedback with code and links.",
                 cx,
@@ -411,12 +411,12 @@ impl Render for FeedbackModal {
         };
 
         let open_zed_repo =
-            cx.listener(|_, _, window, cx| cx.dispatch_action(Box::new(OpenZedRepo)));
+            cx.listener2(|_, _, window, cx| cx.dispatch_action(Box::new(OpenZedRepo)));
 
         v_flex()
             .elevation_3(cx)
             .key_context("GiveFeedback")
-            .on_action(cx.listener(Self::cancel))
+            .on_action(cx.listener2(Self::cancel))
             .min_w(rems(40.))
             .max_w(rems(96.))
             .h(rems(32.))
@@ -492,7 +492,7 @@ impl Render for FeedbackModal {
                                 Button::new("cancel_feedback", "Cancel")
                                     .style(ButtonStyle::Subtle)
                                     .color(Color::Muted)
-                                    .on_click(cx.listener(move |_, _, window, cx| {
+                                    .on_click(cx.listener2(move |_, _, window, cx| {
                                         cx.spawn(|this, mut cx| async move {
                                             this.update(&mut cx, |_, cx| cx.emit(DismissEvent))
                                                 .ok();
@@ -504,7 +504,7 @@ impl Render for FeedbackModal {
                                 Button::new("submit_feedback", submit_button_text)
                                     .color(Color::Accent)
                                     .style(ButtonStyle::Filled)
-                                    .on_click(cx.listener(|this, _, window, cx| {
+                                    .on_click(cx.listener2(|this, _, window, cx| {
                                         this.submit(cx).detach();
                                     }))
                                     .tooltip(move |window, cx| {

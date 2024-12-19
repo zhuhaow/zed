@@ -72,7 +72,7 @@ impl Render for OutlineView {
 }
 
 impl OutlineView {
-    fn register(editor: &mut Editor, cx: &mut ViewContext<Editor>) {
+    fn register(editor: &mut Editor, window: &mut Window, cx: &mut ViewContext<Editor>) {
         if editor.mode() == EditorMode::Full {
             let handle = cx.view().downgrade();
             editor
@@ -92,8 +92,9 @@ impl OutlineView {
         cx: &mut ViewContext<Self>,
     ) -> OutlineView {
         let delegate = OutlineViewDelegate::new(cx.view().downgrade(), outline, editor, cx);
-        let picker =
-            cx.new_view(|cx| Picker::uniform_list(delegate, cx).max_height(Some(vh(0.75, cx))));
+        let picker = cx.new_view(|cx| {
+            Picker::uniform_list(delegate, window, cx).max_height(Some(vh(0.75, cx)))
+        });
         OutlineView { picker }
     }
 }
@@ -247,7 +248,12 @@ impl PickerDelegate for OutlineViewDelegate {
         Task::ready(())
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<OutlineViewDelegate>>) {
+    fn confirm(
+        &mut self,
+        _: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<OutlineViewDelegate>>,
+    ) {
         self.prev_scroll_position.take();
 
         self.active_editor.update(cx, |active_editor, cx| {
@@ -255,7 +261,7 @@ impl PickerDelegate for OutlineViewDelegate {
                 .highlighted_rows::<OutlineRowHighlights>()
                 .next();
             if let Some((rows, _)) = highlight {
-                active_editor.change_selections(Some(Autoscroll::center()), cx, |s| {
+                active_editor.change_selections(Some, window(Autoscroll::center()), cx, |s| {
                     s.select_ranges([rows.start..rows.start])
                 });
                 active_editor.clear_row_highlights::<OutlineRowHighlights>();
@@ -365,7 +371,8 @@ mod tests {
         let project = Project::test(fs, ["/dir".as_ref()], cx).await;
         project.read_with(cx, |project, _| project.languages().add(rust_lang()));
 
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
         let worktree_id = workspace.update(cx, |workspace, cx| {
             workspace.project().update(cx, |project, cx| {
                 project.worktrees(cx).next().unwrap().read(cx).id()

@@ -11,9 +11,11 @@ fn build_menu(cx: &mut WindowContext, header: impl Into<SharedString>) -> View<C
         menu.header(header)
             .separator()
             .action("Print current time", Box::new(PrintCurrentDate))
-            .entry("Print best food", Some(Box::new(PrintBestFood)), |cx| {
-                cx.dispatch_action(Box::new(PrintBestFood))
-            })
+            .entry(
+                "Print best food",
+                Some(Box::new(PrintBestFood)),
+                |window, cx| cx.dispatch_action(Box::new(PrintBestFood)),
+            )
     })
 }
 

@@ -13,6 +13,7 @@ pub trait ViewInputHandler: 'static + Sized {
         &mut self,
         range: Range<usize>,
         adjusted_range: &mut Option<Range<usize>>,
+        &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<String>;
 

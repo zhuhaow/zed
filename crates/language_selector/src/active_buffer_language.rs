@@ -47,10 +47,10 @@ impl Render for ActiveBufferLanguage {
             el.child(
                 Button::new("change-language", active_language_text)
                     .label_size(LabelSize::Small)
-                    .on_click(cx.listener(|this, _, window, cx| {
+                    .on_click(cx.listener2(|this, _, window, cx| {
                         if let Some(workspace) = this.workspace.upgrade() {
                             workspace.update(cx, |workspace, cx| {
-                                LanguageSelector::toggle(workspace, cx)
+                                LanguageSelector::toggle(workspace, window, cx)
                             });
                         }
                     }))

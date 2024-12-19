@@ -53,9 +53,9 @@ async fn test_toggle_through_settings(cx: &mut gpui::TestAppContext) {
     // Selections aren't changed if editor is blurred but vim-mode is still disabled.
     cx.cx.set_state("«hjklˇ»");
     cx.assert_editor_state("«hjklˇ»");
-    cx.update_editor(|_, cx| cx.blur());
+    cx.update_editor(|_, _, cx| cx.blur());
     cx.assert_editor_state("«hjklˇ»");
-    cx.update_editor(|_, cx| cx.focus_self());
+    cx.update_editor(|_, _, cx| cx.focus_self());
     cx.assert_editor_state("«hjklˇ»");
 
     // Enabling dynamically sets vim mode again and restores normal mode
@@ -262,7 +262,7 @@ async fn test_selection_on_search(cx: &mut gpui::TestAppContext) {
         assert_eq!(bar.query(cx), "cc");
     });
 
-    cx.update_editor(|editor, cx| {
+    cx.update_editor(|editor, window, cx| {
         let highlights = editor.all_text_background_highlights(cx);
         assert_eq!(3, highlights.len());
         assert_eq!(

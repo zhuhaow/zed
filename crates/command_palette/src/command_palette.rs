@@ -55,21 +55,32 @@ fn trim_consecutive_whitespaces(input: &str) -> String {
 }
 
 impl CommandPalette {
-    fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
-        workspace
-            .register_action(|workspace, _: &Toggle, window, cx| Self::toggle(workspace, "", cx));
+    fn register(workspace: &mut Workspace, _: &mut Window, _: &mut ViewContext<Workspace>) {
+        workspace.register_action(|workspace, _: &Toggle, window, cx| {
+            Self::toggle(workspace, "", window, cx)
+        });
     }
 
-    pub fn toggle(workspace: &mut Workspace, query: &str, cx: &mut ViewContext<Workspace>) {
+    pub fn toggle(
+        workspace: &mut Workspace,
+        query: &str,
+        window: &mut Window,
+        cx: &mut ViewContext<Workspace>,
+    ) {
         let Some(previous_focus_handle) = cx.focused() else {
             return;
         };
         workspace.toggle_modal(cx, move |cx| {
-            CommandPalette::new(previous_focus_handle, query, cx)
+            CommandPalette::new(previous_focus_handle, query, window, cx)
         });
     }
 
-    fn new(previous_focus_handle: FocusHandle, query: &str, cx: &mut ViewContext<Self>) -> Self {
+    fn new(
+        previous_focus_handle: FocusHandle,
+        query: &str,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Self {
         let filter = CommandPaletteFilter::try_global(cx);
 
         let commands = cx
@@ -91,7 +102,7 @@ impl CommandPalette {
             CommandPaletteDelegate::new(cx.view().downgrade(), commands, previous_focus_handle);
 
         let picker = cx.new_view(|cx| {
-            let picker = Picker::uniform_list(delegate, cx);
+            let picker = Picker::uniform_list(delegate, window, cx);
             picker.set_query(query, cx);
             picker
         });
@@ -347,7 +358,7 @@ impl PickerDelegate for CommandPaletteDelegate {
             .log_err();
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(&mut self, _: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>) {
         if self.matches.is_empty() {
             self.dismissed(cx);
             return;
@@ -468,10 +479,11 @@ mod tests {
     async fn test_command_palette(cx: &mut TestAppContext) {
         let app_state = init_test(cx);
         let project = Project::test(app_state.fs.clone(), [], cx).await;
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         let editor = cx.new_view(|cx| {
-            let mut editor = Editor::single_line(cx);
+            let mut editor = Editor::single_line(window, cx);
             editor.set_text("abc", cx);
             editor
         });
@@ -539,7 +551,8 @@ mod tests {
     async fn test_go_to_line(cx: &mut TestAppContext) {
         let app_state = init_test(cx);
         let project = Project::test(app_state.fs.clone(), [], cx).await;
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         cx.simulate_keystrokes("cmd-n");
 

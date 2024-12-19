@@ -484,11 +484,11 @@ mod test {
             div().id("testview").child(
                 div()
                     .key_context("parent")
-                    .on_key_down(cx.listener(|this, _, window, cx| {
+                    .on_key_down(cx.listener2(|this, _, window, cx| {
                         cx.stop_propagation();
                         this.saw_key_down = true
                     }))
-                    .on_action(cx.listener(|this: &mut TestView, _: &TestAction, _, _| {
+                    .on_action(cx.listener2(|this: &mut TestView, _: &TestAction, _, _| {
                         this.saw_action = true
                     }))
                     .child(

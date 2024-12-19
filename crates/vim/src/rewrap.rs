@@ -8,7 +8,7 @@ use ui::ViewContext;
 actions!(vim, [Rewrap]);
 
 pub(crate) fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
-    Vim::action(editor, cx, |vim, _: &Rewrap, cx| {
+    Vim::action(editor, cx, |vim, _: &Rewrap, window, cx| {
         vim.record_current_action(cx);
         Vim::take_count(cx);
         vim.store_visual_marks(cx);
@@ -53,7 +53,7 @@ impl Vim {
                     });
                 });
                 editor.rewrap_impl(IsVimMode::Yes, cx);
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.move_with(|map, selection| {
                         let anchor = selection_starts.remove(&selection.id).unwrap();
                         let mut point = anchor.to_display_point(map);
@@ -83,7 +83,7 @@ impl Vim {
                     });
                 });
                 editor.rewrap_impl(IsVimMode::Yes, cx);
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.move_with(|map, selection| {
                         let anchor = original_positions.remove(&selection.id).unwrap();
                         let mut point = anchor.to_display_point(map);

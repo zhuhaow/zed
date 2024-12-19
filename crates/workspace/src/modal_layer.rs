@@ -161,11 +161,11 @@ impl Render for ModalLayer {
             .when(active_modal.modal.fade_out_background(cx), |el| {
                 let mut background = cx.theme().colors().elevated_surface_background;
                 background.fade_out(0.2);
-                el.bg(background)
-                    .occlude()
-                    .on_mouse_down_out(cx.listener(|this, _, window, cx| {
+                el.bg(background).occlude().on_mouse_down_out(cx.listener2(
+                    |this, _, window, cx| {
                         this.hide_modal(cx);
-                    }))
+                    },
+                ))
             })
             .child(
                 v_flex()

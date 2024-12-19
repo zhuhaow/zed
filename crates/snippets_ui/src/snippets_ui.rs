@@ -17,7 +17,7 @@ pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(register).detach();
 }
 
-fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
+fn register(workspace: &mut Workspace, _: &mut Window, _: &mut ViewContext<Workspace>) {
     workspace.register_action(configure_snippets);
     workspace.register_action(open_folder);
 }
@@ -32,7 +32,7 @@ fn configure_snippets(
     let workspace_handle = workspace.weak_handle();
 
     workspace.toggle_modal(cx, move |cx| {
-        ScopeSelector::new(language_registry, workspace_handle, cx)
+        ScopeSelector::new(language_registry, workspace_handle, window, cx)
     });
 }
 
@@ -54,12 +54,13 @@ impl ScopeSelector {
     fn new(
         language_registry: Arc<LanguageRegistry>,
         workspace: WeakView<Workspace>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let delegate =
             ScopeSelectorDelegate::new(workspace, cx.view().downgrade(), language_registry);
 
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
 
         Self { picker }
     }
@@ -127,7 +128,7 @@ impl PickerDelegate for ScopeSelectorDelegate {
         self.matches.len()
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(&mut self, _: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>) {
         if let Some(mat) = self.matches.get(self.selected_index) {
             let scope_name = self.candidates[mat.candidate_id].string.clone();
             let language = self.language_registry.language_for_name(&scope_name);

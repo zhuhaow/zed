@@ -14,7 +14,7 @@ use crate::{Item, Workspace};
 actions!(debug, [OpenThemePreview]);
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(|workspace: &mut Workspace, _| {
+    cx.observe_new_views(|workspace: &mut Workspace, window, _| {
         workspace.register_action(|workspace, _: &OpenThemePreview, window, cx| {
             let theme_preview = cx.new_view(ThemePreview::new);
             workspace.add_item_to_active_pane(Box::new(theme_preview), None, true, cx)
@@ -92,6 +92,7 @@ impl Item for ThemePreview {
     fn clone_on_split(
         &self,
         _workspace_id: Option<crate::WorkspaceId>,
+        _window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<gpui::View<Self>>
     where
@@ -391,7 +392,7 @@ impl ThemePreview {
             .bg(Self::preview_bg(cx))
             .children(ThemePreviewPage::iter().map(|p| {
                 Button::new(ElementId::Name(p.name().into()), p.name())
-                    .on_click(cx.listener(move |this, _, window, cx| {
+                    .on_click(cx.listener2(move |this, _, window, cx| {
                         this.current_page = p;
                         cx.notify();
                     }))

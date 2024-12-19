@@ -13,7 +13,7 @@ pub struct ModeIndicator {
 
 impl ModeIndicator {
     /// Construct a new mode indicator in this window.
-    pub fn new(cx: &mut ViewContext<Self>) -> Self {
+    pub fn new(window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
         cx.observe_pending_input(|this, window, cx| {
             this.update_pending_keys(cx);
             cx.notify();
@@ -21,9 +21,9 @@ impl ModeIndicator {
         .detach();
 
         let handle = cx.view().clone();
-        let window = window.handle();
-        cx.observe_new_views::<Vim>(move |_, cx| {
-            if window.handle() != window {
+        let window_handle = window.handle();
+        cx.observe_new_views::<Vim>(move |_, window, cx| {
+            if window.handle() != window_handle {
                 return;
             }
             let vim = cx.view().clone();

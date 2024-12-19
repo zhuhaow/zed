@@ -38,7 +38,7 @@ impl EventEmitter<DismissEvent> for GoToLine {}
 enum GoToLineRowHighlights {}
 
 impl GoToLine {
-    fn register(editor: &mut Editor, cx: &mut ViewContext<Editor>) {
+    fn register(editor: &mut Editor, window: &mut Window, cx: &mut ViewContext<Editor>) {
         let handle = cx.view().downgrade();
         editor
             .register_action(move |_: &editor::actions::ToggleGoToLine, window, cx| {
@@ -63,7 +63,7 @@ impl GoToLine {
         let column = cursor.column + 1;
 
         let line_editor = cx.new_view(|cx| {
-            let mut editor = Editor::single_line(cx);
+            let mut editor = Editor::single_line(window, cx);
             editor.set_placeholder_text(format!("{line}{FILE_ROW_COLUMN_DELIMITER}{column}"), cx);
             editor
         });
@@ -161,7 +161,7 @@ impl GoToLine {
             self.active_editor.update(cx, |editor, cx| {
                 let snapshot = editor.snapshot(cx).display_snapshot;
                 let point = snapshot.buffer_snapshot.clip_point(point, Bias::Left);
-                editor.change_selections(Some(Autoscroll::center()), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::center()), cx, |s| {
                     s.select_ranges([point..point])
                 });
                 editor.focus(cx);
@@ -190,8 +190,8 @@ impl Render for GoToLine {
             .w(rems(24.))
             .elevation_2(cx)
             .key_context("GoToLine")
-            .on_action(cx.listener(Self::cancel))
-            .on_action(cx.listener(Self::confirm))
+            .on_action(cx.listener2(Self::cancel))
+            .on_action(cx.listener2(Self::confirm))
             .child(
                 div()
                     .border_b_1()
@@ -250,7 +250,8 @@ mod tests {
         .await;
 
         let project = Project::test(fs, ["/dir".as_ref()], cx).await;
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
         let worktree_id = workspace.update(cx, |workspace, cx| {
             workspace.project().update(cx, |project, cx| {
                 project.worktrees(cx).next().unwrap().read(cx).id()
@@ -262,7 +263,7 @@ mod tests {
             .unwrap();
         let editor = workspace
             .update(cx, |workspace, cx| {
-                workspace.open_path((worktree_id, "a.rs"), None, true, cx)
+                workspace.open_path((worktree_id, "a.rs"), None, true, window, cx)
             })
             .await
             .unwrap()
@@ -344,7 +345,8 @@ mod tests {
         .await;
 
         let project = Project::test(fs, ["/dir".as_ref()], cx).await;
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
         workspace.update(cx, |workspace, cx| {
             let cursor_position = cx.new_view(|_| CursorPosition::new(workspace));
             workspace.status_bar().update(cx, |status_bar, cx| {
@@ -363,7 +365,7 @@ mod tests {
             .unwrap();
         let editor = workspace
             .update(cx, |workspace, cx| {
-                workspace.open_path((worktree_id, "a.rs"), None, true, cx)
+                workspace.open_path((worktree_id, "a.rs"), None, true, window, cx)
             })
             .await
             .unwrap()

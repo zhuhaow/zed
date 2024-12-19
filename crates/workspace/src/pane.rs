@@ -483,7 +483,7 @@ impl Pane {
                             .icon_size(IconSize::Small)
                             .toggle_state(zoomed)
                             .selected_icon(IconName::Minimize)
-                            .on_click(cx.listener(|pane, _, window, cx| {
+                            .on_click(cx.listener2(|pane, _, window, cx| {
                                 pane.toggle_zoom(&crate::ToggleZoom, window, cx);
                             }))
                             .tooltip(move |window, cx| {
@@ -740,24 +740,32 @@ impl Pane {
         !self.nav_history.0.lock().forward_stack.is_empty()
     }
 
-    fn navigate_backward(&mut self, cx: &mut ViewContext<Self>) {
+    fn navigate_backward(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         if let Some(workspace) = self.workspace.upgrade() {
             let pane = cx.view().downgrade();
+            let window_handle = window.handle();
             cx.window_context().defer(move |cx| {
-                workspace.update(cx, |workspace, cx| {
-                    workspace.go_back(pane, cx).detach_and_log_err(cx)
-                })
+                workspace
+                    .update_in_window(window_handle, cx, |workspace, window, cx| {
+                        workspace.go_back(pane, window, cx).detach_and_log_err(cx)
+                    })
+                    .ok();
             })
         }
     }
 
-    fn navigate_forward(&mut self, cx: &mut ViewContext<Self>) {
+    fn navigate_forward(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         if let Some(workspace) = self.workspace.upgrade() {
             let pane = cx.view().downgrade();
+            let window_handle = window.handle();
             cx.window_context().defer(move |cx| {
-                workspace.update(cx, |workspace, cx| {
-                    workspace.go_forward(pane, cx).detach_and_log_err(cx)
-                })
+                workspace
+                    .update_in_window(window_handle, cx, |workspace, window, cx| {
+                        workspace
+                            .go_forward(pane, window, cx)
+                            .detach_and_log_err(cx)
+                    })
+                    .ok();
             })
         }
     }
@@ -828,8 +836,9 @@ impl Pane {
         focus_item: bool,
         allow_preview: bool,
         suggested_position: Option<usize>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
-        build_item: impl FnOnce(&mut ViewContext<Pane>) -> Box<dyn ItemHandle>,
+        build_item: impl FnOnce(&mut Window, &mut ViewContext<Pane>) -> Box<dyn ItemHandle>,
     ) -> Box<dyn ItemHandle> {
         let mut existing_item = None;
         if let Some(project_entry_id) = project_entry_id {
@@ -866,7 +875,7 @@ impl Pane {
                 suggested_position
             };
 
-            let new_item = build_item(cx);
+            let new_item = build_item(window, cx);
 
             if allow_preview {
                 self.set_preview_item_id(Some(new_item.item_id()), cx);
@@ -2083,20 +2092,20 @@ impl Pane {
                 ClosePosition::Right => ui::TabCloseSide::End,
             })
             .toggle_state(is_active)
-            .on_click(cx.listener(move |pane: &mut Self, _, window, cx| {
+            .on_click(cx.listener2(move |pane: &mut Self, _, window, cx| {
                 pane.activate_item(ix, true, true, cx)
             }))
             // TODO: This should be a click listener with the middle mouse button instead of a mouse down listener.
             .on_mouse_down(
                 MouseButton::Middle,
-                cx.listener(move |pane, _event, window, cx| {
+                cx.listener2(move |pane, _event, window, cx| {
                     pane.close_item_by_id(item_id, SaveIntent::Close, cx)
                         .detach_and_log_err(cx);
                 }),
             )
             .on_mouse_down(
                 MouseButton::Left,
-                cx.listener(move |pane, event: &MouseDownEvent, window, cx| {
+                cx.listener2(move |pane, event: &MouseDownEvent, window, cx| {
                     if let Some(id) = pane.preview_item_id {
                         if id == item_id && event.click_count > 1 {
                             pane.set_preview_item_id(None, cx);
@@ -2124,18 +2133,18 @@ impl Pane {
                 this.can_drop(move |a, window, cx| p(a, cx))
             })
             .on_drop(
-                cx.listener(move |this, dragged_tab: &DraggedTab, window, cx| {
+                cx.listener2(move |this, dragged_tab: &DraggedTab, window, cx| {
                     this.drag_split_direction = None;
                     this.handle_tab_drop(dragged_tab, ix, window, cx)
                 }),
             )
             .on_drop(
-                cx.listener(move |this, selection: &DraggedSelection, window, cx| {
+                cx.listener2(move |this, selection: &DraggedSelection, window, cx| {
                     this.drag_split_direction = None;
                     this.handle_dragged_selection_drop(selection, Some(ix), window, cx)
                 }),
             )
-            .on_drop(cx.listener(move |this, paths, window, cx| {
+            .on_drop(cx.listener2(move |this, paths, window, cx| {
                 this.drag_split_direction = None;
                 this.handle_external_paths_drop(paths, window, cx)
             }))
@@ -2154,7 +2163,7 @@ impl Pane {
                         .icon_color(Color::Muted)
                         .size(ButtonSize::None)
                         .icon_size(IconSize::XSmall)
-                        .on_click(cx.listener(move |pane, _, window, cx| {
+                        .on_click(cx.listener2(move |pane, _, window, cx| {
                             pane.unpin_tab_at(ix, cx);
                         }))
                 } else {
@@ -2168,7 +2177,7 @@ impl Pane {
                         .icon_color(Color::Muted)
                         .size(ButtonSize::None)
                         .icon_size(IconSize::XSmall)
-                        .on_click(cx.listener(move |pane, _, window, cx| {
+                        .on_click(cx.listener2(move |pane, _, window, cx| {
                             pane.close_item_by_id(item_id, SaveIntent::Close, cx)
                                 .detach_and_log_err(cx);
                         }))
@@ -2228,7 +2237,7 @@ impl Pane {
                         .entry(
                             "Close",
                             Some(Box::new(CloseActiveItem { save_intent: None })),
-                            cx.handler_for(&pane, move |pane, cx| {
+                            cx.handler_for2(&pane, move |pane, cx| {
                                 pane.close_item_by_id(item_id, SaveIntent::Close, cx)
                                     .detach_and_log_err(cx);
                             }),
@@ -2239,7 +2248,7 @@ impl Pane {
                                 save_intent: None,
                                 close_pinned: false,
                             })),
-                            cx.handler_for(&pane, move |pane, cx| {
+                            cx.handler_for2(&pane, move |pane, cx| {
                                 pane.close_items(cx, SaveIntent::Close, |id| id != item_id)
                                     .detach_and_log_err(cx);
                             }),
@@ -2250,7 +2259,7 @@ impl Pane {
                             Some(Box::new(CloseItemsToTheLeft {
                                 close_pinned: false,
                             })),
-                            cx.handler_for(&pane, move |pane, cx| {
+                            cx.handler_for2(&pane, move |pane, cx| {
                                 pane.close_items_to_the_left_by_id(
                                     item_id,
                                     pane.get_non_closeable_item_ids(false),
@@ -2264,7 +2273,7 @@ impl Pane {
                             Some(Box::new(CloseItemsToTheRight {
                                 close_pinned: false,
                             })),
-                            cx.handler_for(&pane, move |pane, cx| {
+                            cx.handler_for2(&pane, move |pane, cx| {
                                 pane.close_items_to_the_right_by_id(
                                     item_id,
                                     pane.get_non_closeable_item_ids(false),
@@ -2279,7 +2288,7 @@ impl Pane {
                             Some(Box::new(CloseCleanItems {
                                 close_pinned: false,
                             })),
-                            cx.handler_for(&pane, move |pane, cx| {
+                            cx.handler_for2(&pane, move |pane, cx| {
                                 if let Some(task) = pane.close_clean_items(
                                     &CloseCleanItems {
                                         close_pinned: false,
@@ -2296,7 +2305,7 @@ impl Pane {
                                 save_intent: None,
                                 close_pinned: false,
                             })),
-                            cx.handler_for(&pane, |pane, cx| {
+                            cx.handler_for2(&pane, |pane, cx| {
                                 if let Some(task) = pane.close_all_items(
                                     &CloseAllItems {
                                         save_intent: None,
@@ -2315,7 +2324,7 @@ impl Pane {
                                 this.entry(
                                     "Unpin Tab",
                                     Some(TogglePinTab.boxed_clone()),
-                                    cx.handler_for(&pane, move |pane, cx| {
+                                    cx.handler_for2(&pane, move |pane, cx| {
                                         pane.unpin_tab_at(ix, cx);
                                     }),
                                 )
@@ -2323,7 +2332,7 @@ impl Pane {
                                 this.entry(
                                     "Pin Tab",
                                     Some(TogglePinTab.boxed_clone()),
-                                    cx.handler_for(&pane, move |pane, cx| {
+                                    cx.handler_for2(&pane, move |pane, cx| {
                                         pane.pin_tab_at(ix, cx);
                                     }),
                                 )
@@ -2348,7 +2357,7 @@ impl Pane {
                                 menu.entry(
                                     "Copy Path",
                                     Some(Box::new(CopyPath)),
-                                    cx.handler_for(&pane, move |_, cx| {
+                                    cx.handler_for2(&pane, move |_, cx| {
                                         cx.write_to_clipboard(ClipboardItem::new_string(
                                             abs_path.to_string_lossy().to_string(),
                                         ));
@@ -2359,7 +2368,7 @@ impl Pane {
                                 menu.entry(
                                     "Copy Relative Path",
                                     Some(Box::new(CopyRelativePath)),
-                                    cx.handler_for(&pane, move |_, cx| {
+                                    cx.handler_for2(&pane, move |_, cx| {
                                         cx.write_to_clipboard(ClipboardItem::new_string(
                                             relative_path.to_string_lossy().to_string(),
                                         ));
@@ -2373,7 +2382,7 @@ impl Pane {
                                 Some(Box::new(RevealInProjectPanel {
                                     entry_id: Some(entry_id),
                                 })),
-                                cx.handler_for(&pane, move |pane, cx| {
+                                cx.handler_for2(&pane, move |pane, cx| {
                                     pane.project.update(cx, |_, cx| {
                                         cx.emit(project::Event::RevealInProjectPanel(
                                             ProjectEntryId::from_proto(entry_id),
@@ -2385,7 +2394,7 @@ impl Pane {
                                 menu.entry(
                                     "Open in Terminal",
                                     Some(Box::new(OpenInTerminal)),
-                                    cx.handler_for(&pane, move |_, cx| {
+                                    cx.handler_for2(&pane, move |_, cx| {
                                         cx.dispatch_action(
                                             OpenTerminal {
                                                 working_directory: parent_abs_path.clone(),
@@ -2411,7 +2420,7 @@ impl Pane {
             .icon_size(IconSize::Small)
             .on_click({
                 let view = cx.view().clone();
-                move |_, window, cx| view.update(cx, Self::navigate_backward)
+                move |_, window, cx| view.update(cx, |view, cx| view.navigate_backward(window, cx))
             })
             .disabled(!self.can_navigate_backward())
             .tooltip({
@@ -2423,7 +2432,7 @@ impl Pane {
             .icon_size(IconSize::Small)
             .on_click({
                 let view = cx.view().clone();
-                move |_, window, cx| view.update(cx, Self::navigate_forward)
+                move |_, window, cx| view.update(cx, |view, cx| view.navigate_forward(window, cx))
             })
             .disabled(!self.can_navigate_forward())
             .tooltip({
@@ -2488,13 +2497,13 @@ impl Pane {
                             .drag_over::<DraggedSelection>(|bar, _, window, cx| {
                                 bar.bg(cx.theme().colors().drop_target_background)
                             })
-                            .on_drop(cx.listener(
+                            .on_drop(cx.listener2(
                                 move |this, dragged_tab: &DraggedTab, window, cx| {
                                     this.drag_split_direction = None;
                                     this.handle_tab_drop(dragged_tab, this.items.len(), window, cx)
                                 },
                             ))
-                            .on_drop(cx.listener(
+                            .on_drop(cx.listener2(
                                 move |this, selection: &DraggedSelection, window, cx| {
                                     this.drag_split_direction = None;
                                     this.handle_project_entry_drop(
@@ -2505,11 +2514,11 @@ impl Pane {
                                     )
                                 },
                             ))
-                            .on_drop(cx.listener(move |this, paths, window, cx| {
+                            .on_drop(cx.listener2(move |this, paths, window, cx| {
                                 this.drag_split_direction = None;
                                 this.handle_external_paths_drop(paths, window, cx)
                             }))
-                            .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
+                            .on_click(cx.listener2(move |this, event: &ClickEvent, window, cx| {
                                 if event.up.click_count == 2 {
                                     cx.dispatch_action(
                                         this.double_click_dispatch_action.boxed_clone(),
@@ -2705,7 +2714,12 @@ impl Pane {
                         .read(cx)
                         .path_for_entry(project_entry_id, cx)
                     {
-                        let load_path_task = workspace.load_path(path, cx);
+                        let Ok(load_path_task) = window_handle
+                            .update(cx, |_, window, cx| workspace.load_path(path, window, cx))
+                        else {
+                            return;
+                        };
+
                         cx.spawn(|workspace, mut cx| async move {
                             if let Some((project_entry_id, build_item)) =
                                 load_path_task.await.notify_async_err(&mut cx)
@@ -2729,6 +2743,7 @@ impl Pane {
                                                     true,
                                                     false,
                                                     target,
+                                                    window,
                                                     cx,
                                                     build_item,
                                                 )
@@ -2825,6 +2840,7 @@ impl Pane {
                                 paths,
                                 OpenVisible::OnlyDirectories,
                                 Some(to_pane.downgrade()),
+                                window,
                                 cx,
                             )
                         },
@@ -2899,62 +2915,68 @@ impl Render for Pane {
             .size_full()
             .flex_none()
             .overflow_hidden()
-            .on_action(cx.listener(|pane, _: &AlternateFile, window, cx| {
+            .on_action(cx.listener2(|pane, _: &AlternateFile, window, cx| {
                 pane.alternate_file(cx);
             }))
             .on_action(
-                cx.listener(|pane, _: &SplitLeft, window, cx| pane.split(SplitDirection::Left, cx)),
-            )
-            .on_action(
-                cx.listener(|pane, _: &SplitUp, window, cx| pane.split(SplitDirection::Up, cx)),
-            )
-            .on_action(cx.listener(|pane, _: &SplitHorizontal, window, cx| {
-                pane.split(SplitDirection::horizontal(cx), cx)
-            }))
-            .on_action(cx.listener(|pane, _: &SplitVertical, window, cx| {
-                pane.split(SplitDirection::vertical(cx), cx)
-            }))
-            .on_action(
-                cx.listener(|pane, _: &SplitRight, window, cx| {
-                    pane.split(SplitDirection::Right, cx)
+                cx.listener2(|pane, _: &SplitLeft, window, cx| {
+                    pane.split(SplitDirection::Left, cx)
                 }),
             )
             .on_action(
-                cx.listener(|pane, _: &SplitDown, window, cx| pane.split(SplitDirection::Down, cx)),
+                cx.listener2(|pane, _: &SplitUp, window, cx| pane.split(SplitDirection::Up, cx)),
             )
-            .on_action(cx.listener(|pane, _: &GoBack, window, cx| pane.navigate_backward(cx)))
-            .on_action(cx.listener(|pane, _: &GoForward, window, cx| pane.navigate_forward(cx)))
-            .on_action(cx.listener(|pane, _: &JoinIntoNext, window, cx| pane.join_into_next(cx)))
-            .on_action(cx.listener(|pane, _: &JoinAll, window, cx| pane.join_all(cx)))
-            .on_action(cx.listener(Pane::toggle_zoom))
+            .on_action(cx.listener2(|pane, _: &SplitHorizontal, window, cx| {
+                pane.split(SplitDirection::horizontal(cx), cx)
+            }))
+            .on_action(cx.listener2(|pane, _: &SplitVertical, window, cx| {
+                pane.split(SplitDirection::vertical(cx), cx)
+            }))
+            .on_action(cx.listener2(|pane, _: &SplitRight, window, cx| {
+                pane.split(SplitDirection::Right, cx)
+            }))
             .on_action(
-                cx.listener(|pane: &mut Pane, action: &ActivateItem, window, cx| {
+                cx.listener2(|pane, _: &SplitDown, window, cx| {
+                    pane.split(SplitDirection::Down, cx)
+                }),
+            )
+            .on_action(
+                cx.listener2(|pane, _: &GoBack, window, cx| pane.navigate_backward(window, cx)),
+            )
+            .on_action(
+                cx.listener2(|pane, _: &GoForward, window, cx| pane.navigate_forward(window, cx)),
+            )
+            .on_action(cx.listener2(|pane, _: &JoinIntoNext, window, cx| pane.join_into_next(cx)))
+            .on_action(cx.listener2(|pane, _: &JoinAll, window, cx| pane.join_all(cx)))
+            .on_action(cx.listener2(Pane::toggle_zoom))
+            .on_action(
+                cx.listener2(|pane: &mut Pane, action: &ActivateItem, window, cx| {
                     pane.activate_item(action.0, true, true, cx);
                 }),
             )
             .on_action(
-                cx.listener(|pane: &mut Pane, _: &ActivateLastItem, window, cx| {
+                cx.listener2(|pane: &mut Pane, _: &ActivateLastItem, window, cx| {
                     pane.activate_item(pane.items.len() - 1, true, true, cx);
                 }),
             )
             .on_action(
-                cx.listener(|pane: &mut Pane, _: &ActivatePrevItem, window, cx| {
+                cx.listener2(|pane: &mut Pane, _: &ActivatePrevItem, window, cx| {
                     pane.activate_prev_item(true, cx);
                 }),
             )
             .on_action(
-                cx.listener(|pane: &mut Pane, _: &ActivateNextItem, window, cx| {
+                cx.listener2(|pane: &mut Pane, _: &ActivateNextItem, window, cx| {
                     pane.activate_next_item(true, cx);
                 }),
             )
-            .on_action(cx.listener(|pane, _: &SwapItemLeft, window, cx| pane.swap_item_left(cx)))
-            .on_action(cx.listener(|pane, _: &SwapItemRight, window, cx| pane.swap_item_right(cx)))
-            .on_action(cx.listener(|pane, action, window, cx| {
+            .on_action(cx.listener2(|pane, _: &SwapItemLeft, window, cx| pane.swap_item_left(cx)))
+            .on_action(cx.listener2(|pane, _: &SwapItemRight, window, cx| pane.swap_item_right(cx)))
+            .on_action(cx.listener2(|pane, action, window, cx| {
                 pane.toggle_pin_tab(action, cx);
             }))
             .when(PreviewTabsSettings::get_global(cx).enabled, |this| {
                 this.on_action(
-                    cx.listener(|pane: &mut Pane, _: &TogglePreviewTab, window, cx| {
+                    cx.listener2(|pane: &mut Pane, _: &TogglePreviewTab, window, cx| {
                         if let Some(active_item_id) = pane.active_item().map(|i| i.item_id()) {
                             if pane.is_active_preview_item(active_item_id) {
                                 pane.set_preview_item_id(None, cx);
@@ -2966,34 +2988,34 @@ impl Render for Pane {
                 )
             })
             .on_action(
-                cx.listener(|pane: &mut Self, action: &CloseActiveItem, window, cx| {
+                cx.listener2(|pane: &mut Self, action: &CloseActiveItem, window, cx| {
                     if let Some(task) = pane.close_active_item(action, cx) {
                         task.detach_and_log_err(cx)
                     }
                 }),
             )
             .on_action(
-                cx.listener(|pane: &mut Self, action: &CloseInactiveItems, window, cx| {
+                cx.listener2(|pane: &mut Self, action: &CloseInactiveItems, window, cx| {
                     if let Some(task) = pane.close_inactive_items(action, cx) {
                         task.detach_and_log_err(cx)
                     }
                 }),
             )
             .on_action(
-                cx.listener(|pane: &mut Self, action: &CloseCleanItems, window, cx| {
+                cx.listener2(|pane: &mut Self, action: &CloseCleanItems, window, cx| {
                     if let Some(task) = pane.close_clean_items(action, cx) {
                         task.detach_and_log_err(cx)
                     }
                 }),
             )
-            .on_action(cx.listener(
+            .on_action(cx.listener2(
                 |pane: &mut Self, action: &CloseItemsToTheLeft, window, cx| {
                     if let Some(task) = pane.close_items_to_the_left(action, cx) {
                         task.detach_and_log_err(cx)
                     }
                 },
             ))
-            .on_action(cx.listener(
+            .on_action(cx.listener2(
                 |pane: &mut Self, action: &CloseItemsToTheRight, window, cx| {
                     if let Some(task) = pane.close_items_to_the_right(action, cx) {
                         task.detach_and_log_err(cx)
@@ -3001,20 +3023,20 @@ impl Render for Pane {
                 },
             ))
             .on_action(
-                cx.listener(|pane: &mut Self, action: &CloseAllItems, window, cx| {
+                cx.listener2(|pane: &mut Self, action: &CloseAllItems, window, cx| {
                     if let Some(task) = pane.close_all_items(action, cx) {
                         task.detach_and_log_err(cx)
                     }
                 }),
             )
             .on_action(
-                cx.listener(|pane: &mut Self, action: &CloseActiveItem, window, cx| {
+                cx.listener2(|pane: &mut Self, action: &CloseActiveItem, window, cx| {
                     if let Some(task) = pane.close_active_item(action, cx) {
                         task.detach_and_log_err(cx)
                     }
                 }),
             )
-            .on_action(cx.listener(
+            .on_action(cx.listener2(
                 |pane: &mut Self, action: &RevealInProjectPanel, window, cx| {
                     let entry_id = action
                         .entry_id
@@ -3038,10 +3060,10 @@ impl Render for Pane {
                     .relative()
                     .group("")
                     .overflow_hidden()
-                    .on_drag_move::<DraggedTab>(cx.listener(Self::handle_drag_move))
-                    .on_drag_move::<DraggedSelection>(cx.listener(Self::handle_drag_move))
+                    .on_drag_move::<DraggedTab>(cx.listener2(Self::handle_drag_move))
+                    .on_drag_move::<DraggedSelection>(cx.listener2(Self::handle_drag_move))
                     .when(is_local, |div| {
-                        div.on_drag_move::<ExternalPaths>(cx.listener(Self::handle_drag_move))
+                        div.on_drag_move::<ExternalPaths>(cx.listener2(Self::handle_drag_move))
                     })
                     .map(|div| {
                         if let Some(item) = self.active_item() {
@@ -3076,7 +3098,7 @@ impl Render for Pane {
                             .when_some(self.can_drop_predicate.clone(), |this, p| {
                                 this.can_drop(move |a, window, cx| p(a, cx))
                             })
-                            .on_drop(cx.listener(move |this, dragged_tab, window, cx| {
+                            .on_drop(cx.listener2(move |this, dragged_tab, window, cx| {
                                 this.handle_tab_drop(
                                     dragged_tab,
                                     this.active_item_index(),
@@ -3084,12 +3106,12 @@ impl Render for Pane {
                                     cx,
                                 )
                             }))
-                            .on_drop(cx.listener(
+                            .on_drop(cx.listener2(
                                 move |this, selection: &DraggedSelection, window, cx| {
                                     this.handle_dragged_selection_drop(selection, None, window, cx)
                                 },
                             ))
-                            .on_drop(cx.listener(move |this, paths, window, cx| {
+                            .on_drop(cx.listener2(move |this, paths, window, cx| {
                                 this.handle_external_paths_drop(paths, window, cx)
                             }))
                             .map(|div| {
@@ -3114,26 +3136,34 @@ impl Render for Pane {
             })
             .on_mouse_down(
                 MouseButton::Navigate(NavigationDirection::Back),
-                cx.listener(|pane, _, window, cx| {
+                cx.listener2(|pane, _, window, cx| {
                     if let Some(workspace) = pane.workspace.upgrade() {
                         let pane = cx.view().downgrade();
+                        let window_handle = window.handle();
                         cx.window_context().defer(move |cx| {
-                            workspace.update(cx, |workspace, cx| {
-                                workspace.go_back(pane, cx).detach_and_log_err(cx)
-                            })
+                            workspace
+                                .update_in_window(window_handle, cx, |workspace, window, cx| {
+                                    workspace.go_back(pane, window, cx).detach_and_log_err(cx)
+                                })
+                                .ok();
                         })
                     }
                 }),
             )
             .on_mouse_down(
                 MouseButton::Navigate(NavigationDirection::Forward),
-                cx.listener(|pane, _, window, cx| {
+                cx.listener2(|pane, _, window, cx| {
                     if let Some(workspace) = pane.workspace.upgrade() {
                         let pane = cx.view().downgrade();
+                        let window_handle = window.handle();
                         cx.window_context().defer(move |cx| {
-                            workspace.update(cx, |workspace, cx| {
-                                workspace.go_forward(pane, cx).detach_and_log_err(cx)
-                            })
+                            workspace
+                                .update_in_window(window_handle, cx, |workspace, window, cx| {
+                                    workspace
+                                        .go_forward(pane, window, cx)
+                                        .detach_and_log_err(cx)
+                                })
+                                .ok();
                         })
                     }
                 }),

@@ -444,22 +444,22 @@ impl Render for NotebookEditor {
             .key_context("notebook")
             .track_focus(&self.focus_handle)
             .on_action(
-                cx.listener(|this, &OpenNotebook, window, cx| {
+                cx.listener2(|this, &OpenNotebook, window, cx| {
                     this.open_notebook(&OpenNotebook, cx)
                 }),
             )
-            .on_action(cx.listener(|this, &ClearOutputs, window, cx| this.clear_outputs(cx)))
-            .on_action(cx.listener(|this, &RunAll, window, cx| this.run_cells(cx)))
-            .on_action(cx.listener(|this, &MoveCellUp, window, cx| this.move_cell_up(cx)))
-            .on_action(cx.listener(|this, &MoveCellDown, window, cx| this.move_cell_down(cx)))
+            .on_action(cx.listener2(|this, &ClearOutputs, window, cx| this.clear_outputs(cx)))
+            .on_action(cx.listener2(|this, &RunAll, window, cx| this.run_cells(cx)))
+            .on_action(cx.listener2(|this, &MoveCellUp, window, cx| this.move_cell_up(cx)))
+            .on_action(cx.listener2(|this, &MoveCellDown, window, cx| this.move_cell_down(cx)))
             .on_action(
-                cx.listener(|this, &AddMarkdownBlock, window, cx| this.add_markdown_block(cx)),
+                cx.listener2(|this, &AddMarkdownBlock, window, cx| this.add_markdown_block(cx)),
             )
-            .on_action(cx.listener(|this, &AddCodeBlock, window, cx| this.add_code_block(cx)))
-            .on_action(cx.listener2(Self::select_next))
-            .on_action(cx.listener2(Self::select_previous))
-            .on_action(cx.listener2(Self::select_first))
-            .on_action(cx.listener2(Self::select_last))
+            .on_action(cx.listener2(|this, &AddCodeBlock, window, cx| this.add_code_block(cx)))
+            .on_action(cx.listener(Self::select_next))
+            .on_action(cx.listener(Self::select_previous))
+            .on_action(cx.listener(Self::select_first))
+            .on_action(cx.listener(Self::select_last))
             .flex()
             .items_start()
             .size_full()
@@ -645,6 +645,7 @@ impl Item for NotebookEditor {
     fn clone_on_split(
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<gpui::View<Self>>
     where

@@ -88,17 +88,17 @@ impl Deref for WrappedAction {
 }
 
 pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
-    Vim::action(editor, cx, |vim, _: &VisualCommand, cx| {
-        let Some(workspace) = vim.workspace(cx) else {
+    Vim::action(editor, cx, |vim, _: &VisualCommand, window, cx| {
+        let Some(workspace) = vim.workspace(window, cx) else {
             return;
         };
         workspace.update(cx, |workspace, cx| {
-            command_palette::CommandPalette::toggle(workspace, "'<,'>", cx);
+            command_palette::CommandPalette::toggle(workspace, "'<,'>", window, cx);
         })
     });
 
-    Vim::action(editor, cx, |vim, _: &CountCommand, cx| {
-        let Some(workspace) = vim.workspace(cx) else {
+    Vim::action(editor, cx, |vim, _: &CountCommand, window, cx| {
+        let Some(workspace) = vim.workspace(window, cx) else {
             return;
         };
         let count = Vim::take_count(cx).unwrap_or(1);
@@ -106,12 +106,13 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             command_palette::CommandPalette::toggle(
                 workspace,
                 &format!(".,.+{}", count.saturating_sub(1)),
+                window,
                 cx,
             );
         })
     });
 
-    Vim::action(editor, cx, |vim, action: &GoToLine, cx| {
+    Vim::action(editor, cx, |vim, action: &GoToLine, window, cx| {
         vim.switch_mode(Mode::Normal, false, cx);
         let result = vim.update_editor(cx, |vim, editor, cx| {
             action.range.head().buffer_row(vim, editor, cx)
@@ -119,7 +120,7 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
         let buffer_row = match result {
             None => return,
             Some(e @ Err(_)) => {
-                let Some(workspace) = vim.workspace(cx) else {
+                let Some(workspace) = vim.workspace(window, cx) else {
                     return;
                 };
                 workspace.update(cx, |workspace, cx| {
@@ -132,7 +133,7 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
         vim.move_cursor(Motion::StartOfDocument, Some(buffer_row.0 as usize + 1), cx);
     });
 
-    Vim::action(editor, cx, |vim, action: &YankCommand, cx| {
+    Vim::action(editor, cx, |vim, action: &YankCommand, window, cx| {
         vim.update_editor(cx, |vim, editor, cx| {
             let snapshot = editor.snapshot(cx);
             if let Ok(range) = action.range.buffer_range(vim, editor, cx) {
@@ -152,13 +153,13 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
         });
     });
 
-    Vim::action(editor, cx, |_, action: &WithCount, cx| {
+    Vim::action(editor, cx, |_, action: &WithCount, window, cx| {
         for _ in 0..action.count {
             cx.dispatch_action(action.action.boxed_clone())
         }
     });
 
-    Vim::action(editor, cx, |vim, action: &WithRange, cx| {
+    Vim::action(editor, cx, |vim, action: &WithRange, window, cx| {
         let result = vim.update_editor(cx, |vim, editor, cx| {
             action.range.buffer_range(vim, editor, cx)
         });
@@ -166,7 +167,7 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
         let range = match result {
             None => return,
             Some(e @ Err(_)) => {
-                let Some(workspace) = vim.workspace(cx) else {
+                let Some(workspace) = vim.workspace(window, cx) else {
                     return;
                 };
                 workspace.update(cx, |workspace, cx| {

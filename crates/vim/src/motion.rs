@@ -294,11 +294,13 @@ actions!(
 );
 
 pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
-    Vim::action(editor, cx, |vim, _: &Left, cx| vim.motion(Motion::Left, cx));
-    Vim::action(editor, cx, |vim, _: &Backspace, cx| {
+    Vim::action(editor, cx, |vim, _: &Left, window, cx| {
+        vim.motion(Motion::Left, cx)
+    });
+    Vim::action(editor, cx, |vim, _: &Backspace, window, cx| {
         vim.motion(Motion::Backspace, cx)
     });
-    Vim::action(editor, cx, |vim, action: &Down, cx| {
+    Vim::action(editor, cx, |vim, action: &Down, window, cx| {
         vim.motion(
             Motion::Down {
                 display_lines: action.display_lines,
@@ -306,7 +308,7 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             cx,
         )
     });
-    Vim::action(editor, cx, |vim, action: &Up, cx| {
+    Vim::action(editor, cx, |vim, action: &Up, window, cx| {
         vim.motion(
             Motion::Up {
                 display_lines: action.display_lines,
@@ -314,21 +316,25 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             cx,
         )
     });
-    Vim::action(editor, cx, |vim, _: &Right, cx| {
+    Vim::action(editor, cx, |vim, _: &Right, window, cx| {
         vim.motion(Motion::Right, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Space, cx| {
+    Vim::action(editor, cx, |vim, _: &Space, window, cx| {
         vim.motion(Motion::Space, cx)
     });
-    Vim::action(editor, cx, |vim, action: &FirstNonWhitespace, cx| {
-        vim.motion(
-            Motion::FirstNonWhitespace {
-                display_lines: action.display_lines,
-            },
-            cx,
-        )
-    });
-    Vim::action(editor, cx, |vim, action: &StartOfLine, cx| {
+    Vim::action(
+        editor,
+        cx,
+        |vim, action: &FirstNonWhitespace, window, cx| {
+            vim.motion(
+                Motion::FirstNonWhitespace {
+                    display_lines: action.display_lines,
+                },
+                cx,
+            )
+        },
+    );
+    Vim::action(editor, cx, |vim, action: &StartOfLine, window, cx| {
         vim.motion(
             Motion::StartOfLine {
                 display_lines: action.display_lines,
@@ -336,7 +342,7 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             cx,
         )
     });
-    Vim::action(editor, cx, |vim, action: &EndOfLine, cx| {
+    Vim::action(editor, cx, |vim, action: &EndOfLine, window, cx| {
         vim.motion(
             Motion::EndOfLine {
                 display_lines: action.display_lines,
@@ -344,166 +350,166 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             cx,
         )
     });
-    Vim::action(editor, cx, |vim, _: &CurrentLine, cx| {
+    Vim::action(editor, cx, |vim, _: &CurrentLine, window, cx| {
         vim.motion(Motion::CurrentLine, cx)
     });
-    Vim::action(editor, cx, |vim, _: &StartOfParagraph, cx| {
+    Vim::action(editor, cx, |vim, _: &StartOfParagraph, window, cx| {
         vim.motion(Motion::StartOfParagraph, cx)
     });
-    Vim::action(editor, cx, |vim, _: &EndOfParagraph, cx| {
+    Vim::action(editor, cx, |vim, _: &EndOfParagraph, window, cx| {
         vim.motion(Motion::EndOfParagraph, cx)
     });
 
-    Vim::action(editor, cx, |vim, _: &SentenceForward, cx| {
+    Vim::action(editor, cx, |vim, _: &SentenceForward, window, cx| {
         vim.motion(Motion::SentenceForward, cx)
     });
-    Vim::action(editor, cx, |vim, _: &SentenceBackward, cx| {
+    Vim::action(editor, cx, |vim, _: &SentenceBackward, window, cx| {
         vim.motion(Motion::SentenceBackward, cx)
     });
-    Vim::action(editor, cx, |vim, _: &StartOfDocument, cx| {
+    Vim::action(editor, cx, |vim, _: &StartOfDocument, window, cx| {
         vim.motion(Motion::StartOfDocument, cx)
     });
-    Vim::action(editor, cx, |vim, _: &EndOfDocument, cx| {
+    Vim::action(editor, cx, |vim, _: &EndOfDocument, window, cx| {
         vim.motion(Motion::EndOfDocument, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Matching, cx| {
+    Vim::action(editor, cx, |vim, _: &Matching, window, cx| {
         vim.motion(Motion::Matching, cx)
     });
     Vim::action(
         editor,
         cx,
-        |vim, &UnmatchedForward { char }: &UnmatchedForward, cx| {
+        |vim, &UnmatchedForward { char }: &UnmatchedForward, window, cx| {
             vim.motion(Motion::UnmatchedForward { char }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &UnmatchedBackward { char }: &UnmatchedBackward, cx| {
+        |vim, &UnmatchedBackward { char }: &UnmatchedBackward, window, cx| {
             vim.motion(Motion::UnmatchedBackward { char }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &NextWordStart { ignore_punctuation }: &NextWordStart, cx| {
+        |vim, &NextWordStart { ignore_punctuation }: &NextWordStart, window, cx| {
             vim.motion(Motion::NextWordStart { ignore_punctuation }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &NextWordEnd { ignore_punctuation }: &NextWordEnd, cx| {
+        |vim, &NextWordEnd { ignore_punctuation }: &NextWordEnd, window, cx| {
             vim.motion(Motion::NextWordEnd { ignore_punctuation }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &PreviousWordStart { ignore_punctuation }: &PreviousWordStart, cx| {
+        |vim, &PreviousWordStart { ignore_punctuation }: &PreviousWordStart, window, cx| {
             vim.motion(Motion::PreviousWordStart { ignore_punctuation }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &PreviousWordEnd { ignore_punctuation }, cx| {
+        |vim, &PreviousWordEnd { ignore_punctuation }, window, cx| {
             vim.motion(Motion::PreviousWordEnd { ignore_punctuation }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &NextSubwordStart { ignore_punctuation }: &NextSubwordStart, cx| {
+        |vim, &NextSubwordStart { ignore_punctuation }: &NextSubwordStart, window, cx| {
             vim.motion(Motion::NextSubwordStart { ignore_punctuation }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &NextSubwordEnd { ignore_punctuation }: &NextSubwordEnd, cx| {
+        |vim, &NextSubwordEnd { ignore_punctuation }: &NextSubwordEnd, window, cx| {
             vim.motion(Motion::NextSubwordEnd { ignore_punctuation }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &PreviousSubwordStart { ignore_punctuation }: &PreviousSubwordStart, cx| {
+        |vim, &PreviousSubwordStart { ignore_punctuation }: &PreviousSubwordStart, window, cx| {
             vim.motion(Motion::PreviousSubwordStart { ignore_punctuation }, cx)
         },
     );
     Vim::action(
         editor,
         cx,
-        |vim, &PreviousSubwordEnd { ignore_punctuation }, cx| {
+        |vim, &PreviousSubwordEnd { ignore_punctuation }, window, cx| {
             vim.motion(Motion::PreviousSubwordEnd { ignore_punctuation }, cx)
         },
     );
-    Vim::action(editor, cx, |vim, &NextLineStart, cx| {
+    Vim::action(editor, cx, |vim, &NextLineStart, window, cx| {
         vim.motion(Motion::NextLineStart, cx)
     });
-    Vim::action(editor, cx, |vim, &PreviousLineStart, cx| {
+    Vim::action(editor, cx, |vim, &PreviousLineStart, window, cx| {
         vim.motion(Motion::PreviousLineStart, cx)
     });
-    Vim::action(editor, cx, |vim, &StartOfLineDownward, cx| {
+    Vim::action(editor, cx, |vim, &StartOfLineDownward, window, cx| {
         vim.motion(Motion::StartOfLineDownward, cx)
     });
-    Vim::action(editor, cx, |vim, &EndOfLineDownward, cx| {
+    Vim::action(editor, cx, |vim, &EndOfLineDownward, window, cx| {
         vim.motion(Motion::EndOfLineDownward, cx)
     });
-    Vim::action(editor, cx, |vim, &GoToColumn, cx| {
+    Vim::action(editor, cx, |vim, &GoToColumn, window, cx| {
         vim.motion(Motion::GoToColumn, cx)
     });
 
-    Vim::action(editor, cx, |vim, _: &RepeatFind, cx| {
+    Vim::action(editor, cx, |vim, _: &RepeatFind, window, cx| {
         if let Some(last_find) = Vim::globals(cx).last_find.clone().map(Box::new) {
             vim.motion(Motion::RepeatFind { last_find }, cx);
         }
     });
 
-    Vim::action(editor, cx, |vim, _: &RepeatFindReversed, cx| {
+    Vim::action(editor, cx, |vim, _: &RepeatFindReversed, window, cx| {
         if let Some(last_find) = Vim::globals(cx).last_find.clone().map(Box::new) {
             vim.motion(Motion::RepeatFindReversed { last_find }, cx);
         }
     });
-    Vim::action(editor, cx, |vim, &WindowTop, cx| {
+    Vim::action(editor, cx, |vim, &WindowTop, window, cx| {
         vim.motion(Motion::WindowTop, cx)
     });
-    Vim::action(editor, cx, |vim, &WindowMiddle, cx| {
+    Vim::action(editor, cx, |vim, &WindowMiddle, window, cx| {
         vim.motion(Motion::WindowMiddle, cx)
     });
-    Vim::action(editor, cx, |vim, &WindowBottom, cx| {
+    Vim::action(editor, cx, |vim, &WindowBottom, window, cx| {
         vim.motion(Motion::WindowBottom, cx)
     });
 
-    Vim::action(editor, cx, |vim, &PreviousSectionStart, cx| {
+    Vim::action(editor, cx, |vim, &PreviousSectionStart, window, cx| {
         vim.motion(Motion::PreviousSectionStart, cx)
     });
-    Vim::action(editor, cx, |vim, &NextSectionStart, cx| {
+    Vim::action(editor, cx, |vim, &NextSectionStart, window, cx| {
         vim.motion(Motion::NextSectionStart, cx)
     });
-    Vim::action(editor, cx, |vim, &PreviousSectionEnd, cx| {
+    Vim::action(editor, cx, |vim, &PreviousSectionEnd, window, cx| {
         vim.motion(Motion::PreviousSectionEnd, cx)
     });
-    Vim::action(editor, cx, |vim, &NextSectionEnd, cx| {
+    Vim::action(editor, cx, |vim, &NextSectionEnd, window, cx| {
         vim.motion(Motion::NextSectionEnd, cx)
     });
-    Vim::action(editor, cx, |vim, &PreviousMethodStart, cx| {
+    Vim::action(editor, cx, |vim, &PreviousMethodStart, window, cx| {
         vim.motion(Motion::PreviousMethodStart, cx)
     });
-    Vim::action(editor, cx, |vim, &NextMethodStart, cx| {
+    Vim::action(editor, cx, |vim, &NextMethodStart, window, cx| {
         vim.motion(Motion::NextMethodStart, cx)
     });
-    Vim::action(editor, cx, |vim, &PreviousMethodEnd, cx| {
+    Vim::action(editor, cx, |vim, &PreviousMethodEnd, window, cx| {
         vim.motion(Motion::PreviousMethodEnd, cx)
     });
-    Vim::action(editor, cx, |vim, &NextMethodEnd, cx| {
+    Vim::action(editor, cx, |vim, &NextMethodEnd, window, cx| {
         vim.motion(Motion::NextMethodEnd, cx)
     });
-    Vim::action(editor, cx, |vim, &NextComment, cx| {
+    Vim::action(editor, cx, |vim, &NextComment, window, cx| {
         vim.motion(Motion::NextComment, cx)
     });
-    Vim::action(editor, cx, |vim, &PreviousComment, cx| {
+    Vim::action(editor, cx, |vim, &PreviousComment, window, cx| {
         vim.motion(Motion::PreviousComment, cx)
     });
 }
@@ -518,7 +524,7 @@ impl Vim {
                 Mode::Visual | Mode::VisualLine | Mode::VisualBlock => {
                     if !prior_selections.is_empty() {
                         self.update_editor(cx, |_, editor, cx| {
-                            editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                            editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                                 s.select_ranges(prior_selections.iter().cloned())
                             })
                         });

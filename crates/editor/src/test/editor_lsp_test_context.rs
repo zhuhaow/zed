@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::Result;
 use serde_json::json;
+use ui::prelude::Window;
 
 use crate::{Editor, ToPoint};
 use collections::HashSet;
@@ -76,8 +77,10 @@ impl EditorLspTestContext {
     pub async fn new(
         language: Language,
         capabilities: lsp::ServerCapabilities,
+        window: &mut Window,
         cx: &mut gpui::TestAppContext,
     ) -> EditorLspTestContext {
+        let window_handle = window.handle();
         let app_state = cx.update(AppState::test);
 
         cx.update(|cx| {
@@ -139,8 +142,8 @@ impl EditorLspTestContext {
             .await;
         let file = cx.read(|cx| workspace.file_project_paths(cx)[0].clone());
         let item = workspace
-            .update(&mut cx, |workspace, cx| {
-                workspace.open_path(file, None, true, cx)
+            .update_in_window(window_handle, &mut cx, |workspace, window, cx| {
+                workspace.open_path(file, None, true, window, cx)
             })
             .await
             .expect("Could not open test file");

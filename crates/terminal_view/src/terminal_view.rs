@@ -77,7 +77,7 @@ pub fn init(cx: &mut AppContext) {
 
     register_serializable_item::<TerminalView>(cx);
 
-    cx.observe_new_views(|workspace: &mut Workspace, _cx| {
+    cx.observe_new_views(|workspace: &mut Workspace, _window, _cx| {
         workspace.register_action(TerminalView::deploy);
     })
     .detach();
@@ -135,8 +135,13 @@ impl TerminalView {
         cx: &mut ViewContext<Workspace>,
     ) {
         let working_directory = default_working_directory(workspace, cx);
-        TerminalPanel::add_center_terminal(workspace, TerminalKind::Shell(working_directory), cx)
-            .detach_and_log_err(cx);
+        TerminalPanel::add_center_terminal(
+            workspace,
+            TerminalKind::Shell(working_directory),
+            window,
+            cx,
+        )
+        .detach_and_log_err(cx);
     }
 
     pub fn new(
@@ -947,24 +952,24 @@ impl Render for TerminalView {
             .relative()
             .track_focus(&self.focus_handle(cx))
             .key_context(self.dispatch_context(cx))
-            .on_action(cx.listener2(TerminalView::send_text))
-            .on_action(cx.listener2(TerminalView::send_keystroke))
-            .on_action(cx.listener2(TerminalView::copy))
-            .on_action(cx.listener2(TerminalView::paste))
-            .on_action(cx.listener2(TerminalView::clear))
-            .on_action(cx.listener2(TerminalView::scroll_line_up))
-            .on_action(cx.listener2(TerminalView::scroll_line_down))
-            .on_action(cx.listener2(TerminalView::scroll_page_up))
-            .on_action(cx.listener2(TerminalView::scroll_page_down))
-            .on_action(cx.listener2(TerminalView::scroll_to_top))
-            .on_action(cx.listener2(TerminalView::scroll_to_bottom))
-            .on_action(cx.listener2(TerminalView::toggle_vi_mode))
-            .on_action(cx.listener2(TerminalView::show_character_palette))
-            .on_action(cx.listener2(TerminalView::select_all))
-            .on_key_down(cx.listener2(Self::key_down))
+            .on_action(cx.listener(TerminalView::send_text))
+            .on_action(cx.listener(TerminalView::send_keystroke))
+            .on_action(cx.listener(TerminalView::copy))
+            .on_action(cx.listener(TerminalView::paste))
+            .on_action(cx.listener(TerminalView::clear))
+            .on_action(cx.listener(TerminalView::scroll_line_up))
+            .on_action(cx.listener(TerminalView::scroll_line_down))
+            .on_action(cx.listener(TerminalView::scroll_page_up))
+            .on_action(cx.listener(TerminalView::scroll_page_down))
+            .on_action(cx.listener(TerminalView::scroll_to_top))
+            .on_action(cx.listener(TerminalView::scroll_to_bottom))
+            .on_action(cx.listener(TerminalView::toggle_vi_mode))
+            .on_action(cx.listener(TerminalView::show_character_palette))
+            .on_action(cx.listener(TerminalView::select_all))
+            .on_key_down(cx.listener(Self::key_down))
             .on_mouse_down(
                 MouseButton::Right,
-                cx.listener(|this, event: &MouseDownEvent, window, cx| {
+                cx.listener2(|this, event: &MouseDownEvent, window, cx| {
                     if !this.terminal.read(cx).mouse_mode(event.modifiers.shift) {
                         this.deploy_context_menu(event.position, cx);
                         cx.notify();
@@ -1080,6 +1085,7 @@ impl Item for TerminalView {
     fn clone_on_split(
         &self,
         workspace_id: Option<WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>> {
         let window = window.handle();
@@ -1181,6 +1187,7 @@ impl SerializableItem for TerminalView {
         _workspace: &mut Workspace,
         item_id: workspace::ItemId,
         _closing: bool,
+        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<Task<gpui::Result<()>>> {
         let terminal = self.terminal().read(cx);
@@ -1208,6 +1215,7 @@ impl SerializableItem for TerminalView {
         workspace: WeakView<Workspace>,
         workspace_id: workspace::WorkspaceId,
         item_id: workspace::ItemId,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Task<anyhow::Result<View<Self>>> {
         let window = window.handle();
@@ -1526,7 +1534,7 @@ mod tests {
 
         let project = Project::test(params.fs.clone(), [], cx).await;
         let workspace = cx
-            .add_window(|cx| Workspace::test_new(project.clone(), cx))
+            .add_window(|window, cx| Workspace::test_new(project.clone(), window, cx))
             .root_view(cx);
 
         (project, workspace)

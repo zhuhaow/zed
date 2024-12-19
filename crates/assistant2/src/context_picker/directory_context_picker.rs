@@ -23,11 +23,12 @@ impl DirectoryContextPicker {
         context_picker: WeakView<ContextPicker>,
         workspace: WeakView<Workspace>,
         context_store: WeakModel<ContextStore>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let delegate =
             DirectoryContextPickerDelegate::new(context_picker, workspace, context_store);
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
 
         Self { picker }
     }
@@ -93,7 +94,12 @@ impl PickerDelegate for DirectoryContextPickerDelegate {
         Task::ready(())
     }
 
-    fn confirm(&mut self, _secondary: bool, _cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        _cx: &mut ViewContext<Picker<Self>>,
+    ) {
         // TODO: Implement this once we fix the issues with the file context picker.
     }
 

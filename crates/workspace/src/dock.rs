@@ -621,13 +621,13 @@ impl Render for Dock {
                     })
                     .on_mouse_down(
                         MouseButton::Left,
-                        cx.listener(|_, _: &MouseDownEvent, window, cx| {
+                        cx.listener2(|_, _: &MouseDownEvent, window, cx| {
                             cx.stop_propagation();
                         }),
                     )
                     .on_mouse_up(
                         MouseButton::Left,
-                        cx.listener(|v, e: &MouseUpEvent, window, cx| {
+                        cx.listener2(|v, e: &MouseUpEvent, window, cx| {
                             if e.click_count == 2 {
                                 v.resize_active_panel(None, cx);
                                 cx.stop_propagation();
@@ -765,7 +765,7 @@ impl Render for PanelButtons {
                                         menu = menu.entry(
                                             format!("Dock {}", position.label()),
                                             None,
-                                            move |cx| {
+                                            move |window, cx| {
                                                 panel.set_position(position, cx);
                                             },
                                         )

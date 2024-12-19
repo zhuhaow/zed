@@ -27,7 +27,7 @@ actions!(
 );
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(move |workspace: &mut Workspace, _cx| {
+    cx.observe_new_views(move |workspace: &mut Workspace, _window, _cx| {
         workspace.register_action(|workspace, _: &RateCompletions, window, cx| {
             RateCompletionModal::toggle(workspace, cx);
         });
@@ -512,7 +512,7 @@ impl RateCompletionModal {
                                                 Tooltip::text("Explain what's bad about it before reporting it", cx)
                                             })
                                         })
-                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                        .on_click(cx.listener2(move |this, _, window, cx| {
                                             this.thumbs_down_active(
                                                 &ThumbsDownActiveCompletion,
                                                 window,
@@ -532,7 +532,7 @@ impl RateCompletionModal {
                                         .icon_size(IconSize::Small)
                                         .icon_position(IconPosition::Start)
                                         .disabled(rated)
-                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                        .on_click(cx.listener2(move |this, _, window, cx| {
                                             this.thumbs_up_active(&ThumbsUpActiveCompletion, window, cx);
                                         })),
                                 ),
@@ -549,19 +549,19 @@ impl Render for RateCompletionModal {
         h_flex()
             .key_context("RateCompletionModal")
             .track_focus(&self.focus_handle)
-            .on_action(cx.listener(Self::dismiss))
-            .on_action(cx.listener(Self::confirm))
-            .on_action(cx.listener(Self::select_prev))
-            .on_action(cx.listener(Self::select_prev_edit))
-            .on_action(cx.listener(Self::select_next))
-            .on_action(cx.listener(Self::select_next_edit))
-            .on_action(cx.listener(Self::select_first))
-            .on_action(cx.listener(Self::select_last))
-            .on_action(cx.listener(Self::thumbs_up))
-            .on_action(cx.listener(Self::thumbs_up_active))
-            .on_action(cx.listener(Self::thumbs_down_active))
-            .on_action(cx.listener(Self::focus_completions))
-            .on_action(cx.listener(Self::preview_completion))
+            .on_action(cx.listener2(Self::dismiss))
+            .on_action(cx.listener2(Self::confirm))
+            .on_action(cx.listener2(Self::select_prev))
+            .on_action(cx.listener2(Self::select_prev_edit))
+            .on_action(cx.listener2(Self::select_next))
+            .on_action(cx.listener2(Self::select_next_edit))
+            .on_action(cx.listener2(Self::select_first))
+            .on_action(cx.listener2(Self::select_last))
+            .on_action(cx.listener2(Self::thumbs_up))
+            .on_action(cx.listener2(Self::thumbs_up_active))
+            .on_action(cx.listener2(Self::thumbs_down_active))
+            .on_action(cx.listener2(Self::focus_completions))
+            .on_action(cx.listener2(Self::preview_completion))
             .bg(cx.theme().colors().elevated_surface_background)
             .border_1()
             .border_color(border_color)
@@ -641,7 +641,7 @@ impl Render for RateCompletionModal {
                                                             .size(LabelSize::XSmall)
                                                         )
                                                 )
-                                                .on_click(cx.listener(move |this, _, window, cx| {
+                                                .on_click(cx.listener2(move |this, _, window, cx| {
                                                     this.select_completion(Some(completion.clone()), true, cx);
                                                 }))
                                         },
@@ -650,7 +650,7 @@ impl Render for RateCompletionModal {
                     ),
             )
             .children(self.render_active_completion(cx))
-            .on_mouse_down_out(cx.listener(|_, _, window, cx| cx.emit(DismissEvent)))
+            .on_mouse_down_out(cx.listener2(|_, _, window, cx| cx.emit(DismissEvent)))
     }
 }
 

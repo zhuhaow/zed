@@ -16,18 +16,19 @@ pub(crate) enum Head {
 impl Head {
     pub fn editor<V: 'static>(
         placeholder_text: Arc<str>,
-        mut edit_handler: impl FnMut(&mut V, View<Editor>, &EditorEvent, &mut ViewContext<'_, V>)
+        mut edit_handler: impl FnMut(&mut V, View<Editor>, &EditorEvent, &mut Window, &mut ViewContext<'_, V>)
             + 'static,
+        window: &mut Window,
         cx: &mut ViewContext<V>,
     ) -> Self {
         let editor = cx.new_view(|cx| {
-            let mut editor = Editor::single_line(cx);
+            let mut editor = Editor::single_line(window, cx);
             editor.set_placeholder_text(placeholder_text, cx);
             editor
         });
 
-        cx.subscribe(&editor, move |view, editor, event, cx| {
-            edit_handler(view, editor, event, todo!());
+        cx.subscribe_in_window(&editor, window, move |view, editor, event, window, cx| {
+            edit_handler(view, editor, event, window, cx);
         })
         .detach();
         Self::Editor(editor)

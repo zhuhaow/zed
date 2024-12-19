@@ -11,8 +11,8 @@ use picker::{highlighted_match_with_paths::HighlightedText, Picker, PickerDelega
 use project::{task_store::TaskStore, TaskSourceKind};
 use task::{ResolvedTask, RevealTarget, TaskContext, TaskTemplate};
 use ui::{
-    div, h_flex, v_flex, ActiveTheme, Button, ButtonCommon, ButtonSize, Clickable, Color,
-    FluentBuilder as _, Icon, IconButton, IconButtonShape, IconName, IconSize, IntoElement,
+    div, h_flex, prelude::Window, v_flex, ActiveTheme, Button, ButtonCommon, ButtonSize, Clickable,
+    Color, FluentBuilder as _, Icon, IconButton, IconButtonShape, IconName, IconSize, IntoElement,
     KeyBinding, LabelSize, ListItem, ListItemSpacing, RenderOnce, Toggleable, Tooltip,
     WindowContext,
 };
@@ -126,11 +126,13 @@ impl TasksModal {
         task_context: TaskContext,
         task_overrides: Option<TaskOverrides>,
         workspace: WeakView<Workspace>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let picker = cx.new_view(|cx| {
             Picker::uniform_list(
                 TasksModalDelegate::new(task_store, task_context, task_overrides, workspace),
+                window,
                 cx,
             )
         });
@@ -271,7 +273,12 @@ impl PickerDelegate for TasksModalDelegate {
         })
     }
 
-    fn confirm(&mut self, omit_history_entry: bool, cx: &mut ViewContext<picker::Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        omit_history_entry: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<picker::Picker<Self>>,
+    ) {
         let current_match_index = self.selected_index();
         let task = self
             .matches
@@ -390,7 +397,7 @@ impl PickerDelegate for TasksModalDelegate {
                                 .icon_color(Color::Muted)
                                 .size(ButtonSize::None)
                                 .icon_size(IconSize::XSmall)
-                                .on_click(cx.listener(move |picker, _event, window, cx| {
+                                .on_click(cx.listener2(move |picker, _event, window, cx| {
                                     cx.stop_propagation();
                                     cx.prevent_default();
 
@@ -400,7 +407,7 @@ impl PickerDelegate for TasksModalDelegate {
                                         .last_used_candidate_index
                                         .unwrap_or(0)
                                         .checked_sub(1);
-                                    picker.refresh(cx);
+                                    picker.refresh(window, cx);
                                 }))
                                 .tooltip(|window, cx| {
                                     Tooltip::text("Delete Previously Scheduled Task", cx)
@@ -608,7 +615,8 @@ mod tests {
         .await;
 
         let project = Project::test(fs, ["/dir".as_ref()], cx).await;
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project, cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
 
         let tasks_picker = open_spawn_tasks(&workspace, cx);
         assert_eq!(
@@ -772,7 +780,8 @@ mod tests {
         .await;
 
         let project = Project::test(fs, ["/dir".as_ref()], cx).await;
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         let tasks_picker = open_spawn_tasks(&workspace, cx);
         assert_eq!(
@@ -817,7 +826,7 @@ mod tests {
 
         let editor = cx.update(|cx| second_item.act_as::<Editor>(cx)).unwrap();
         editor.update(cx, |editor, cx| {
-            editor.change_selections(None, cx, |s| {
+            editor.change_selections(None, window, cx, |s| {
                 s.select_ranges(Some(Point::new(1, 2)..Point::new(1, 5)))
             })
         });
@@ -908,7 +917,8 @@ mod tests {
                 ))),
             ));
         });
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         let _ts_file_1 = workspace
             .update(cx, |workspace, cx| {

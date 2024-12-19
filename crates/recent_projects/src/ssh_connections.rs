@@ -371,8 +371,8 @@ impl Render for SshConnectionModal {
             .border_color(theme.colors().border)
             .key_context("SshConnectionModal")
             .track_focus(&self.focus_handle(cx))
-            .on_action(cx.listener2(Self::dismiss))
-            .on_action(cx.listener2(Self::confirm))
+            .on_action(cx.listener(Self::dismiss))
+            .on_action(cx.listener(Self::confirm))
             .child(
                 SshConnectionHeader {
                     paths: self.paths.clone(),
@@ -515,6 +515,7 @@ pub fn connect_over_ssh(
     unique_identifier: ConnectionIdentifier,
     connection_options: SshConnectionOptions,
     ui: View<SshPrompt>,
+    window: &mut Window,
     cx: &mut WindowContext,
 ) -> Task<Result<Option<Model<SshRemoteClient>>>> {
     let window = window.handle();

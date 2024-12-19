@@ -118,7 +118,7 @@ impl Vim {
                         ranges.push(anchor..anchor);
                     }
                 }
-                editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                     s.select_anchor_ranges(ranges)
                 })
             });

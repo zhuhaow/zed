@@ -9,7 +9,9 @@ use language::{Buffer, OwnedSyntaxLayer};
 use std::{mem, ops::Range};
 use theme::ActiveTheme;
 use tree_sitter::{Node, TreeCursor};
-use ui::{h_flex, ButtonLike, Color, ContextMenu, Label, LabelCommon, PopoverMenu};
+use ui::{
+    h_flex, prelude::Window, ButtonLike, Color, ContextMenu, Label, LabelCommon, PopoverMenu,
+};
 use workspace::{
     item::{Item, ItemHandle},
     SplitDirection, ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView, Workspace,
@@ -18,13 +20,18 @@ use workspace::{
 actions!(debug, [OpenSyntaxTreeView]);
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(|workspace: &mut Workspace, _| {
+    cx.observe_new_views(|workspace: &mut Workspace, _, _| {
         workspace.register_action(|workspace, _: &OpenSyntaxTreeView, window, cx| {
             let active_item = workspace.active_item(cx);
             let workspace_handle = workspace.weak_handle();
             let syntax_tree_view =
                 cx.new_view(|cx| SyntaxTreeView::new(workspace_handle, active_item, cx));
-            workspace.split_item(SplitDirection::Right, Box::new(syntax_tree_view), cx)
+            workspace.split_item(
+                SplitDirection::Right,
+                Box::new(syntax_tree_view),
+                window,
+                cx,
+            )
         });
     })
     .detach();
@@ -313,7 +320,7 @@ impl Render for SyntaxTreeView {
                                 )
                                 .on_mouse_down(
                                     MouseButton::Left,
-                                    cx.listener(move |tree_view, _: &MouseDownEvent, window, cx| {
+                                    cx.listener2(move |tree_view, _: &MouseDownEvent, window, cx| {
                                         tree_view.update_editor_with_range_for_descendant_ix(
                                             descendant_ix,
                                             cx,
@@ -332,7 +339,7 @@ impl Render for SyntaxTreeView {
                                         );
                                     }),
                                 )
-                                .on_mouse_move(cx.listener(
+                                .on_mouse_move(cx.listener2(
                                     move |tree_view, _: &MouseMoveEvent, window, cx| {
                                         if tree_view.hovered_descendant_ix != Some(descendant_ix) {
                                             tree_view.hovered_descendant_ix = Some(descendant_ix);
@@ -393,6 +400,7 @@ impl Item for SyntaxTreeView {
     fn clone_on_split(
         &self,
         _: Option<workspace::WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>>
     where
@@ -445,7 +453,7 @@ impl SyntaxTreeToolbarItemView {
                                     format_node_range(layer.node())
                                 ),
                                 None,
-                                cx.handler_for(&view, move |view, cx| {
+                                cx.handler_for2(&view, move |view, cx| {
                                     view.select_layer(layer_ix, cx);
                                 }),
                             );

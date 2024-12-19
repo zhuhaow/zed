@@ -139,7 +139,12 @@ impl PickerDelegate for SlashCommandDelegate {
         ret
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some(command) = self.filtered_commands.get(self.selected_index) {
             match command {
                 SlashCommandEntry::Info(info) => {
@@ -305,7 +310,8 @@ impl<T: PopoverTrigger> RenderOnce for SlashCommandSelector<T> {
         };
 
         let picker_view = cx.new_view(|cx| {
-            let picker = Picker::uniform_list(delegate, cx).max_height(Some(rems(20.).into()));
+            let picker =
+                Picker::uniform_list(delegate, window, cx).max_height(Some(rems(20.).into()));
             picker
         });
 

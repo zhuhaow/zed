@@ -24,7 +24,7 @@ impl Vim {
                     });
                 });
                 editor.toggle_comments(&Default::default(), cx);
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.move_with(|map, selection| {
                         let anchor = selection_starts.remove(&selection.id).unwrap();
                         selection.collapse_to(anchor.to_display_point(map), SelectionGoal::None);
@@ -52,7 +52,7 @@ impl Vim {
                     });
                 });
                 editor.toggle_comments(&Default::default(), cx);
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.move_with(|map, selection| {
                         let anchor = original_positions.remove(&selection.id).unwrap();
                         selection.collapse_to(anchor.to_display_point(map), SelectionGoal::None);

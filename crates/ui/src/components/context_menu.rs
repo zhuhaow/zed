@@ -98,12 +98,12 @@ impl ContextMenu {
         mut self,
         label: impl Into<SharedString>,
         action: Option<Box<dyn Action>>,
-        handler: impl Fn(&mut WindowContext) + 'static,
+        handler: impl Fn(&mut Window, &mut WindowContext) + 'static,
     ) -> Self {
         self.items.push(ContextMenuItem::Entry {
             toggle: None,
             label: label.into(),
-            handler: Rc::new(move |_, window, cx| handler(cx)),
+            handler: Rc::new(move |_, window, cx| handler(window, cx)),
             icon: None,
             icon_size: IconSize::Small,
             action,
@@ -118,12 +118,12 @@ impl ContextMenu {
         toggled: bool,
         position: IconPosition,
         action: Option<Box<dyn Action>>,
-        handler: impl Fn(&mut WindowContext) + 'static,
+        handler: impl Fn(&mut Window, &mut WindowContext) + 'static,
     ) -> Self {
         self.items.push(ContextMenuItem::Entry {
             toggle: Some((position, toggled)),
             label: label.into(),
-            handler: Rc::new(move |_, window, cx| handler(cx)),
+            handler: Rc::new(move |_, window, cx| handler(window, cx)),
             icon: None,
             icon_size: IconSize::Small,
             action,
@@ -147,11 +147,11 @@ impl ContextMenu {
     pub fn custom_entry(
         mut self,
         entry_render: impl Fn(&mut WindowContext) -> AnyElement + 'static,
-        handler: impl Fn(&mut WindowContext) + 'static,
+        handler: impl Fn(&mut Window, &mut WindowContext) + 'static,
     ) -> Self {
         self.items.push(ContextMenuItem::CustomEntry {
             entry_render: Box::new(entry_render),
-            handler: Rc::new(move |_, window, cx| handler(cx)),
+            handler: Rc::new(move |_, window, cx| handler(window, cx)),
             selectable: true,
         });
         self
@@ -378,15 +378,15 @@ impl Render for ContextMenu {
                     .overflow_y_scroll()
                     .track_focus(&self.focus_handle(cx))
                     .on_mouse_down_out(
-                        cx.listener(|this, _, window, cx| this.cancel(&menu::Cancel, window, cx)),
+                        cx.listener2(|this, _, window, cx| this.cancel(&menu::Cancel, window, cx)),
                     )
                     .key_context("menu")
-                    .on_action(cx.listener(ContextMenu::select_first))
-                    .on_action(cx.listener(ContextMenu::handle_select_last))
-                    .on_action(cx.listener(ContextMenu::select_next))
-                    .on_action(cx.listener(ContextMenu::select_prev))
-                    .on_action(cx.listener(ContextMenu::confirm))
-                    .on_action(cx.listener(ContextMenu::cancel))
+                    .on_action(cx.listener2(ContextMenu::select_first))
+                    .on_action(cx.listener2(ContextMenu::handle_select_last))
+                    .on_action(cx.listener2(ContextMenu::select_next))
+                    .on_action(cx.listener2(ContextMenu::select_prev))
+                    .on_action(cx.listener2(ContextMenu::confirm))
+                    .on_action(cx.listener2(ContextMenu::cancel))
                     .when(!self.delayed, |mut el| {
                         for item in self.items.iter() {
                             if let ContextMenuItem::Entry {
@@ -397,7 +397,7 @@ impl Render for ContextMenu {
                             {
                                 el = el.on_boxed_action(
                                     &**action,
-                                    cx.listener(ContextMenu::on_action_dispatch),
+                                    cx.listener2(ContextMenu::on_action_dispatch),
                                 );
                             }
                         }

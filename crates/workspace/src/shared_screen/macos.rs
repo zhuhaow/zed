@@ -112,6 +112,7 @@ impl Item for SharedScreen {
     fn clone_on_split(
         &self,
         _workspace_id: Option<WorkspaceId>,
+        _window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>> {
         let track = self.track.upgrade()?;

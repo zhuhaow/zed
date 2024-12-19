@@ -538,17 +538,19 @@ impl CompletionsMenu {
                                     ListItem::new(mat.candidate_id)
                                         .inset(true)
                                         .toggle_state(item_ix == selected_item)
-                                        .on_click(cx.listener(move |editor, _event, window, cx| {
-                                            cx.stop_propagation();
-                                            if let Some(task) = editor.confirm_completion(
-                                                &ConfirmCompletion {
-                                                    item_ix: Some(item_ix),
-                                                },
-                                                cx,
-                                            ) {
-                                                task.detach_and_log_err(cx)
-                                            }
-                                        }))
+                                        .on_click(cx.listener2(
+                                            move |editor, _event, window, cx| {
+                                                cx.stop_propagation();
+                                                if let Some(task) = editor.confirm_completion(
+                                                    &ConfirmCompletion {
+                                                        item_ix: Some(item_ix),
+                                                    },
+                                                    cx,
+                                                ) {
+                                                    task.detach_and_log_err(cx)
+                                                }
+                                            },
+                                        ))
                                         .start_slot::<Div>(color_swatch)
                                         .child(h_flex().overflow_hidden().child(completion_label))
                                         .end_slot::<Label>(documentation_label),
@@ -569,7 +571,7 @@ impl CompletionsMenu {
                                         ))
                                         .with_highlights(&style.text, None),
                                     )
-                                    .on_click(cx.listener(move |editor, _event, window, cx| {
+                                    .on_click(cx.listener2(move |editor, _event, window, cx| {
                                         cx.stop_propagation();
                                         editor.accept_inline_completion(
                                             &AcceptInlineCompletion {},
@@ -906,12 +908,13 @@ impl CodeActionsMenu {
                                 .inset(true)
                                 .toggle_state(selected)
                                 .when_some(action.as_code_action(), |this, action| {
-                                    this.on_click(cx.listener(move |editor, _, window, cx| {
+                                    this.on_click(cx.listener2(move |editor, _, window, cx| {
                                         cx.stop_propagation();
                                         if let Some(task) = editor.confirm_code_action(
                                             &ConfirmCodeAction {
                                                 item_ix: Some(item_ix),
                                             },
+                                            window,
                                             cx,
                                         ) {
                                             task.detach_and_log_err(cx)
@@ -930,12 +933,13 @@ impl CodeActionsMenu {
                                     )
                                 })
                                 .when_some(action.as_task(), |this, task| {
-                                    this.on_click(cx.listener(move |editor, _, window, cx| {
+                                    this.on_click(cx.listener2(move |editor, _, window, cx| {
                                         cx.stop_propagation();
                                         if let Some(task) = editor.confirm_code_action(
                                             &ConfirmCodeAction {
                                                 item_ix: Some(item_ix),
                                             },
+                                            window,
                                             cx,
                                         ) {
                                             task.detach_and_log_err(cx)

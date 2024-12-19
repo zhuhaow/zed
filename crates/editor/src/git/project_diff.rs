@@ -60,7 +60,7 @@ struct Changes {
 }
 
 impl ProjectDiffEditor {
-    fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
+    fn register(workspace: &mut Workspace, window: &mut Window, _: &mut ViewContext<Workspace>) {
         workspace.register_action(Self::deploy);
     }
 
@@ -154,7 +154,7 @@ impl ProjectDiffEditor {
 
         let editor = cx.new_view(|cx| {
             let mut diff_display_editor =
-                Editor::for_multibuffer(excerpts.clone(), Some(project.clone()), true, cx);
+                Editor::for_multibuffer(excerpts.clone(), Some(project.clone()), true, window, cx);
             diff_display_editor.set_expand_all_diff_hunks();
             diff_display_editor
         });
@@ -1001,6 +1001,7 @@ impl Item for ProjectDiffEditor {
     fn clone_on_split(
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>>
     where
@@ -1150,7 +1151,7 @@ mod tests {
         let file_a_editor = workspace
             .update(cx, |workspace, window, cx| {
                 let file_a_editor =
-                    workspace.open_abs_path(PathBuf::from("/root/file_a"), true, cx);
+                    workspace.open_abs_path(PathBuf::from("/root/file_a"), true, window, cx);
                 ProjectDiffEditor::deploy(workspace, &Deploy, window, cx);
                 file_a_editor
             })

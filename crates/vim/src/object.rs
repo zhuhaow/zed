@@ -79,51 +79,53 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
     Vim::action(
         editor,
         cx,
-        |vim, &Word { ignore_punctuation }: &Word, cx| {
+        |vim, &Word { ignore_punctuation }: &Word, window, cx| {
             vim.object(Object::Word { ignore_punctuation }, cx)
         },
     );
-    Vim::action(editor, cx, |vim, _: &Tag, cx| vim.object(Object::Tag, cx));
-    Vim::action(editor, cx, |vim, _: &Sentence, cx| {
+    Vim::action(editor, cx, |vim, _: &Tag, window, cx| {
+        vim.object(Object::Tag, cx)
+    });
+    Vim::action(editor, cx, |vim, _: &Sentence, window, cx| {
         vim.object(Object::Sentence, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Paragraph, cx| {
+    Vim::action(editor, cx, |vim, _: &Paragraph, window, cx| {
         vim.object(Object::Paragraph, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Quotes, cx| {
+    Vim::action(editor, cx, |vim, _: &Quotes, window, cx| {
         vim.object(Object::Quotes, cx)
     });
-    Vim::action(editor, cx, |vim, _: &BackQuotes, cx| {
+    Vim::action(editor, cx, |vim, _: &BackQuotes, window, cx| {
         vim.object(Object::BackQuotes, cx)
     });
-    Vim::action(editor, cx, |vim, _: &DoubleQuotes, cx| {
+    Vim::action(editor, cx, |vim, _: &DoubleQuotes, window, cx| {
         vim.object(Object::DoubleQuotes, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Parentheses, cx| {
+    Vim::action(editor, cx, |vim, _: &Parentheses, window, cx| {
         vim.object(Object::Parentheses, cx)
     });
-    Vim::action(editor, cx, |vim, _: &SquareBrackets, cx| {
+    Vim::action(editor, cx, |vim, _: &SquareBrackets, window, cx| {
         vim.object(Object::SquareBrackets, cx)
     });
-    Vim::action(editor, cx, |vim, _: &CurlyBrackets, cx| {
+    Vim::action(editor, cx, |vim, _: &CurlyBrackets, window, cx| {
         vim.object(Object::CurlyBrackets, cx)
     });
-    Vim::action(editor, cx, |vim, _: &AngleBrackets, cx| {
+    Vim::action(editor, cx, |vim, _: &AngleBrackets, window, cx| {
         vim.object(Object::AngleBrackets, cx)
     });
-    Vim::action(editor, cx, |vim, _: &VerticalBars, cx| {
+    Vim::action(editor, cx, |vim, _: &VerticalBars, window, cx| {
         vim.object(Object::VerticalBars, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Argument, cx| {
+    Vim::action(editor, cx, |vim, _: &Argument, window, cx| {
         vim.object(Object::Argument, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Method, cx| {
+    Vim::action(editor, cx, |vim, _: &Method, window, cx| {
         vim.object(Object::Method, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Class, cx| {
+    Vim::action(editor, cx, |vim, _: &Class, window, cx| {
         vim.object(Object::Class, cx)
     });
-    Vim::action(editor, cx, |vim, _: &Comment, cx| {
+    Vim::action(editor, cx, |vim, _: &Comment, window, cx| {
         if !matches!(vim.active_operator(), Some(Operator::Object { .. })) {
             vim.push_operator(Operator::Object { around: true }, cx);
         }

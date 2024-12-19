@@ -38,13 +38,14 @@ impl MessageEditor {
         workspace: WeakView<Workspace>,
         thread_store: WeakModel<ThreadStore>,
         thread: Model<Thread>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let context_store = cx.new_model(|_cx| ContextStore::new());
         let context_picker_menu_handle = PopoverMenuHandle::default();
 
         let editor = cx.new_view(|cx| {
-            let mut editor = Editor::auto_height(80, cx);
+            let mut editor = Editor::auto_height(80, window, cx);
             editor.set_placeholder_text("Ask anything, @ to add context", cx);
             editor.set_show_indent_guides(false, cx);
 
@@ -76,6 +77,7 @@ impl MessageEditor {
                             move |settings, _cx| settings.set_model(model.clone()),
                         );
                     },
+                    window,
                     cx,
                 )
             }),
@@ -203,9 +205,9 @@ impl Render for MessageEditor {
 
         v_flex()
             .key_context("MessageEditor")
-            .on_action(cx.listener2(Self::chat))
-            .on_action(cx.listener2(Self::toggle_model_selector))
-            .on_action(cx.listener2(Self::toggle_context_picker))
+            .on_action(cx.listener(Self::chat))
+            .on_action(cx.listener(Self::toggle_model_selector))
+            .on_action(cx.listener(Self::toggle_context_picker))
             .size_full()
             .gap_2()
             .p_2()
@@ -240,7 +242,7 @@ impl Render for MessageEditor {
                         "use-tools",
                         Label::new("Tools"),
                         self.use_tools.into(),
-                        cx.listener2(|this, selection, _cx| {
+                        cx.listener(|this, selection, _cx| {
                             this.use_tools = match selection {
                                 ToggleState::Selected => true,
                                 ToggleState::Unselected | ToggleState::Indeterminate => false,

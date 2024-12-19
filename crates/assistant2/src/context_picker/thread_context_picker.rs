@@ -24,7 +24,7 @@ impl ThreadContextPicker {
     ) -> Self {
         let delegate =
             ThreadContextPickerDelegate::new(thread_store, context_picker, context_store);
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
 
         ThreadContextPicker { picker }
     }
@@ -145,7 +145,13 @@ impl PickerDelegate for ThreadContextPickerDelegate {
         })
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         let entry = &self.matches[self.selected_index];
 
         let Some(thread_store) = self.thread_store.upgrade() else {

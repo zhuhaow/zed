@@ -13,7 +13,7 @@ const COPILOT_SIGN_UP_URL: &str = "https://github.com/features/copilot";
 
 struct CopilotStartingToast;
 
-pub fn initiate_sign_in(window: &Window, cx: &mut WindowContext) {
+pub fn initiate_sign_in(window: &mut Window, cx: &mut WindowContext) {
     let Some(copilot) = Copilot::global(cx) else {
         return;
     };
@@ -180,7 +180,7 @@ impl CopilotCodeVerification {
                 Button::new("connect-button", connect_button_label)
                     .on_click({
                         let verification_uri = data.verification_uri.clone();
-                        cx.listener(move |this, _, window, cx| {
+                        cx.listener2(move |this, _, window, cx| {
                             cx.open_url(&verification_uri);
                             this.connect_clicked = true;
                         })
@@ -191,7 +191,7 @@ impl CopilotCodeVerification {
             .child(
                 Button::new("copilot-enable-cancel-button", "Cancel")
                     .full_width()
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(DismissEvent))),
+                    .on_click(cx.listener2(|_, _, window, cx| cx.emit(DismissEvent))),
             )
     }
     fn render_enabled_modal(cx: &mut ViewContext<Self>) -> impl Element {
@@ -204,7 +204,7 @@ impl CopilotCodeVerification {
             .child(
                 Button::new("copilot-enabled-done-button", "Done")
                     .full_width()
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(DismissEvent))),
+                    .on_click(cx.listener2(|_, _, window, cx| cx.emit(DismissEvent))),
             )
     }
 
@@ -223,7 +223,7 @@ impl CopilotCodeVerification {
             .child(
                 Button::new("copilot-subscribe-cancel-button", "Cancel")
                     .full_width()
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(DismissEvent))),
+                    .on_click(cx.listener2(|_, _, window, cx| cx.emit(DismissEvent))),
             )
     }
 
@@ -263,10 +263,10 @@ impl Render for CopilotCodeVerification {
             .items_center()
             .p_4()
             .gap_2()
-            .on_action(cx.listener(|_, _: &menu::Cancel, window, cx| {
+            .on_action(cx.listener2(|_, _: &menu::Cancel, window, cx| {
                 cx.emit(DismissEvent);
             }))
-            .on_any_mouse_down(cx.listener(|this, _: &MouseDownEvent, window, cx| {
+            .on_any_mouse_down(cx.listener2(|this, _: &MouseDownEvent, window, cx| {
                 cx.focus(&this.focus_handle);
             }))
             .child(

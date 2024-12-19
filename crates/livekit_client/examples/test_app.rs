@@ -383,7 +383,7 @@ impl Render for LivekitWindow {
                         } else {
                             "Publish mic"
                         })
-                        .on_click(cx.listener(|this, _, window, cx| this.toggle_mute(cx))),
+                        .on_click(cx.listener2(|this, _, window, cx| this.toggle_mute(cx))),
                     button()
                         .id("toggle-screen-share")
                         .child(if self.screen_share_track.is_none() {
@@ -391,7 +391,7 @@ impl Render for LivekitWindow {
                         } else {
                             "Unshare screen"
                         })
-                        .on_click(cx.listener(|this, _, window, cx| this.toggle_screen_share(cx))),
+                        .on_click(cx.listener2(|this, _, window, cx| this.toggle_screen_share(cx))),
                 ]),
             )
             .child(
@@ -425,7 +425,7 @@ impl Render for LivekitWindow {
                                         } else {
                                             "Undeafen"
                                         })
-                                        .on_click(cx.listener({
+                                        .on_click(cx.listener2({
                                             let identity = identity.clone();
                                             move |this, _, window, cx| {
                                                 this.toggle_remote_audio_for_participant(

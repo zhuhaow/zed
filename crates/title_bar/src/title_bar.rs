@@ -51,7 +51,7 @@ actions!(
 );
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(|workspace: &mut Workspace, cx| {
+    cx.observe_new_views(|workspace: &mut Workspace, window, cx| {
         let item = cx.new_view(|cx| TitleBar::new("title-bar", workspace, cx));
         workspace.set_titlebar_item(item.into(), cx)
     })
@@ -174,24 +174,24 @@ impl Render for TitleBar {
                                     move |ev, window, cx| cx.show_window_menu(ev.position),
                                 )
                             })
-                            .on_mouse_move(cx.listener(move |this, _ev, window, cx| {
+                            .on_mouse_move(cx.listener2(move |this, _ev, window, cx| {
                                 if this.should_move {
                                     this.should_move = false;
                                     cx.start_window_move();
                                 }
                             }))
-                            .on_mouse_down_out(cx.listener(move |this, _event, _window, _cx| {
+                            .on_mouse_down_out(cx.listener2(move |this, _event, _window, _cx| {
                                 this.should_move = false;
                             }))
                             .on_mouse_up(
                                 gpui::MouseButton::Left,
-                                cx.listener(move |this, _event, _window, _cx| {
+                                cx.listener2(move |this, _event, _window, _cx| {
                                     this.should_move = false;
                                 }),
                             )
                             .on_mouse_down(
                                 gpui::MouseButton::Left,
-                                cx.listener(move |this, _event, _window, _cx| {
+                                cx.listener2(move |this, _event, _window, _cx| {
                                     this.should_move = true;
                                 }),
                             )
@@ -371,7 +371,7 @@ impl TitleBar {
                 })
                 .on_click({
                     let host_peer_id = host.peer_id;
-                    cx.listener(move |this, _, window, cx| {
+                    cx.listener2(move |this, _, window, cx| {
                         this.workspace
                             .update(cx, |workspace, cx| {
                                 workspace.follow(host_peer_id, window, cx);
@@ -412,7 +412,7 @@ impl TitleBar {
                     cx,
                 )
             })
-            .on_click(cx.listener(move |_, _, window, cx| {
+            .on_click(cx.listener2(move |_, _, window, cx| {
                 cx.dispatch_action(
                     OpenRecent {
                         create_new_window: false,

@@ -33,7 +33,7 @@ const GIT_PANEL_KEY: &str = "GitPanel";
 
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
-        |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
+        |workspace: &mut Workspace, _window: &mut Window, _cx: &mut ViewContext<Workspace>| {
             workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
                 workspace.toggle_panel_focus::<GitPanel>(window, cx);
             });
@@ -489,12 +489,12 @@ impl GitPanel {
                     )
                     .child(if self.all_staged() {
                         self.panel_button("unstage-all", "Unstage All")
-                            .on_click(cx.listener(move |_, _, window, cx| {
+                            .on_click(cx.listener2(move |_, _, window, cx| {
                                 cx.dispatch_action(Box::new(DiscardAll))
                             }))
                     } else {
                         self.panel_button("stage-all", "Stage All")
-                            .on_click(cx.listener(move |_, _, window, cx| {
+                            .on_click(cx.listener2(move |_, _, window, cx| {
                                 cx.dispatch_action(Box::new(StageAll))
                             }))
                     }),
@@ -516,7 +516,7 @@ impl GitPanel {
                     cx,
                 )
             })
-            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+            .on_click(cx.listener2(|this, _: &ClickEvent, window, cx| {
                 this.commit_staged_changes(&CommitStagedChanges, cx)
             }));
 
@@ -531,7 +531,7 @@ impl GitPanel {
                     cx,
                 )
             })
-            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+            .on_click(cx.listener2(|this, _: &ClickEvent, window, cx| {
                 this.commit_all_changes(&CommitAllChanges, cx)
             }));
 
@@ -585,7 +585,7 @@ impl GitPanel {
             div()
                 .occlude()
                 .id("project-panel-vertical-scroll")
-                .on_mouse_move(cx.listener(|_, _, window, cx| {
+                .on_mouse_move(cx.listener2(|_, _, window, cx| {
                     cx.notify();
                     cx.stop_propagation()
                 }))
@@ -597,7 +597,7 @@ impl GitPanel {
                 })
                 .on_mouse_up(
                     MouseButton::Left,
-                    cx.listener(|this, _, window, cx| {
+                    cx.listener2(|this, _, window, cx| {
                         if !this.scrollbar_state.is_dragging()
                             && !this.focus_handle.contains_focused(cx)
                         {
@@ -608,7 +608,7 @@ impl GitPanel {
                         cx.stop_propagation();
                     }),
                 )
-                .on_scroll_wheel(cx.listener(|_, _, window, cx| {
+                .on_scroll_wheel(cx.listener2(|_, _, window, cx| {
                     cx.notify();
                 }))
                 .h_full()
@@ -691,25 +691,25 @@ impl Render for GitPanel {
             .id("git_panel")
             .key_context(self.dispatch_context())
             .track_focus(&self.focus_handle)
-            .on_modifiers_changed(cx.listener(Self::handle_modifiers_changed))
+            .on_modifiers_changed(cx.listener2(Self::handle_modifiers_changed))
             .when(!project.is_read_only(cx), |this| {
                 this.on_action(
-                    cx.listener(|this, &StageAll, window, cx| this.stage_all(&StageAll, cx)),
+                    cx.listener2(|this, &StageAll, window, cx| this.stage_all(&StageAll, cx)),
                 )
                 .on_action(
-                    cx.listener(|this, &UnstageAll, window, cx| this.unstage_all(&UnstageAll, cx)),
+                    cx.listener2(|this, &UnstageAll, window, cx| this.unstage_all(&UnstageAll, cx)),
                 )
                 .on_action(
-                    cx.listener(|this, &DiscardAll, window, cx| this.discard_all(&DiscardAll, cx)),
+                    cx.listener2(|this, &DiscardAll, window, cx| this.discard_all(&DiscardAll, cx)),
                 )
-                .on_action(cx.listener(|this, &CommitStagedChanges, window, cx| {
+                .on_action(cx.listener2(|this, &CommitStagedChanges, window, cx| {
                     this.commit_staged_changes(&CommitStagedChanges, cx)
                 }))
-                .on_action(cx.listener(|this, &CommitAllChanges, window, cx| {
+                .on_action(cx.listener2(|this, &CommitAllChanges, window, cx| {
                     this.commit_all_changes(&CommitAllChanges, cx)
                 }))
             })
-            .on_hover(cx.listener(|this, hovered, window, cx| {
+            .on_hover(cx.listener2(|this, hovered, window, cx| {
                 if *hovered {
                     this.show_scrollbar = true;
                     this.hide_scrollbar_task.take();

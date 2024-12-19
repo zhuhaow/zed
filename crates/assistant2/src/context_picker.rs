@@ -79,7 +79,8 @@ impl ContextPicker {
         };
 
         let picker = cx.new_view(|cx| {
-            Picker::nonsearchable_uniform_list(delegate, cx).max_height(Some(rems(20.).into()))
+            Picker::nonsearchable_uniform_list(delegate, window, cx)
+                .max_height(Some(rems(20.).into()))
         });
 
         ContextPicker {
@@ -164,7 +165,12 @@ impl PickerDelegate for ContextPickerDelegate {
         Task::ready(())
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some(entry) = self.entries.get(self.selected_ix) {
             self.context_picker
                 .update(cx, |this, cx| {
@@ -185,6 +191,7 @@ impl PickerDelegate for ContextPickerDelegate {
                                     self.context_picker.clone(),
                                     self.workspace.clone(),
                                     self.context_store.clone(),
+                                    window,
                                     cx,
                                 )
                             }));
@@ -195,6 +202,7 @@ impl PickerDelegate for ContextPickerDelegate {
                                     self.context_picker.clone(),
                                     self.workspace.clone(),
                                     self.context_store.clone(),
+                                    window,
                                     cx,
                                 )
                             }));

@@ -54,13 +54,15 @@ impl ProposedChangesEditor {
         title: impl Into<SharedString>,
         locations: Vec<ProposedChangeLocation<T>>,
         project: Option<Model<Project>>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let multibuffer = cx.new_model(|_| MultiBuffer::new(Capability::ReadWrite));
         let (recalculate_diffs_tx, mut recalculate_diffs_rx) = mpsc::unbounded();
         let mut this = Self {
             editor: cx.new_view(|cx| {
-                let mut editor = Editor::for_multibuffer(multibuffer.clone(), project, true, cx);
+                let mut editor =
+                    Editor::for_multibuffer(multibuffer.clone(), project, true, window, cx);
                 editor.set_expand_all_diff_hunks();
                 editor.set_completion_provider(None);
                 editor.clear_code_action_providers();
@@ -222,7 +224,7 @@ impl ProposedChangesEditor {
 
         self.buffer_entries = buffer_entries;
         self.editor.update(cx, |editor, cx| {
-            editor.change_selections(None, cx, |selections| selections.refresh());
+            editor.change_selections(None, window, cx, |selections| selections.refresh());
             for change_set in new_change_sets {
                 editor.diff_map.add_change_set(change_set, cx)
             }

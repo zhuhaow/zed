@@ -22,7 +22,7 @@ impl Render for UpdateNotification {
         let app_name = ReleaseChannel::global(cx).display_name();
 
         v_flex()
-            .on_action(cx.listener(UpdateNotification::dismiss))
+            .on_action(cx.listener2(UpdateNotification::dismiss))
             .elevation_3(cx)
             .p_4()
             .child(
@@ -37,7 +37,7 @@ impl Render for UpdateNotification {
                             .id("cancel")
                             .child(Icon::new(IconName::Close))
                             .cursor_pointer()
-                            .on_click(cx.listener(|this, _, window, cx| {
+                            .on_click(cx.listener2(|this, _, window, cx| {
                                 this.dismiss(&menu::Cancel, window, cx)
                             })),
                     ),
@@ -47,7 +47,7 @@ impl Render for UpdateNotification {
                     .id("notes")
                     .child(Label::new("View the release notes"))
                     .cursor_pointer()
-                    .on_click(cx.listener(|this, _, window, cx| {
+                    .on_click(cx.listener2(|this, _, window, cx| {
                         this.workspace
                             .update(cx, |workspace, cx| {
                                 crate::view_release_notes_locally(workspace, cx);

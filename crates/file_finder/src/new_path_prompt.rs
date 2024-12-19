@@ -207,10 +207,17 @@ pub struct NewPathDelegate {
 }
 
 impl NewPathPrompt {
-    pub(crate) fn register(workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>) {
+    pub(crate) fn register(
+        workspace: &mut Workspace,
+        window: &mut Window,
+        _cx: &mut ViewContext<Workspace>,
+    ) {
+        let window_handle = window.handle();
         workspace.set_prompt_for_new_path(Box::new(move |workspace, cx| {
             let (tx, rx) = futures::channel::oneshot::channel();
-            Self::prompt_for_new_path(workspace, tx, todo!());
+            window_handle.update(cx, |_, window, cx| {
+                Self::prompt_for_new_path(workspace, tx, window, todo!());
+            });
             rx
         }));
     }
@@ -218,6 +225,7 @@ impl NewPathPrompt {
     fn prompt_for_new_path(
         workspace: &mut Workspace,
         tx: oneshot::Sender<Option<ProjectPath>>,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         let project = workspace.project().clone();
@@ -232,7 +240,7 @@ impl NewPathPrompt {
                 should_dismiss: true,
             };
 
-            Picker::uniform_list(delegate, cx).width(rems(34.))
+            Picker::uniform_list(delegate, window, cx).width(rems(34.))
         });
     }
 }
@@ -345,7 +353,12 @@ impl PickerDelegate for NewPathDelegate {
         }
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<picker::Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<picker::Picker<Self>>,
+    ) {
         let Some(m) = self.matches.get(self.selected_index) else {
             return;
         };

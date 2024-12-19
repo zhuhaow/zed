@@ -147,6 +147,7 @@ impl Item for ImageView {
     fn clone_on_split(
         &self,
         _workspace_id: Option<WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>>
     where
@@ -187,6 +188,7 @@ impl SerializableItem for ImageView {
         _workspace: WeakView<Workspace>,
         workspace_id: WorkspaceId,
         item_id: ItemId,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Task<gpui::Result<View<Self>>> {
         cx.spawn(|mut cx| async move {
@@ -228,6 +230,7 @@ impl SerializableItem for ImageView {
         workspace: &mut Workspace,
         item_id: ItemId,
         _closing: bool,
+        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<Task<gpui::Result<()>>> {
         let workspace_id = workspace.database_id()?;

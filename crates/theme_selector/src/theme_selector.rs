@@ -18,7 +18,7 @@ actions!(theme_selector, [Reload]);
 
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
-        |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
+        |workspace: &mut Workspace, _window: &mut Window, _cx: &mut ViewContext<Workspace>| {
             workspace.register_action(toggle);
         },
     )
@@ -71,7 +71,7 @@ impl ThemeSelector {
         window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         Self { picker }
     }
 }
@@ -184,7 +184,12 @@ impl PickerDelegate for ThemeSelectorDelegate {
         self.matches.len()
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<ThemeSelectorDelegate>>) {
+    fn confirm(
+        &mut self,
+        _: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<ThemeSelectorDelegate>>,
+    ) {
         self.selection_completed = true;
 
         let theme_name = cx.theme().name.clone();

@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use workspace::{AppState, OpenVisible, Workspace};
+use workspace::{ui::prelude::Window, AppState, OpenVisible, Workspace};
 
 actions!(journal, [NewJournalEntry]);
 
@@ -59,7 +59,7 @@ pub fn init(_: Arc<AppState>, cx: &mut AppContext) {
     JournalSettings::register(cx);
 
     cx.observe_new_views(
-        |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
+        |workspace: &mut Workspace, _window: &mut Window, _cx: &mut ViewContext<Workspace>| {
             workspace.register_action(|workspace, _: &NewJournalEntry, window, cx| {
                 new_journal_entry(workspace, cx);
             });
@@ -147,7 +147,7 @@ pub fn new_journal_entry(workspace: &Workspace, cx: &mut WindowContext) {
             if let Some(editor) = item.downcast::<Editor>().map(|editor| editor.downgrade()) {
                 editor.update(&mut cx, |editor, cx| {
                     let len = editor.buffer().read(cx).len(cx);
-                    editor.change_selections(Some(Autoscroll::center()), cx, |s| {
+                    editor.change_selections(Some, window(Autoscroll::center()), cx, |s| {
                         s.select_ranges([len..len])
                     });
                     if len > 0 {

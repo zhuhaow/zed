@@ -238,7 +238,7 @@ pub async fn open_paths_with_positions(
                     active_editor.update(cx, |editor, cx| {
                         let snapshot = editor.snapshot(cx).display_snapshot;
                         let point = snapshot.buffer_snapshot.clip_point(point, Bias::Left);
-                        editor.change_selections(Some(Autoscroll::center()), cx, |s| {
+                        editor.change_selections(Some, window(Autoscroll::center()), cx, |s| {
                             s.select_ranges([point..point])
                         });
                     });

@@ -208,7 +208,7 @@ actions!(debug, [OpenLanguageServerLogs]);
 pub fn init(cx: &mut AppContext) {
     let log_store = cx.new_model(LogStore::new);
 
-    cx.observe_new_views(move |workspace: &mut Workspace, cx| {
+    cx.observe_new_views(move |workspace: &mut Workspace, window, cx| {
         let project = workspace.project();
         if project.read(cx).is_local() || project.read(cx).is_via_ssh() {
             log_store.update(cx, |store, cx| {
@@ -225,6 +225,7 @@ pub fn init(cx: &mut AppContext) {
                     Box::new(cx.new_view(|cx| {
                         LspLogView::new(workspace.project().clone(), log_store.clone(), cx)
                     })),
+                    window,
                     cx,
                 );
             }
@@ -1022,6 +1023,7 @@ impl Item for LspLogView {
     fn clone_on_split(
         &self,
         _workspace_id: Option<WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>>
     where
@@ -1185,7 +1187,7 @@ impl Render for LspLogToolbarItemView {
                             menu = menu.entry(
                                 label,
                                 None,
-                                cx.handler_for(&log_view, move |view, cx| {
+                                cx.handler_for2(&log_view, move |view, cx| {
                                     view.current_server_id = Some(server_id);
                                     view.active_entry_kind = active_entry_kind;
                                     match view.active_entry_kind {
@@ -1226,7 +1228,7 @@ impl Render for LspLogToolbarItemView {
                         this.entry(
                             SERVER_LOGS,
                             None,
-                            cx.handler_for(&log_view, move |view, cx| {
+                            cx.handler_for2(&log_view, move |view, cx| {
                                 view.show_logs_for_server(server_id, cx);
                             }),
                         )
@@ -1234,7 +1236,7 @@ impl Render for LspLogToolbarItemView {
                             this.entry(
                                 SERVER_TRACE,
                                 None,
-                                cx.handler_for(&log_view, move |view, cx| {
+                                cx.handler_for2(&log_view, move |view, cx| {
                                     view.show_trace_for_server(server_id, cx);
                                 }),
                             )
@@ -1274,7 +1276,7 @@ impl Render for LspLogToolbarItemView {
                                             .into_any_element()
                                     }
                                 },
-                                cx.handler_for(&log_view, move |view, cx| {
+                                cx.handler_for2(&log_view, move |view, cx| {
                                     view.show_rpc_trace_for_server(server_id, cx);
                                 }),
                             )
@@ -1282,7 +1284,7 @@ impl Render for LspLogToolbarItemView {
                         .entry(
                             SERVER_CAPABILITIES,
                             None,
-                            cx.handler_for(&log_view, move |view, cx| {
+                            cx.handler_for2(&log_view, move |view, cx| {
                                 view.show_capabilities_for_server(server_id, cx);
                             }),
                         )
@@ -1331,7 +1333,7 @@ impl Render for LspLogToolbarItemView {
                                                 ] {
                                                     menu = menu.entry(label, None, {
                                                         let log_view = log_view.clone();
-                                                        move |cx| {
+                                                        move |window, cx| {
                                                             log_view.update(cx, |this, cx| {
                                                                 if let Some(id) =
                                                                     this.current_server_id
@@ -1390,7 +1392,7 @@ impl Render for LspLogToolbarItemView {
                                                 ] {
                                                     menu = menu.entry(label, None, {
                                                         let log_view = log_view.clone();
-                                                        move |cx| {
+                                                        move |window, cx| {
                                                             log_view.update(cx, |this, cx| {
                                                                 if let Some(id) =
                                                                     this.current_server_id
@@ -1420,7 +1422,7 @@ impl Render for LspLogToolbarItemView {
             .child(
                 div()
                     .child(
-                        Button::new("clear_log_button", "Clear").on_click(cx.listener(
+                        Button::new("clear_log_button", "Clear").on_click(cx.listener2(
                             |this, _, window, cx| {
                                 if let Some(log_view) = this.log_view.as_ref() {
                                     log_view.update(cx, |log_view, cx| {

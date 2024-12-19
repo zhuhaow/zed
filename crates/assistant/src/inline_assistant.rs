@@ -929,7 +929,7 @@ impl InlineAssistant {
 
         let position = assist.range.start;
         editor.update(cx, |editor, cx| {
-            editor.change_selections(None, cx, |selections| {
+            editor.change_selections(None, window, cx, |selections| {
                 selections.select_anchor_ranges([position..position])
             });
 
@@ -1408,7 +1408,7 @@ impl Render for PromptEditor {
                         .tooltip(|window, cx| {
                             Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
                         })
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
                         .into_any_element(),
@@ -1416,7 +1416,7 @@ impl Render for PromptEditor {
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|window, cx| Tooltip::for_action("Transform", &menu::Confirm, cx))
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::StartRequested)
                         }))
                         .into_any_element(),
@@ -1428,7 +1428,7 @@ impl Render for PromptEditor {
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|window, cx| Tooltip::text("Cancel Assist", cx))
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
                         .into_any_element(),
@@ -1443,11 +1443,9 @@ impl Render for PromptEditor {
                                 cx,
                             )
                         })
-                        .on_click(
-                            cx.listener(|_, _, window, cx| {
-                                cx.emit(PromptEditorEvent::StopRequested)
-                            }),
-                        )
+                        .on_click(cx.listener2(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::StopRequested)
+                        }))
                         .into_any_element(),
                 ]
             }
@@ -1468,7 +1466,7 @@ impl Render for PromptEditor {
                         .tooltip(|window, cx| {
                             Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
                         })
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         }))
                         .into_any_element(),
@@ -1483,7 +1481,7 @@ impl Render for PromptEditor {
                                 cx,
                             )
                         })
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::StartRequested);
                         }))
                         .into_any_element(),
@@ -1494,7 +1492,7 @@ impl Render for PromptEditor {
                             .tooltip(|window, cx| {
                                 Tooltip::for_action("Confirm Assist", &menu::Confirm, cx)
                             })
-                            .on_click(cx.listener(|_, _, window, cx| {
+                            .on_click(cx.listener2(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested);
                             }))
                             .into_any_element()
@@ -1514,13 +1512,13 @@ impl Render for PromptEditor {
             .border_color(cx.theme().status().info_border)
             .size_full()
             .py(cx.line_height() / 2.5)
-            .on_action(cx.listener2(Self::confirm))
-            .on_action(cx.listener2(Self::cancel))
-            .on_action(cx.listener2(Self::restart))
-            .on_action(cx.listener2(Self::move_up))
-            .on_action(cx.listener2(Self::move_down))
-            .capture_action(cx.listener2(Self::cycle_prev))
-            .capture_action(cx.listener2(Self::cycle_next))
+            .on_action(cx.listener(Self::confirm))
+            .on_action(cx.listener(Self::cancel))
+            .on_action(cx.listener(Self::restart))
+            .on_action(cx.listener(Self::move_up))
+            .on_action(cx.listener(Self::move_down))
+            .capture_action(cx.listener(Self::cycle_prev))
+            .capture_action(cx.listener(Self::cycle_next))
             .child(
                 h_flex()
                     .w(gutter_dimensions.full_width() + (gutter_dimensions.margin / 2.0))
@@ -1563,7 +1561,7 @@ impl Render for PromptEditor {
                                             .toggle_state(self.show_rate_limit_notice)
                                             .shape(IconButtonShape::Square)
                                             .icon_size(IconSize::Small)
-                                            .on_click(cx.listener2(Self::toggle_rate_limit_notice)),
+                                            .on_click(cx.listener(Self::toggle_rate_limit_notice)),
                                     )
                                     .children(self.show_rate_limit_notice.then(|| {
                                         deferred(
@@ -1664,6 +1662,7 @@ impl PromptEditor {
                             move |settings, _| settings.set_model(model.clone()),
                         );
                     },
+                    window,
                     cx,
                 )
             }),
@@ -2009,7 +2008,7 @@ impl PromptEditor {
                             .into()
                         }
                     })
-                    .on_click(cx.listener(|this, _, window, cx| {
+                    .on_click(cx.listener2(|this, _, window, cx| {
                         this.codegen
                             .update(cx, |codegen, cx| codegen.cycle_prev(cx))
                     })),
@@ -2051,7 +2050,7 @@ impl PromptEditor {
                             .into()
                         }
                     })
-                    .on_click(cx.listener(|this, _, window, cx| {
+                    .on_click(cx.listener2(|this, _, window, cx| {
                         this.codegen
                             .update(cx, |codegen, cx| codegen.cycle_next(cx))
                     })),
@@ -2108,7 +2107,7 @@ impl PromptEditor {
                     cx.stop_propagation();
                     workspace
                         .update(cx, |workspace, cx| {
-                            workspace.focus_panel::<AssistantPanel>(cx)
+                            workspace.focus_panel::<AssistantPanel>(window, cx)
                         })
                         .ok();
                 });
@@ -2187,7 +2186,7 @@ impl PromptEditor {
                                 .child(
                                     Button::new("dismiss", "Dismiss")
                                         .style(ButtonStyle::Transparent)
-                                        .on_click(cx.listener2(Self::toggle_rate_limit_notice)),
+                                        .on_click(cx.listener(Self::toggle_rate_limit_notice)),
                                 )
                                 .child(Button::new("more-info", "More Info").on_click(
                                     |_event, window, cx| {

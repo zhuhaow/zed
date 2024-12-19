@@ -4,6 +4,7 @@ use editor::{display_map::ToDisplayPoint, movement, scroll::Autoscroll, DisplayP
 use gpui::{impl_actions, ViewContext};
 use language::{Bias, SelectionGoal};
 use serde::Deserialize;
+use ui::prelude::Window;
 
 use crate::{
     state::{Mode, Register},
@@ -22,7 +23,7 @@ pub struct Paste {
 impl_actions!(vim, [Paste]);
 
 impl Vim {
-    pub fn paste(&mut self, action: &Paste, cx: &mut ViewContext<Self>) {
+    pub fn paste(&mut self, action: &Paste, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.record_current_action(cx);
         self.store_visual_marks(cx);
         let count = Vim::take_count(cx).unwrap_or(1);

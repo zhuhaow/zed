@@ -48,7 +48,7 @@ impl Render for ToolbarControls {
                         .shape(IconButtonShape::Square)
                         .disabled(is_updating)
                         .tooltip(move |_window, cx| Tooltip::text("Update excerpts", cx))
-                        .on_click(cx.listener(|this, _, window, cx| {
+                        .on_click(cx.listener2(|this, _, window, cx| {
                             if let Some(diagnostics) = this.diagnostics() {
                                 diagnostics.update(cx, |diagnostics, cx| {
                                     diagnostics.update_all_excerpts(cx);
@@ -62,7 +62,7 @@ impl Render for ToolbarControls {
                     .icon_color(warning_color)
                     .shape(IconButtonShape::Square)
                     .tooltip(move |_window, cx| Tooltip::text(tooltip, cx))
-                    .on_click(cx.listener(|this, _, window, cx| {
+                    .on_click(cx.listener2(|this, _, window, cx| {
                         if let Some(editor) = this.diagnostics() {
                             editor.update(cx, |editor, cx| {
                                 editor.toggle_warnings(&Default::default(), window, cx);

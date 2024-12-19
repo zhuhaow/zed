@@ -1,11 +1,11 @@
+use crate::{
+    element::register_action, lsp_ext::find_specific_language_server_in_selection, Editor,
+    SwitchSourceHeader,
+};
 use anyhow::Context as _;
-use gpui::{View, ViewContext, WindowContext};
+use gpui::{View, ViewContext, Window, WindowContext};
 use language::Language;
 use url::Url;
-
-use crate::lsp_ext::find_specific_language_server_in_selection;
-
-use crate::{element::register_action2, Editor, SwitchSourceHeader};
 
 const CLANGD_SERVER_NAME: &str = "clangd";
 
@@ -16,8 +16,11 @@ fn is_c_language(language: &Language) -> bool {
 pub fn switch_source_header(
     editor: &mut Editor,
     _: &SwitchSourceHeader,
+    window: &mut Window,
     cx: &mut ViewContext<'_, Editor>,
 ) {
+    let window_handle = window.handle();
+
     let Some(project) = &editor.project else {
         return;
     };
@@ -70,8 +73,8 @@ pub fn switch_source_header(
         })?;
 
         workspace
-            .update(&mut cx, |workspace, view_cx| {
-                workspace.open_abs_path(path, false, view_cx)
+            .update_in_window(window_handle, &mut cx, |workspace, window, view_cx| {
+                workspace.open_abs_path(path, false, window, view_cx)
             })
             .with_context(|| {
                 format!(
@@ -89,6 +92,6 @@ pub fn apply_related_actions(editor: &View<Editor>, cx: &mut WindowContext) {
         find_specific_language_server_in_selection(e, cx, is_c_language, CLANGD_SERVER_NAME)
             .is_some()
     }) {
-        register_action2(editor, cx, switch_source_header);
+        register_action(editor, cx, switch_source_header);
     }
 }

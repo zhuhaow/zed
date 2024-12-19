@@ -37,9 +37,9 @@ const MESSAGE_LOADING_THRESHOLD: usize = 50;
 const CHAT_PANEL_KEY: &str = "ChatPanel";
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(|workspace: &mut Workspace, _| {
+    cx.observe_new_views(|workspace: &mut Workspace, _, _| {
         workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
-            workspace.toggle_panel_focus::<ChatPanel>(cx);
+            workspace.toggle_panel_focus::<ChatPanel>(window, cx);
         });
     })
     .detach();
@@ -104,7 +104,7 @@ impl ChatPanel {
                     }
                 });
 
-            message_list.set_scroll_handler(cx.listener(
+            message_list.set_scroll_handler(cx.listener2(
                 |this, event: &ListScrollEvent, window, cx| {
                     if event.visible_range.start < MESSAGE_LOADING_THRESHOLD {
                         this.load_more_messages(cx);
@@ -372,7 +372,7 @@ impl ChatPanel {
                 )
                 .cursor(CursorStyle::PointingHand)
                 .tooltip(|window, cx| Tooltip::text("Go to message", cx))
-                .on_click(cx.listener(move |chat_panel, _, window, cx| {
+                .on_click(cx.listener2(move |chat_panel, _, window, cx| {
                     if let Some(channel_id) = current_channel_id {
                         chat_panel
                             .select_channel(channel_id, reply_to_message_id.into(), cx)
@@ -608,7 +608,7 @@ impl ChatPanel {
                             .id("reply")
                             .child(
                                 IconButton::new(("reply", message_id), IconName::ReplyArrowRight)
-                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                    .on_click(cx.listener2(move |this, _, window, cx| {
                                         this.cancel_edit_message(cx);
 
                                         this.message_editor.update(cx, |editor, cx| {
@@ -630,7 +630,7 @@ impl ChatPanel {
                                 .id("edit")
                                 .child(
                                     IconButton::new(("edit", message_id), IconName::Pencil)
-                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                        .on_click(cx.listener2(move |this, _, window, cx| {
                                             this.message_editor.update(cx, |editor, cx| {
                                                 editor.clear_reply_to_message_id();
 
@@ -707,7 +707,7 @@ impl ChatPanel {
                 menu.entry(
                     "Copy message text",
                     None,
-                    cx.handler_for(this, move |this, cx| {
+                    cx.handler_for2(this, move |this, cx| {
                         if let Some(message) = this.active_chat().and_then(|active_chat| {
                             active_chat.read(cx).find_loaded_message(message_id)
                         }) {
@@ -720,7 +720,7 @@ impl ChatPanel {
                     menu.entry(
                         "Delete message",
                         None,
-                        cx.handler_for(this, move |this, cx| this.remove_message(message_id, cx)),
+                        cx.handler_for2(this, move |this, cx| this.remove_message(message_id, cx)),
                     )
                 })
             })
@@ -935,7 +935,7 @@ impl Render for ChatPanel {
             .key_context("ChatPanel")
             .track_focus(&self.focus_handle)
             .size_full()
-            .on_action(cx.listener(Self::send))
+            .on_action(cx.listener2(Self::send))
             .child(
                 h_flex().child(
                     TabBar::new("chat_header").child(
@@ -1002,7 +1002,7 @@ impl Render for ChatPanel {
                             IconButton::new("cancel-edit-message", IconName::Close)
                                 .shape(ui::IconButtonShape::Square)
                                 .tooltip(|window, cx| Tooltip::text("Cancel edit message", cx))
-                                .on_click(cx.listener(move |this, _, window, cx| {
+                                .on_click(cx.listener2(move |this, _, window, cx| {
                                     this.cancel_edit_message(cx);
                                 })),
                         ),
@@ -1046,7 +1046,7 @@ impl Render for ChatPanel {
                                             .weight(FontWeight::BOLD),
                                         )
                                         .when_some(channel_id, |this, channel_id| {
-                                            this.cursor_pointer().on_click(cx.listener(
+                                            this.cursor_pointer().on_click(cx.listener2(
                                                 move |chat_panel, _, window, cx| {
                                                     chat_panel
                                                         .select_channel(
@@ -1064,7 +1064,7 @@ impl Render for ChatPanel {
                                 IconButton::new("close-reply-preview", IconName::Close)
                                     .shape(ui::IconButtonShape::Square)
                                     .tooltip(|window, cx| Tooltip::text("Close reply", cx))
-                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                    .on_click(cx.listener2(move |this, _, window, cx| {
                                         this.close_reply_preview(cx);
                                     })),
                             ),
@@ -1075,7 +1075,7 @@ impl Render for ChatPanel {
                 Some(
                     h_flex()
                         .p_2()
-                        .on_action(cx.listener(|this, _: &actions::Cancel, window, cx| {
+                        .on_action(cx.listener2(|this, _: &actions::Cancel, window, cx| {
                             this.cancel_edit_message(cx);
                             this.close_reply_preview(cx);
                         }))

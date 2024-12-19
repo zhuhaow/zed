@@ -83,7 +83,7 @@ impl Render for InlineCompletionButton {
                     return div().child(
                         IconButton::new("copilot-error", icon)
                             .icon_size(IconSize::Small)
-                            .on_click(cx.listener(move |_, _, window, cx| {
+                            .on_click(cx.listener2(move |_, _, window, cx| {
                                 if let Some(workspace) = window.handle().downcast::<Workspace>() {
                                     workspace
                                         .update(cx, |workspace, window, cx| {
@@ -169,13 +169,13 @@ impl Render for InlineCompletionButton {
                                 Some(ContextMenu::build(cx, |menu, _| {
                                     let fs = fs.clone();
                                     let activate_url = activate_url.clone();
-                                    menu.entry("Sign In", None, move |cx| {
+                                    menu.entry("Sign In", None, move |window, cx| {
                                         cx.open_url(activate_url.as_str())
                                     })
                                     .entry(
                                         "Use Copilot",
                                         None,
-                                        move |cx| {
+                                        move |window, cx| {
                                             set_completion_provider(
                                                 fs.clone(),
                                                 cx,
@@ -213,7 +213,7 @@ impl Render for InlineCompletionButton {
                                 cx,
                             )
                         })
-                        .on_click(cx.listener(|this, _, window, cx| {
+                        .on_click(cx.listener2(|this, _, window, cx| {
                             if let Some(workspace) = this.workspace.upgrade() {
                                 workspace.update(cx, |workspace, cx| {
                                     RateCompletionModal::toggle(workspace, cx)
@@ -255,11 +255,11 @@ impl InlineCompletionButton {
             menu.entry("Sign In", None, copilot::initiate_sign_in)
                 .entry("Disable Copilot", None, {
                     let fs = fs.clone();
-                    move |cx| hide_copilot(fs.clone(), cx)
+                    move |window, cx| hide_copilot(fs.clone(), cx)
                 })
                 .entry("Use Supermaven", None, {
                     let fs = fs.clone();
-                    move |cx| {
+                    move |window, cx| {
                         set_completion_provider(
                             fs.clone(),
                             cx,
@@ -290,7 +290,9 @@ impl InlineCompletionButton {
                     language.name()
                 ),
                 None,
-                move |cx| toggle_inline_completions_for_language(language.clone(), fs.clone(), cx),
+                move |window, cx| {
+                    toggle_inline_completions_for_language(language.clone(), fs.clone(), cx)
+                },
             );
         }
 
@@ -306,7 +308,7 @@ impl InlineCompletionButton {
                     if path_enabled { "Hide" } else { "Show" }
                 ),
                 None,
-                move |cx| {
+                move |window, cx| {
                     if let Some(workspace) = window.handle().downcast::<Workspace>() {
                         if let Ok(workspace) = workspace.root_view(cx) {
                             let workspace = workspace.downgrade();
@@ -332,7 +334,7 @@ impl InlineCompletionButton {
                 "Show Inline Completions for All Files"
             },
             None,
-            move |cx| toggle_inline_completions_globally(fs.clone(), cx),
+            move |window, cx| toggle_inline_completions_globally(fs.clone(), cx),
         )
     }
 
@@ -459,7 +461,7 @@ async fn configure_disabled_globs(
         });
 
         if !edits.is_empty() {
-            item.change_selections(Some(Autoscroll::newest()), cx, |selections| {
+            item.change_selections(Some, window(Autoscroll::newest()), cx, |selections| {
                 selections.select_ranges(edits.iter().map(|e| e.0.clone()));
             });
 

@@ -16,7 +16,7 @@ use workspace::{ui::HighlightedLabel, ModalView, Workspace};
 actions!(welcome, [ToggleBaseKeymapSelector]);
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(|workspace: &mut Workspace, _cx| {
+    cx.observe_new_views(|workspace: &mut Workspace, _window, _cx| {
         workspace.register_action(toggle);
     })
     .detach();
@@ -33,6 +33,7 @@ pub fn toggle(
     workspace.toggle_modal(cx, |cx| {
         BaseKeymapSelector::new(
             BaseKeymapSelectorDelegate::new(cx.view().downgrade(), fs, telemetry, cx),
+            window,
             cx,
         )
     });
@@ -54,9 +55,10 @@ impl ModalView for BaseKeymapSelector {}
 impl BaseKeymapSelector {
     pub fn new(
         delegate: BaseKeymapSelectorDelegate,
+        window: &mut Window,
         cx: &mut ViewContext<BaseKeymapSelector>,
     ) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         Self { picker }
     }
 }
@@ -166,7 +168,12 @@ impl PickerDelegate for BaseKeymapSelectorDelegate {
         })
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<BaseKeymapSelectorDelegate>>) {
+    fn confirm(
+        &mut self,
+        _: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<BaseKeymapSelectorDelegate>>,
+    ) {
         if let Some(selection) = self.matches.get(self.selected_index) {
             let base_keymap = BaseKeymap::from_names(&selection.string);
 

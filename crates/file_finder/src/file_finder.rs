@@ -71,7 +71,7 @@ pub fn init(cx: &mut AppContext) {
 }
 
 impl FileFinder {
-    fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
+    fn register(workspace: &mut Workspace, window: &mut Window, cx: &mut ViewContext<Workspace>) {
         workspace.register_action(
             |workspace, action: &workspace::ToggleFileFinder, window, cx| {
                 let Some(file_finder) = workspace.active_modal::<Self>(cx) else {
@@ -150,6 +150,7 @@ impl FileFinder {
                             currently_opened_path,
                             history_items.collect(),
                             separate_history,
+                            window,
                             cx,
                         );
 
@@ -161,7 +162,7 @@ impl FileFinder {
     }
 
     fn new(delegate: FileFinderDelegate, window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         let picker_focus_handle = picker.focus_handle(cx);
         picker.update(cx, |picker, _| {
             picker.delegate.focus_handle = picker_focus_handle.clone();
@@ -222,7 +223,7 @@ impl FileFinder {
         window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
-        self.go_to_file_split_inner(SplitDirection::Left, cx)
+        self.go_to_file_split_inner(SplitDirection::Left, window, cx)
     }
 
     fn go_to_file_split_right(
@@ -231,7 +232,7 @@ impl FileFinder {
         window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
-        self.go_to_file_split_inner(SplitDirection::Right, cx)
+        self.go_to_file_split_inner(SplitDirection::Right, window, cx)
     }
 
     fn go_to_file_split_up(
@@ -240,7 +241,7 @@ impl FileFinder {
         window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
-        self.go_to_file_split_inner(SplitDirection::Up, cx)
+        self.go_to_file_split_inner(SplitDirection::Up, window, cx)
     }
 
     fn go_to_file_split_down(
@@ -249,12 +250,13 @@ impl FileFinder {
         window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
-        self.go_to_file_split_inner(SplitDirection::Down, cx)
+        self.go_to_file_split_inner(SplitDirection::Down, window, cx)
     }
 
     fn go_to_file_split_inner(
         &mut self,
         split_direction: SplitDirection,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         self.picker.update(cx, |picker, cx| {
@@ -275,7 +277,7 @@ impl FileFinder {
                         },
                     };
                     let open_task = workspace.update(cx, move |workspace, cx| {
-                        workspace.split_path_preview(path, false, Some(split_direction), cx)
+                        workspace.split_path_preview(path, false, Some(split_direction), window, cx)
                     });
                     open_task.detach_and_log_err(cx);
                 }
@@ -318,13 +320,13 @@ impl Render for FileFinder {
         v_flex()
             .key_context(key_context)
             .w(modal_max_width)
-            .on_modifiers_changed(cx.listener(Self::handle_modifiers_changed))
-            .on_action(cx.listener(Self::handle_select_prev))
-            .on_action(cx.listener(Self::handle_toggle_menu))
-            .on_action(cx.listener(Self::go_to_file_split_left))
-            .on_action(cx.listener(Self::go_to_file_split_right))
-            .on_action(cx.listener(Self::go_to_file_split_up))
-            .on_action(cx.listener(Self::go_to_file_split_down))
+            .on_modifiers_changed(cx.listener2(Self::handle_modifiers_changed))
+            .on_action(cx.listener2(Self::handle_select_prev))
+            .on_action(cx.listener2(Self::handle_toggle_menu))
+            .on_action(cx.listener2(Self::go_to_file_split_left))
+            .on_action(cx.listener2(Self::go_to_file_split_right))
+            .on_action(cx.listener2(Self::go_to_file_split_up))
+            .on_action(cx.listener2(Self::go_to_file_split_down))
             .child(self.picker.clone())
     }
 }
@@ -656,9 +658,10 @@ impl FileFinderDelegate {
         currently_opened_path: Option<FoundPath>,
         history_items: Vec<FoundPath>,
         separate_history: bool,
+        window: &mut Window,
         cx: &mut ViewContext<FileFinder>,
     ) -> Self {
-        Self::subscribe_to_updates(&project, cx);
+        Self::subscribe_to_updates(&project, window, cx);
         Self {
             file_finder,
             workspace,
@@ -680,14 +683,18 @@ impl FileFinderDelegate {
         }
     }
 
-    fn subscribe_to_updates(project: &Model<Project>, cx: &mut ViewContext<FileFinder>) {
-        cx.subscribe(project, |file_finder, _, event, cx| {
+    fn subscribe_to_updates(
+        project: &Model<Project>,
+        window: &mut Window,
+        cx: &mut ViewContext<FileFinder>,
+    ) {
+        cx.subscribe_in_window(project, window, |file_finder, _, event, window, cx| {
             match event {
                 project::Event::WorktreeUpdatedEntries(_, _)
                 | project::Event::WorktreeAdded(_)
                 | project::Event::WorktreeRemoved(_) => file_finder
                     .picker
-                    .update(cx, |picker, cx| picker.refresh(cx)),
+                    .update(cx, |picker, cx| picker.refresh(window, cx)),
                 _ => {}
             };
         })
@@ -1100,7 +1107,12 @@ impl PickerDelegate for FileFinderDelegate {
         }
     }
 
-    fn confirm(&mut self, secondary: bool, cx: &mut ViewContext<Picker<FileFinderDelegate>>) {
+    fn confirm(
+        &mut self,
+        secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<FileFinderDelegate>>,
+    ) {
         if let Some(m) = self.matches.get(self.selected_index()) {
             if let Some(workspace) = self.workspace.upgrade() {
                 let open_task = workspace.update(cx, move |workspace, cx| {
@@ -1111,7 +1123,13 @@ impl PickerDelegate for FileFinderDelegate {
                             let allow_preview =
                                 PreviewTabsSettings::get_global(cx).enable_preview_from_file_finder;
                             if secondary {
-                                workspace.split_path_preview(project_path, allow_preview, None, cx)
+                                workspace.split_path_preview(
+                                    project_path,
+                                    allow_preview,
+                                    None,
+                                    window,
+                                    cx,
+                                )
                             } else {
                                 workspace.open_path_preview(
                                     project_path,
@@ -1146,6 +1164,7 @@ impl PickerDelegate for FileFinderDelegate {
                                             workspace.split_abs_path(
                                                 abs_path.to_path_buf(),
                                                 false,
+                                                window,
                                                 cx,
                                             )
                                         } else {
@@ -1202,9 +1221,12 @@ impl PickerDelegate for FileFinderDelegate {
                                     let point = snapshot
                                         .buffer_snapshot
                                         .clip_point(Point::new(row, col), Bias::Left);
-                                    editor.change_selections(Some(Autoscroll::center()), cx, |s| {
-                                        s.select_ranges([point..point])
-                                    });
+                                    editor.change_selections(
+                                        Some,
+                                        window(Autoscroll::center()),
+                                        cx,
+                                        |s| s.select_ranges([point..point]),
+                                    );
                                 })
                                 .log_err();
                         }

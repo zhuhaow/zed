@@ -30,13 +30,17 @@ pub struct LanguageSelector {
 }
 
 impl LanguageSelector {
-    fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
+    fn register(workspace: &mut Workspace, _window: &mut Window, _: &mut ViewContext<Workspace>) {
         workspace.register_action(move |workspace, _: &Toggle, window, cx| {
-            Self::toggle(workspace, cx);
+            Self::toggle(workspace, window, cx);
         });
     }
 
-    fn toggle(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> Option<()> {
+    fn toggle(
+        workspace: &mut Workspace,
+        window: &mut Window,
+        cx: &mut ViewContext<Workspace>,
+    ) -> Option<()> {
         let registry = workspace.app_state().languages.clone();
         let (_, buffer, _) = workspace
             .active_item(cx)?
@@ -46,7 +50,7 @@ impl LanguageSelector {
         let project = workspace.project().clone();
 
         workspace.toggle_modal(cx, move |cx| {
-            LanguageSelector::new(buffer, project, registry, cx)
+            LanguageSelector::new(buffer, project, registry, window, cx)
         });
         Some(())
     }
@@ -55,6 +59,7 @@ impl LanguageSelector {
         buffer: Model<Buffer>,
         project: Model<Project>,
         language_registry: Arc<LanguageRegistry>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let delegate = LanguageSelectorDelegate::new(
@@ -64,7 +69,7 @@ impl LanguageSelector {
             language_registry,
         );
 
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         Self { picker }
     }
 }
@@ -189,7 +194,7 @@ impl PickerDelegate for LanguageSelectorDelegate {
         self.matches.len()
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(&mut self, _: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>) {
         if let Some(mat) = self.matches.get(self.selected_index) {
             let language_name = &self.candidates[mat.candidate_id].string;
             let language = self.language_registry.language_for_name(language_name);

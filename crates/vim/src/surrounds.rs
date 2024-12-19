@@ -214,7 +214,7 @@ impl Vim {
                     }
                 }
 
-                editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                     s.select_ranges(anchors);
                 });
                 edits.sort_by_key(|(range, _)| range.start);
@@ -318,7 +318,7 @@ impl Vim {
                     edits.sort_by_key(|(range, _)| range.start);
                     editor.edit(edits, cx);
                     editor.set_clip_at_line_ends(true, cx);
-                    editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                    editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                         s.select_anchor_ranges(stable_anchors);
                     });
                 });
@@ -375,7 +375,7 @@ impl Vim {
                             anchors.push(start..start)
                         }
                     }
-                    editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                    editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                         s.select_ranges(anchors);
                     });
                     editor.set_clip_at_line_ends(true, cx);

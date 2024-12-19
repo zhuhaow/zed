@@ -750,7 +750,7 @@ impl InfoPopover {
         div()
             .occlude()
             .id("info-popover-vertical-scroll")
-            .on_mouse_move(cx.listener(|_, _, window, cx| {
+            .on_mouse_move(cx.listener2(|_, _, window, cx| {
                 cx.notify();
                 cx.stop_propagation()
             }))
@@ -762,11 +762,11 @@ impl InfoPopover {
             })
             .on_mouse_up(
                 MouseButton::Left,
-                cx.listener(|_, _, window, cx| {
+                cx.listener2(|_, _, window, cx| {
                     cx.stop_propagation();
                 }),
             )
-            .on_scroll_wheel(cx.listener(|_, _, window, cx| {
+            .on_scroll_wheel(cx.listener2(|_, _, window, cx| {
                 cx.notify();
             }))
             .h_full()

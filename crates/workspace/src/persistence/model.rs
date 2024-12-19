@@ -378,7 +378,14 @@ impl SerializedPaneGroup {
                     .log_err()?;
                 let active = serialized_pane.active;
                 let new_items = serialized_pane
-                    .deserialize_to(project, &pane, workspace_id, workspace.clone(), cx)
+                    .deserialize_to(
+                        project,
+                        &pane,
+                        workspace_id,
+                        workspace.clone(),
+                        window_handle,
+                        cx,
+                    )
                     .await
                     .log_err()?;
 
@@ -425,6 +432,7 @@ impl SerializedPane {
         pane: &WeakView<Pane>,
         workspace_id: WorkspaceId,
         workspace: WeakView<Workspace>,
+        window_handle: AnyWindowHandle,
         cx: &mut AsyncWindowContext,
     ) -> Result<Vec<Option<Box<dyn ItemHandle>>>> {
         let mut item_tasks = Vec::new();
@@ -432,13 +440,14 @@ impl SerializedPane {
         let mut preview_item_index = None;
         for (index, item) in self.children.iter().enumerate() {
             let project = project.clone();
-            item_tasks.push(pane.update(cx, |_, cx| {
+            item_tasks.push(pane.update_in_window(window_handle, cx, |_, window, cx| {
                 SerializableItemRegistry::deserialize(
                     &item.kind,
                     project,
                     workspace.clone(),
                     workspace_id,
                     item.item_id,
+                    window,
                     cx,
                 )
             })?);

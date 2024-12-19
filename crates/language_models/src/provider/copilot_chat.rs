@@ -378,7 +378,9 @@ impl Render for ConfigurationView {
                                         .icon_size(IconSize::Medium)
                                         .style(ui::ButtonStyle::Filled)
                                         .full_width()
-                                        .on_click(|_, window, cx| copilot::initiate_sign_in(cx)),
+                                        .on_click(|_, window, cx| {
+                                            copilot::initiate_sign_in(window, cx)
+                                        }),
                                 )
                                 .child(
                                     div().flex().w_full().items_center().child(

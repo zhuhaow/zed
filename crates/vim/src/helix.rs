@@ -1,7 +1,7 @@
 use editor::{movement, scroll::Autoscroll, DisplayPoint, Editor};
 use gpui::{actions, Action};
 use language::{CharClassifier, CharKind};
-use ui::ViewContext;
+use ui::{prelude::Window, ViewContext};
 
 use crate::{motion::Motion, state::Mode, Vim};
 
@@ -13,7 +13,12 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
 }
 
 impl Vim {
-    pub fn helix_normal_after(&mut self, action: &HelixNormalAfter, cx: &mut ViewContext<Self>) {
+    pub fn helix_normal_after(
+        &mut self,
+        action: &HelixNormalAfter,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if self.active_operator().is_some() {
             self.operator_stack.clear();
             self.sync_vim_settings(cx);
@@ -228,7 +233,12 @@ impl Vim {
         }
     }
 
-    pub fn helix_delete(&mut self, _: &HelixDelete, cx: &mut ViewContext<Self>) {
+    pub fn helix_delete(
+        &mut self,
+        _: &HelixDelete,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.store_visual_marks(cx);
         self.update_editor(cx, |vim, editor, cx| {
             // Fixup selections so they have helix's semantics.

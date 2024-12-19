@@ -184,7 +184,7 @@ impl ChannelView {
             editor.set_custom_context_menu(move |_, position, cx| {
                 let this = this.clone();
                 Some(ui::ContextMenu::build(cx, move |menu, _| {
-                    menu.entry("Copy link to section", None, move |cx| {
+                    menu.entry("Copy link to section", None, move |window, cx| {
                         this.update(cx, |this, cx| this.copy_link_for_position(position, cx))
                             .ok();
                     })
@@ -226,7 +226,7 @@ impl ChannelView {
                 .find(|item| &Channel::slug(&item.text).to_lowercase() == &position)
             {
                 self.editor.update(cx, |editor, cx| {
-                    editor.change_selections(Some(Autoscroll::focused()), cx, |s| {
+                    editor.change_selections(Some, window(Autoscroll::focused()), cx, |s| {
                         s.replace_cursors_with(|map| vec![item.range.start.to_display_point(map)])
                     })
                 });
@@ -358,7 +358,7 @@ impl Render for ChannelView {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         div()
             .size_full()
-            .on_action(cx.listener(Self::copy_link))
+            .on_action(cx.listener2(Self::copy_link))
             .child(self.editor.clone())
     }
 }
@@ -437,6 +437,7 @@ impl Item for ChannelView {
     fn clone_on_split(
         &self,
         _: Option<WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>> {
         Some(cx.new_view(|cx| {

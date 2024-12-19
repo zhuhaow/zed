@@ -122,11 +122,12 @@ impl SearchOptions {
     }
 }
 
-pub(crate) fn show_no_more_matches(cx: &mut WindowContext) {
-    cx.defer(|cx| {
+pub(crate) fn show_no_more_matches(window: &Window, cx: &mut WindowContext) {
+    let window_handle = window.handle();
+    cx.defer(move |cx| {
         struct NotifType();
         let notification_id = NotificationId::unique::<NotifType>();
-        let Some(workspace) = window.handle().downcast::<Workspace>() else {
+        let Some(workspace) = window_handle.downcast::<Workspace>() else {
             return;
         };
         workspace

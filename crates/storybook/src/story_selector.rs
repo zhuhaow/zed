@@ -43,7 +43,7 @@ pub enum ComponentStory {
 }
 
 impl ComponentStory {
-    pub fn story(&self, cx: &mut WindowContext) -> AnyView {
+    pub fn story(&self, window: &mut Window, cx: &mut WindowContext) -> AnyView {
         match self {
             Self::ApplicationMenu => cx
                 .new_view(|cx| title_bar::ApplicationMenuStory::new(cx))
@@ -67,7 +67,7 @@ impl ComponentStory {
             Self::ListHeader => cx.new_view(|_| ui::ListHeaderStory).into(),
             Self::ListItem => cx.new_view(|_| ui::ListItemStory).into(),
             Self::OverflowScroll => cx.new_view(|_| crate::stories::OverflowScrollStory).into(),
-            Self::Picker => PickerStory::new(cx).into(),
+            Self::Picker => PickerStory::new(window, cx).into(),
             Self::Scroll => ScrollStory::view(cx).into(),
             Self::Tab => cx.new_view(|_| ui::TabStory).into(),
             Self::TabBar => cx.new_view(|_| ui::TabBarStory).into(),
@@ -111,9 +111,9 @@ impl FromStr for StorySelector {
 }
 
 impl StorySelector {
-    pub fn story(&self, cx: &mut WindowContext) -> AnyView {
+    pub fn story(&self, window: &mut Window, cx: &mut WindowContext) -> AnyView {
         match self {
-            Self::Component(component_story) => component_story.story(cx),
+            Self::Component(component_story) => component_story.story(window, cx),
             Self::KitchenSink => KitchenSinkStory::view(cx).into(),
         }
     }

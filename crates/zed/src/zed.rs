@@ -140,7 +140,7 @@ pub fn initialize_workspace(
         cx.subscribe(&workspace_handle, {
             move |workspace, _, event, cx| match event {
                 workspace::Event::PaneAdded(pane) => {
-                    initialize_pane(workspace, pane, cx);
+                    initialize_pane(workspace, &pane, cx);
                 }
                 workspace::Event::OpenBundledFile {
                     text,
@@ -307,9 +307,10 @@ fn initialize_panels(prompt_builder: Arc<PromptBuilder>, cx: &mut ViewContext<Wo
     let prompt_builder = prompt_builder.clone();
 
     cx.spawn(|workspace_handle, mut cx| async move {
-        let project_panel = ProjectPanel::load(workspace_handle.clone(), cx.clone());
+        let project_panel = ProjectPanel::load(workspace_handle.clone(), window_handle, cx.clone());
         let outline_panel = OutlinePanel::load(workspace_handle.clone(), cx.clone());
-        let terminal_panel = TerminalPanel::load(workspace_handle.clone(), cx.clone());
+        let terminal_panel =
+            TerminalPanel::load(workspace_handle.clone(), window_handle, cx.clone());
         let channels_panel =
             collab_ui::collab_panel::CollabPanel::load(workspace_handle.clone(), cx.clone());
         let chat_panel =
@@ -422,6 +423,7 @@ fn register_actions(
                 },
                 DirectoryLister::Project(workspace.project().clone()),
                 cx,
+                e,
             );
 
             cx.spawn(|this, mut cx| async move {
@@ -432,7 +434,7 @@ fn register_actions(
                 if let Some(task) = this
                     .update(&mut cx, |this, cx| {
                         if this.project().read(cx).is_local() {
-                            this.open_workspace_for_paths(false, paths, cx)
+                            this.open_workspace_for_paths(false, paths, window, cx)
                         } else {
                             open_new_ssh_project_from_project(this, paths, cx)
                         }
@@ -575,43 +577,45 @@ fn register_actions(
             |workspace: &mut Workspace,
              _: &project_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
-                workspace.toggle_panel_focus::<ProjectPanel>(cx);
+                workspace.toggle_panel_focus::<ProjectPanel>(window, cx);
             },
         )
         .register_action2(
             |workspace: &mut Workspace,
              _: &outline_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
-                workspace.toggle_panel_focus::<OutlinePanel>(cx);
+                workspace.toggle_panel_focus::<OutlinePanel>(window, cx);
             },
         )
         .register_action2(
             |workspace: &mut Workspace,
              _: &collab_ui::collab_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
-                workspace.toggle_panel_focus::<collab_ui::collab_panel::CollabPanel>(cx);
+                workspace.toggle_panel_focus::<collab_ui::collab_panel::CollabPanel>(window, cx);
             },
         )
         .register_action2(
             |workspace: &mut Workspace,
              _: &collab_ui::chat_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
-                workspace.toggle_panel_focus::<collab_ui::chat_panel::ChatPanel>(cx);
+                workspace.toggle_panel_focus::<collab_ui::chat_panel::ChatPanel>(window, cx);
             },
         )
-        .register_action2(
+        .register_action(
             |workspace: &mut Workspace,
              _: &collab_ui::notification_panel::ToggleFocus,
+             window: &mut Window,
              cx: &mut ViewContext<Workspace>| {
-                workspace
-                    .toggle_panel_focus::<collab_ui::notification_panel::NotificationPanel>(cx);
+                workspace.toggle_panel_focus::<collab_ui::notification_panel::NotificationPanel>(
+                    window, cx,
+                );
             },
         )
         .register_action2(
             |workspace: &mut Workspace,
              _: &terminal_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
-                workspace.toggle_panel_focus::<TerminalPanel>(cx);
+                workspace.toggle_panel_focus::<TerminalPanel>(window, cx);
             },
         )
         .register_action2({
@@ -804,7 +808,7 @@ fn quit(_: &Quit, cx: &mut AppContext) {
         for window in workspace_windows {
             if let Some(should_close) = window
                 .update(&mut cx, |workspace, window, cx| {
-                    workspace.prepare_to_close(CloseIntent::Quit, cx)
+                    workspace.prepare_to_close(CloseIntent::Quit, window, cx)
                 })
                 .log_err()
             {
@@ -1855,7 +1859,7 @@ mod tests {
         project.update(cx, |project, _cx| {
             project.languages().add(markdown_language())
         });
-        let window = cx.add_window(|cx| Workspace::test_new(project, cx));
+        let window = cx.add_window(|window, cx| Workspace::test_new(project, window, cx));
         let workspace = window.root(cx).unwrap();
 
         let entries = cx.read(|cx| workspace.file_project_paths(cx));
@@ -1919,7 +1923,7 @@ mod tests {
         // Split the pane with the first entry, then open the second entry again.
         window
             .update(cx, |w, window, cx| {
-                w.split_and_clone(w.active_pane().clone(), SplitDirection::Right, cx);
+                w.split_and_clone(w.active_pane().clone(), SplitDirection::Right, window, cx);
                 w.open_path(file2.clone(), None, true, cx)
             })
             .unwrap()
@@ -2224,7 +2228,7 @@ mod tests {
         project.update(cx, |project, _cx| {
             project.languages().add(markdown_language())
         });
-        let window = cx.add_window(|cx| Workspace::test_new(project, cx));
+        let window = cx.add_window(|window, cx| Workspace::test_new(project, window, cx));
         let workspace = window.root(cx).unwrap();
 
         let initial_entries = cx.read(|cx| workspace.file_project_paths(cx));
@@ -2322,7 +2326,7 @@ mod tests {
         project.update(cx, |project, _cx| {
             project.languages().add(markdown_language())
         });
-        let window = cx.add_window(|cx| Workspace::test_new(project, cx));
+        let window = cx.add_window(|window, cx| Workspace::test_new(project, window, cx));
         let workspace = window.root(cx).unwrap();
 
         // Open a file within an existing worktree.
@@ -2387,7 +2391,7 @@ mod tests {
             project.languages().add(markdown_language());
             project.languages().add(rust_lang());
         });
-        let window = cx.add_window(|cx| Workspace::test_new(project, cx));
+        let window = cx.add_window(|window, cx| Workspace::test_new(project, window, cx));
         let worktree = cx.update(|cx| window.read(cx).unwrap().worktrees(cx).next().unwrap());
 
         // Create a new untitled buffer
@@ -2482,6 +2486,7 @@ mod tests {
                 workspace.split_and_clone(
                     workspace.active_pane().clone(),
                     SplitDirection::Right,
+                    window,
                     cx,
                 );
                 workspace.open_path((worktree.read(cx).id(), "the-new-name.rs"), None, true, cx)
@@ -2516,7 +2521,7 @@ mod tests {
             project.languages().add(rust_lang());
             project.languages().add(markdown_language());
         });
-        let window = cx.add_window(|cx| Workspace::test_new(project, cx));
+        let window = cx.add_window(|window, cx| Workspace::test_new(project, window, cx));
 
         // Create a new untitled buffer
         cx.dispatch_action(window.into(), NewFile);
@@ -2585,7 +2590,7 @@ mod tests {
         project.update(cx, |project, _cx| {
             project.languages().add(markdown_language())
         });
-        let window = cx.add_window(|cx| Workspace::test_new(project, cx));
+        let window = cx.add_window(|window, cx| Workspace::test_new(project, window, cx));
         let workspace = window.root(cx).unwrap();
 
         let entries = cx.read(|cx| workspace.file_project_paths(cx));
@@ -2679,7 +2684,7 @@ mod tests {
         project.update(cx, |project, _cx| {
             project.languages().add(markdown_language())
         });
-        let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
+        let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), window, cx));
         let pane = workspace.read_with(cx, |workspace, window, _| workspace.active_pane().clone());
 
         let entries = cx.update(|cx| workspace.root(cx).unwrap().file_project_paths(cx));
@@ -2699,7 +2704,7 @@ mod tests {
         workspace
             .update(cx, |_, window, cx| {
                 editor1.update(cx, |editor, cx| {
-                    editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                    editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                         s.select_display_ranges([DisplayPoint::new(DisplayRow(10), 0)
                             ..DisplayPoint::new(DisplayRow(10), 0)])
                     });
@@ -2729,7 +2734,7 @@ mod tests {
         workspace
             .update(cx, |_, window, cx| {
                 editor3.update(cx, |editor, cx| {
-                    editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                    editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                         s.select_display_ranges([DisplayPoint::new(DisplayRow(12), 0)
                             ..DisplayPoint::new(DisplayRow(12), 0)])
                     });
@@ -2936,7 +2941,7 @@ mod tests {
         workspace
             .update(cx, |_, window, cx| {
                 editor1.update(cx, |editor, cx| {
-                    editor.change_selections(None, cx, |s| {
+                    editor.change_selections(None, window, cx, |s| {
                         s.select_display_ranges([DisplayPoint::new(DisplayRow(15), 0)
                             ..DisplayPoint::new(DisplayRow(15), 0)])
                     })
@@ -2947,7 +2952,7 @@ mod tests {
             workspace
                 .update(cx, |_, window, cx| {
                     editor1.update(cx, |editor, cx| {
-                        editor.change_selections(None, cx, |s| {
+                        editor.change_selections(None, window, cx, |s| {
                             s.select_display_ranges([DisplayPoint::new(DisplayRow(3), 0)
                                 ..DisplayPoint::new(DisplayRow(3), 0)])
                         });
@@ -2958,7 +2963,7 @@ mod tests {
             workspace
                 .update(cx, |_, window, cx| {
                     editor1.update(cx, |editor, cx| {
-                        editor.change_selections(None, cx, |s| {
+                        editor.change_selections(None, window, cx, |s| {
                             s.select_display_ranges([DisplayPoint::new(DisplayRow(13), 0)
                                 ..DisplayPoint::new(DisplayRow(13), 0)])
                         })
@@ -2970,7 +2975,7 @@ mod tests {
             .update(cx, |_, window, cx| {
                 editor1.update(cx, |editor, cx| {
                     editor.transact(cx, |editor, cx| {
-                        editor.change_selections(None, cx, |s| {
+                        editor.change_selections(None, window, cx, |s| {
                             s.select_display_ranges([DisplayPoint::new(DisplayRow(2), 0)
                                 ..DisplayPoint::new(DisplayRow(14), 0)])
                         });
@@ -2983,7 +2988,7 @@ mod tests {
         workspace
             .update(cx, |_, window, cx| {
                 editor1.update(cx, |editor, cx| {
-                    editor.change_selections(None, cx, |s| {
+                    editor.change_selections(None, window, cx, |s| {
                         s.select_display_ranges([DisplayPoint::new(DisplayRow(1), 0)
                             ..DisplayPoint::new(DisplayRow(1), 0)])
                     })
@@ -3060,7 +3065,7 @@ mod tests {
         project.update(cx, |project, _cx| {
             project.languages().add(markdown_language())
         });
-        let workspace = cx.add_window(|cx| Workspace::test_new(project, cx));
+        let workspace = cx.add_window(|window, cx| Workspace::test_new(project, window, cx));
         let pane = workspace.read_with(cx, |workspace, window, _| workspace.active_pane().clone());
 
         let entries = cx.update(|cx| workspace.root(cx).unwrap().file_project_paths(cx));
@@ -3289,7 +3294,8 @@ mod tests {
         let executor = cx.executor();
         let app_state = init_keymap_test(cx);
         let project = Project::test(app_state.fs.clone(), [], cx).await;
-        let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
+        let workspace =
+            cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         actions!(test1, [A, B]);
         // From the Atom keymap
@@ -3395,7 +3401,8 @@ mod tests {
         let executor = cx.executor();
         let app_state = init_keymap_test(cx);
         let project = Project::test(app_state.fs.clone(), [], cx).await;
-        let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
+        let workspace =
+            cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         actions!(test2, [A, B]);
         // From the Atom keymap

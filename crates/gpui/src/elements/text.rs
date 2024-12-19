@@ -480,10 +480,15 @@ impl TextLayout {
 pub struct InteractiveText {
     element_id: ElementId,
     text: StyledText,
-    click_listener:
-        Option<Box<dyn Fn(&[Range<usize>], InteractiveTextClickEvent, &mut WindowContext<'_>)>>,
-    hover_listener: Option<Box<dyn Fn(Option<usize>, MouseMoveEvent, &mut WindowContext<'_>)>>,
-    tooltip_builder: Option<Rc<dyn Fn(usize, &mut WindowContext<'_>) -> Option<AnyView>>>,
+    click_listener: Option<
+        Box<
+            dyn Fn(&[Range<usize>], InteractiveTextClickEvent, &mut Window, &mut WindowContext<'_>),
+        >,
+    >,
+    hover_listener:
+        Option<Box<dyn Fn(Option<usize>, MouseMoveEvent, &mut Window, &mut WindowContext<'_>)>>,
+    tooltip_builder:
+        Option<Rc<dyn Fn(usize, &mut Window, &mut WindowContext<'_>) -> Option<AnyView>>>,
     clickable_ranges: Vec<Range<usize>>,
 }
 
@@ -519,13 +524,13 @@ impl InteractiveText {
     pub fn on_click(
         mut self,
         ranges: Vec<Range<usize>>,
-        listener: impl Fn(usize, &mut WindowContext<'_>) + 'static,
+        listener: impl Fn(usize, &mut Window, &mut WindowContext<'_>) + 'static,
     ) -> Self {
-        self.click_listener = Some(Box::new(move |ranges, event, cx| {
+        self.click_listener = Some(Box::new(move |ranges, event, window, cx| {
             for (range_ix, range) in ranges.iter().enumerate() {
                 if range.contains(&event.mouse_down_index) && range.contains(&event.mouse_up_index)
                 {
-                    listener(range_ix, cx);
+                    listener(range_ix, window, cx);
                 }
             }
         }));
@@ -537,7 +542,7 @@ impl InteractiveText {
     /// index of the hovered character, or None if the mouse leaves the text.
     pub fn on_hover(
         mut self,
-        listener: impl Fn(Option<usize>, MouseMoveEvent, &mut WindowContext<'_>) + 'static,
+        listener: impl Fn(Option<usize>, MouseMoveEvent, &mut Window, &mut WindowContext<'_>) + 'static,
     ) -> Self {
         self.hover_listener = Some(Box::new(listener));
         self
@@ -546,7 +551,7 @@ impl InteractiveText {
     /// tooltip lets you specify a tooltip for a given character index in the string.
     pub fn tooltip(
         mut self,
-        builder: impl Fn(usize, &mut WindowContext<'_>) -> Option<AnyView> + 'static,
+        builder: impl Fn(usize, &mut Window, &mut WindowContext<'_>) -> Option<AnyView> + 'static,
     ) -> Self {
         self.tooltip_builder = Some(Rc::new(builder));
         self
@@ -609,6 +614,7 @@ impl Element for InteractiveText {
         window: &mut Window,
         cx: &mut WindowContext,
     ) {
+        let window_handle = window.handle();
         let text_layout = self.text.layout().clone();
         cx.with_element_state::<InteractiveTextState, _>(
             global_id.unwrap(),
@@ -642,6 +648,7 @@ impl Element for InteractiveText {
                                             mouse_down_index,
                                             mouse_up_index,
                                         },
+                                        window,
                                         cx,
                                     )
                                 }
@@ -677,7 +684,7 @@ impl Element for InteractiveText {
                             if current != updated {
                                 hovered_index.set(updated);
                                 if let Some(hover_listener) = hover_listener.as_ref() {
-                                    hover_listener(updated, event.clone(), cx);
+                                    hover_listener(updated, event.clone(), window, cx);
                                 }
                                 cx.refresh();
                             }
@@ -713,21 +720,20 @@ impl Element for InteractiveText {
 
                                 move |mut cx| async move {
                                     cx.background_executor().timer(TOOLTIP_DELAY).await;
-                                    cx.update(|cx| {
-                                        let new_tooltip =
-                                            tooltip_builder(position, cx).map(|tooltip| {
-                                                ActiveTooltip {
+                                    window_handle
+                                        .update(&mut cx, |_, window, cx| {
+                                            let new_tooltip = tooltip_builder(position, window, cx)
+                                                .map(|tooltip| ActiveTooltip {
                                                     tooltip: Some(AnyTooltip {
                                                         view: tooltip,
                                                         mouse_position: cx.mouse_position(),
                                                     }),
                                                     _task: None,
-                                                }
-                                            });
-                                        *active_tooltip.borrow_mut() = new_tooltip;
-                                        cx.refresh();
-                                    })
-                                    .ok();
+                                                });
+                                            *active_tooltip.borrow_mut() = new_tooltip;
+                                            cx.refresh();
+                                        })
+                                        .ok();
                                 }
                             });
                             *active_tooltip.borrow_mut() = Some(ActiveTooltip {

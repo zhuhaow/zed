@@ -148,7 +148,7 @@ impl Output {
                         IconButton::new(ElementId::Name("copy-output".into()), IconName::Copy)
                             .style(ButtonStyle::Transparent)
                             .tooltip(move |window, cx| Tooltip::text("Copy Output", cx))
-                            .on_click(cx.listener(move |_, _, window, cx| {
+                            .on_click(cx.listener2(move |_, _, window, cx| {
                                 let clipboard_content = v.clipboard_content(cx);
 
                                 if let Some(clipboard_content) = clipboard_content.as_ref() {
@@ -166,7 +166,7 @@ impl Output {
                         )
                         .style(ButtonStyle::Transparent)
                         .tooltip(move |window, cx| Tooltip::text("Open in Buffer", cx))
-                        .on_click(cx.listener2({
+                        .on_click(cx.listener({
                             let workspace = workspace.clone();
 
                             move |_, _, cx| {

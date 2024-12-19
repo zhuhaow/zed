@@ -12,13 +12,13 @@ use std::sync::Arc;
 actions!(vim, [ToggleReplace, UndoReplace]);
 
 pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
-    Vim::action(editor, cx, |vim, _: &ToggleReplace, cx| {
+    Vim::action(editor, cx, |vim, _: &ToggleReplace, window, cx| {
         vim.replacements = vec![];
         vim.start_recording(cx);
         vim.switch_mode(Mode::Replace, false, cx);
     });
 
-    Vim::action(editor, cx, |vim, _: &UndoReplace, cx| {
+    Vim::action(editor, cx, |vim, _: &UndoReplace, window, cx| {
         if vim.mode != Mode::Replace {
             return;
         }
@@ -60,7 +60,7 @@ impl Vim {
 
                 editor.edit_with_block_indent(edits.clone(), Vec::new(), cx);
 
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.select_anchor_ranges(edits.iter().map(|(range, _)| range.end..range.end));
                 });
                 editor.set_clip_at_line_ends(true, cx);
@@ -107,7 +107,7 @@ impl Vim {
 
                 editor.edit(edits, cx);
 
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.select_ranges(new_selections);
                 });
                 editor.set_clip_at_line_ends(true, cx);

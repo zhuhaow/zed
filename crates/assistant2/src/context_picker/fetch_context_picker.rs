@@ -24,10 +24,11 @@ impl FetchContextPicker {
         context_picker: WeakView<ContextPicker>,
         workspace: WeakView<Workspace>,
         context_store: WeakModel<ContextStore>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let delegate = FetchContextPickerDelegate::new(context_picker, workspace, context_store);
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
 
         Self { picker }
     }
@@ -177,7 +178,12 @@ impl PickerDelegate for FetchContextPickerDelegate {
         Task::ready(())
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         let Some(workspace) = self.workspace.upgrade() else {
             return;
         };

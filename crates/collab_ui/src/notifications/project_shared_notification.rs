@@ -128,12 +128,12 @@ impl Render for ProjectSharedNotification {
         div().size_full().font(ui_font).child(
             CollabNotification::new(
                 self.owner.avatar_uri.clone(),
-                Button::new("open", "Open").on_click(cx.listener(
+                Button::new("open", "Open").on_click(cx.listener2(
                     move |this, _event, window, cx| {
                         this.join(cx);
                     },
                 )),
-                Button::new("dismiss", "Dismiss").on_click(cx.listener(
+                Button::new("dismiss", "Dismiss").on_click(cx.listener2(
                     move |this, _event, window, cx| {
                         this.dismiss(cx);
                     },

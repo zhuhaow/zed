@@ -163,14 +163,14 @@ impl ProjectIndexDebugView {
                             .child(
                                 Button::new(("prev", ix), "prev")
                                     .disabled(ix == 0)
-                                    .on_click(cx.listener(move |this, _, _, _| {
+                                    .on_click(cx.listener2(move |this, _, _, _| {
                                         this.scroll_to_chunk(ix.saturating_sub(1))
                                     })),
                             )
                             .child(
                                 Button::new(("next", ix), "next")
                                     .disabled(ix + 1 == state.chunks.len())
-                                    .on_click(cx.listener(move |this, _, _, _| {
+                                    .on_click(cx.listener2(move |this, _, _, _| {
                                         this.scroll_to_chunk(ix + 1)
                                     })),
                             ),
@@ -211,7 +211,7 @@ impl Render for ProjectIndexDebugView {
                         .border_b_1()
                         .border_color(cx.theme().colors().border)
                         .cursor(CursorStyle::PointingHand)
-                        .on_click(cx.listener(|this, _, window, cx| {
+                        .on_click(cx.listener2(|this, _, window, cx| {
                             this.selected_path.take();
                             cx.notify();
                         })),
@@ -236,7 +236,7 @@ impl Render for ProjectIndexDebugView {
                                 .id(ix)
                                 .pl_8()
                                 .child(Label::new(file_path.to_string_lossy().to_string()))
-                                .on_mouse_move(cx.listener(
+                                .on_mouse_move(cx.listener2(
                                     move |this, _: &MouseMoveEvent, window, cx| {
                                         if this.hovered_row_ix != Some(ix) {
                                             this.hovered_row_ix = Some(ix);
@@ -245,7 +245,7 @@ impl Render for ProjectIndexDebugView {
                                     },
                                 ))
                                 .cursor(CursorStyle::PointingHand)
-                                .on_click(cx.listener({
+                                .on_click(cx.listener2({
                                     let worktree_id = *worktree_id;
                                     let file_path = file_path.clone();
                                     move |this, _, _, cx| {
@@ -288,6 +288,7 @@ impl Item for ProjectIndexDebugView {
     fn clone_on_split(
         &self,
         _: Option<workspace::WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>>
     where

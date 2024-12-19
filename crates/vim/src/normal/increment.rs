@@ -24,13 +24,13 @@ struct Decrement {
 impl_actions!(vim, [Increment, Decrement]);
 
 pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
-    Vim::action(editor, cx, |vim, action: &Increment, cx| {
+    Vim::action(editor, cx, |vim, action: &Increment, window, cx| {
         vim.record_current_action(cx);
         let count = Vim::take_count(cx).unwrap_or(1);
         let step = if action.step { 1 } else { 0 };
         vim.increment(count as i64, step, cx)
     });
-    Vim::action(editor, cx, |vim, action: &Decrement, cx| {
+    Vim::action(editor, cx, |vim, action: &Decrement, window, cx| {
         vim.record_current_action(cx);
         let count = Vim::take_count(cx).unwrap_or(1);
         let step = if action.step { -1 } else { 0 };

@@ -11,20 +11,23 @@ use std::{borrow::Cow, cmp::Reverse, sync::Arc};
 use theme::ActiveTheme;
 use util::ResultExt;
 use workspace::{
-    ui::{v_flex, Color, Label, LabelCommon, LabelLike, ListItem, ListItemSpacing, Toggleable},
+    ui::{
+        prelude::Window, v_flex, Color, Label, LabelCommon, LabelLike, ListItem, ListItemSpacing,
+        Toggleable,
+    },
     Workspace,
 };
 
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
-        |workspace: &mut Workspace, _: &mut ViewContext<Workspace>| {
+        |workspace: &mut Workspace, _: &mut Window, _: &mut ViewContext<Workspace>| {
             workspace.register_action(
                 |workspace, _: &workspace::ToggleProjectSymbols, window, cx| {
                     let project = workspace.project().clone();
                     let handle = cx.view().downgrade();
                     workspace.toggle_modal(cx, move |cx| {
                         let delegate = ProjectSymbolsDelegate::new(handle, project);
-                        Picker::uniform_list(delegate, cx).width(rems(34.))
+                        Picker::uniform_list(delegate, window, cx).width(rems(34.))
                     })
                 },
             );
@@ -107,7 +110,12 @@ impl PickerDelegate for ProjectSymbolsDelegate {
         "Search project symbols...".into()
     }
 
-    fn confirm(&mut self, secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some(symbol) = self
             .matches
             .get(self.selected_match_index)
@@ -118,14 +126,15 @@ impl PickerDelegate for ProjectSymbolsDelegate {
             });
             let symbol = symbol.clone();
             let workspace = self.workspace.clone();
+            let window_handle = window.handle();
             cx.spawn(|_, mut cx| async move {
                 let buffer = buffer.await?;
-                workspace.update(&mut cx, |workspace, cx| {
+                workspace.update_in_window(window_handle, &mut cx, |workspace, window, cx| {
                     let position = buffer
                         .read(cx)
                         .clip_point_utf16(symbol.range.start, Bias::Left);
                     let pane = if secondary {
-                        workspace.adjacent_pane(cx)
+                        workspace.adjacent_pane(window, cx)
                     } else {
                         workspace.active_pane().clone()
                     };
@@ -134,7 +143,7 @@ impl PickerDelegate for ProjectSymbolsDelegate {
                         workspace.open_project_item::<Editor>(pane, buffer, true, true, cx);
 
                     editor.update(cx, |editor, cx| {
-                        editor.change_selections(Some(Autoscroll::center()), cx, |s| {
+                        editor.change_selections(Some, window(Autoscroll::center()), cx, |s| {
                             s.select_ranges([position..position])
                         });
                     });
@@ -335,38 +344,42 @@ mod tests {
             },
         );
 
-        let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
+        let window = cx.window;
 
         // Create the project symbols view.
-        let symbols = cx.new_view(|cx| {
-            Picker::uniform_list(
-                ProjectSymbolsDelegate::new(workspace.downgrade(), project.clone()),
-                cx,
-            )
+        let symbols = window.update(cx, |_, window, cx| {
+            cx.new_view(|cx| {
+                Picker::uniform_list(
+                    ProjectSymbolsDelegate::new(workspace.downgrade(), project.clone()),
+                    window,
+                    cx,
+                )
+            })
         });
 
         // Spawn multiples updates before the first update completes,
         // such that in the end, there are no matches. Testing for regression:
         // https://github.com/zed-industries/zed/issues/861
-        symbols.update(cx, |p, cx| {
-            p.update_matches("o".to_string(), cx);
-            p.update_matches("on".to_string(), cx);
-            p.update_matches("onex".to_string(), cx);
+        symbols.update_in_window(window, cx, |p, window, cx| {
+            p.update_matches("o".to_string(), window, cx);
+            p.update_matches("on".to_string(), window, cx);
+            p.update_matches("onex".to_string(), window, cx);
         });
 
-        cx.run_until_parked();
-        symbols.update(cx, |symbols, _| {
+        symbols.update_in_window(window, cx, |symbols, window, cx| {
             assert_eq!(symbols.delegate.matches.len(), 0);
         });
 
         // Spawn more updates such that in the end, there are matches.
-        symbols.update(cx, |p, cx| {
-            p.update_matches("one".to_string(), cx);
-            p.update_matches("on".to_string(), cx);
+        symbols.update_in_window(window, cx, |p, window, cx| {
+            p.update_matches("one".to_string(), window, cx);
+            p.update_matches("on".to_string(), window, cx);
         });
 
         cx.run_until_parked();
-        symbols.update(cx, |symbols, _| {
+        symbols.update_in_window(window, cx, |symbols, window, cx| {
             let delegate = &symbols.delegate;
             assert_eq!(delegate.matches.len(), 2);
             assert_eq!(delegate.matches[0].string, "ton");
@@ -374,13 +387,13 @@ mod tests {
         });
 
         // Spawn more updates such that in the end, there are again no matches.
-        symbols.update(cx, |p, cx| {
-            p.update_matches("o".to_string(), cx);
-            p.update_matches("".to_string(), cx);
+        symbols.update_in_window(window, cx, |p, window, cx| {
+            p.update_matches("o".to_string(), window, cx);
+            p.update_matches("".to_string(), window, cx);
         });
 
         cx.run_until_parked();
-        symbols.update(cx, |symbols, _| {
+        symbols.update_in_window(window, cx, |symbols, window, cx| {
             assert_eq!(symbols.delegate.matches.len(), 0);
         });
     }

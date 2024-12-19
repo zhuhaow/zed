@@ -5,6 +5,7 @@ use gpui::{
 use itertools::Itertools;
 use serde_json::json;
 use settings::get_key_equivalents;
+use ui::prelude::Window;
 use ui::{
     div, h_flex, px, v_flex, ButtonCommon, Clickable, FluentBuilder, InteractiveElement, Label,
     LabelCommon, LabelSize, ParentElement, SharedString, StatefulInteractiveElement, Styled,
@@ -17,7 +18,7 @@ use workspace::Workspace;
 actions!(debug, [OpenKeyContextView]);
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(|workspace: &mut Workspace, _| {
+    cx.observe_new_views(|workspace: &mut Workspace, _, _| {
         workspace.register_action(|workspace, _: &OpenKeyContextView, window, cx| {
             let key_context_view = cx.new_view(KeyContextView::new);
             workspace.add_item_to_active_pane(Box::new(key_context_view), None, true, cx)
@@ -156,6 +157,7 @@ impl Item for KeyContextView {
     fn clone_on_split(
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<gpui::View<Self>>
     where
@@ -180,14 +182,14 @@ impl Render for KeyContextView {
             .key_context("KeyContextView")
             .on_mouse_up_out(
                 MouseButton::Left,
-                cx.listener(|this, _, window, cx| {
+                cx.listener2(|this, _, window, cx| {
                     this.last_keystrokes.take();
                     this.set_context_stack(cx.context_stack(), cx);
                 }),
             )
             .on_mouse_up_out(
                 MouseButton::Right,
-                cx.listener(|_, _, window, cx| {
+                cx.listener2(|_, _, window, cx| {
                     cx.defer(|this, cx| {
                         this.last_keystrokes.take();
                         this.set_context_stack(cx.context_stack(), cx);

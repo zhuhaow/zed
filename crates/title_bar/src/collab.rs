@@ -165,7 +165,7 @@ impl TitleBar {
                                 .cursor_pointer()
                                 .on_click({
                                     let peer_id = collaborator.peer_id;
-                                    cx.listener(move |this, _, window, cx| {
+                                    cx.listener2(move |this, _, window, cx| {
                                         this.workspace
                                             .update(cx, |workspace, cx| {
                                                 if is_following {
@@ -324,7 +324,7 @@ impl TitleBar {
                 .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                 .toggle_state(is_shared)
                 .label_size(LabelSize::Small)
-                .on_click(cx.listener(move |this, _, window, cx| {
+                .on_click(cx.listener2(move |this, _, window, cx| {
                     if is_shared {
                         this.unshare_project(&Default::default(), cx);
                     } else {

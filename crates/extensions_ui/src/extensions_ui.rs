@@ -38,7 +38,7 @@ use crate::extension_version_selector::{
 actions!(zed, [InstallDevExtension]);
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(move |workspace: &mut Workspace, cx| {
+    cx.observe_new_views(move |workspace: &mut Workspace, window, cx| {
         workspace
             .register_action(move |workspace, _: &zed_actions::Extensions, window, cx| {
                 let existing = workspace
@@ -63,6 +63,7 @@ pub fn init(cx: &mut AppContext) {
                         multiple: false,
                     },
                     DirectoryLister::Local(workspace.app_state().fs.clone()),
+                    window,
                     cx,
                 );
 
@@ -212,7 +213,7 @@ impl ExtensionsPage {
             ];
 
             let query_editor = cx.new_view(|cx| {
-                let mut input = Editor::single_line(cx);
+                let mut input = Editor::single_line(window, cx);
                 input.set_placeholder_text("Search extensions...", cx);
                 input
             });
@@ -481,7 +482,7 @@ impl ExtensionsPage {
                         .icon_color(Color::Accent)
                         .icon_size(IconSize::Small)
                         .style(ButtonStyle::Filled)
-                        .on_click(cx.listener({
+                        .on_click(cx.listener2({
                             let repository_url = repository_url.clone();
                             move |_, _, window, cx| {
                                 cx.open_url(&repository_url);
@@ -589,7 +590,7 @@ impl ExtensionsPage {
                                 .icon_color(Color::Accent)
                                 .icon_size(IconSize::Small)
                                 .style(ButtonStyle::Filled)
-                                .on_click(cx.listener({
+                                .on_click(cx.listener2({
                                     let repository_url = repository_url.clone();
                                     move |_, _, window, cx| {
                                         cx.open_url(&repository_url);
@@ -637,12 +638,14 @@ impl ExtensionsPage {
                     None,
                     cx.handler_for(this, {
                         let extension_id = extension_id.clone();
-                        move |this, cx| this.show_extension_version_list(extension_id.clone(), cx)
+                        move |this, window, cx| {
+                            this.show_extension_version_list(extension_id.clone(), window, cx)
+                        }
                     }),
                 )
                 .entry("Copy Extension ID", None, {
                     let extension_id = extension_id.clone();
-                    move |cx| {
+                    move |window, cx| {
                         cx.write_to_clipboard(ClipboardItem::new_string(extension_id.to_string()));
                     }
                 })
@@ -651,11 +654,17 @@ impl ExtensionsPage {
         context_menu
     }
 
-    fn show_extension_version_list(&mut self, extension_id: Arc<str>, cx: &mut ViewContext<Self>) {
+    fn show_extension_version_list(
+        &mut self,
+        extension_id: Arc<str>,
+        window: &Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let Some(workspace) = self.workspace.upgrade() else {
             return;
         };
 
+        let window_handle = window.handle();
         cx.spawn(move |this, mut cx| async move {
             let extension_versions_task = this.update(&mut cx, |_, cx| {
                 let extension_store = ExtensionStore::global(cx);
@@ -667,7 +676,7 @@ impl ExtensionsPage {
 
             let extension_versions = extension_versions_task.await?;
 
-            workspace.update(&mut cx, |workspace, cx| {
+            workspace.update_in_window(window_handle, &mut cx, |workspace, window, cx| {
                 let fs = workspace.project().read(cx).fs().clone();
                 workspace.toggle_modal(cx, |cx| {
                     let delegate = ExtensionVersionSelectorDelegate::new(
@@ -676,7 +685,7 @@ impl ExtensionsPage {
                         extension_versions,
                     );
 
-                    ExtensionVersionSelector::new(delegate, cx)
+                    ExtensionVersionSelector::new(delegate, window, cx)
                 });
             })?;
 
@@ -707,7 +716,7 @@ impl ExtensionsPage {
         match status.clone() {
             ExtensionStatus::NotInstalled => (
                 Button::new(SharedString::from(extension.id.clone()), "Install").on_click(
-                    cx.listener({
+                    cx.listener2({
                         let extension_id = extension.id.clone();
                         move |this, _, window, cx| {
                             this.telemetry
@@ -732,7 +741,7 @@ impl ExtensionsPage {
             ),
             ExtensionStatus::Installed(installed_version) => (
                 Button::new(SharedString::from(extension.id.clone()), "Uninstall").on_click(
-                    cx.listener({
+                    cx.listener2({
                         let extension_id = extension.id.clone();
                         move |this, _, window, cx| {
                             this.telemetry
@@ -762,7 +771,7 @@ impl ExtensionsPage {
                                 })
                             })
                             .disabled(!is_compatible)
-                            .on_click(cx.listener({
+                            .on_click(cx.listener2({
                                 let extension_id = extension.id.clone();
                                 let version = extension.manifest.version.clone();
                                 move |this, _, window, cx| {
@@ -996,7 +1005,7 @@ impl ExtensionsPage {
                         } else {
                             ui::ToggleState::Unselected
                         },
-                        cx.listener(move |this, selection, window, cx| {
+                        cx.listener2(move |this, selection, window, cx| {
                             this.telemetry
                                 .report_app_event("feature upsell: toggle vim".to_string());
                             this.update_settings::<VimModeSetting>(
@@ -1085,7 +1094,7 @@ impl Render for ExtensionsPage {
                                             .style(ButtonStyle::Filled)
                                             .size(ButtonSize::Large)
                                             .toggle_state(self.filter == ExtensionFilter::All)
-                                            .on_click(cx.listener(|this, _event, window, cx| {
+                                            .on_click(cx.listener2(|this, _event, window, cx| {
                                                 this.filter = ExtensionFilter::All;
                                                 this.filter_extension_entries(cx);
                                             }))
@@ -1099,7 +1108,7 @@ impl Render for ExtensionsPage {
                                             .style(ButtonStyle::Filled)
                                             .size(ButtonSize::Large)
                                             .toggle_state(self.filter == ExtensionFilter::Installed)
-                                            .on_click(cx.listener(|this, _event, window, cx| {
+                                            .on_click(cx.listener2(|this, _event, window, cx| {
                                                 this.filter = ExtensionFilter::Installed;
                                                 this.filter_extension_entries(cx);
                                             }))
@@ -1115,7 +1124,7 @@ impl Render for ExtensionsPage {
                                             .toggle_state(
                                                 self.filter == ExtensionFilter::NotInstalled,
                                             )
-                                            .on_click(cx.listener(|this, _event, window, cx| {
+                                            .on_click(cx.listener2(|this, _event, window, cx| {
                                                 this.filter = ExtensionFilter::NotInstalled;
                                                 this.filter_extension_entries(cx);
                                             }))
@@ -1176,7 +1185,8 @@ impl Item for ExtensionsPage {
     fn clone_on_split(
         &self,
         _workspace_id: Option<WorkspaceId>,
-        _: &mut ViewContext<Self>,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>> {
         None
     }

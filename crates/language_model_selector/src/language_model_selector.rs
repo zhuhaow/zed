@@ -22,6 +22,7 @@ pub struct LanguageModelSelector {
 impl LanguageModelSelector {
     pub fn new(
         on_model_changed: impl Fn(Arc<dyn LanguageModel>, &AppContext) + 'static,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let on_model_changed = Arc::new(on_model_changed);
@@ -54,8 +55,9 @@ impl LanguageModelSelector {
             selected_index: 0,
         };
 
-        let picker =
-            cx.new_view(|cx| Picker::uniform_list(delegate, cx).max_height(Some(rems(20.).into())));
+        let picker = cx.new_view(|cx| {
+            Picker::uniform_list(delegate, window, cx).max_height(Some(rems(20.).into()))
+        });
 
         LanguageModelSelector { picker }
     }
@@ -202,7 +204,12 @@ impl PickerDelegate for LanguageModelPickerDelegate {
         })
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some(model_info) = self.filtered_models.get(self.selected_index) {
             let model = model_info.model.clone();
             (self.on_model_changed)(model.clone(), cx);

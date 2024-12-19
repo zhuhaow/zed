@@ -5,6 +5,7 @@ use gpui::{actions, impl_actions, ViewContext};
 use language::Point;
 use search::{buffer_search, BufferSearchBar, SearchOptions};
 use serde_derive::Deserialize;
+use ui::prelude::Window;
 use util::serde::default_true;
 use workspace::{notifications::NotifyResultExt, searchable::Direction};
 
@@ -83,36 +84,58 @@ pub(crate) fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
 }
 
 impl Vim {
-    fn move_to_next(&mut self, action: &MoveToNext, cx: &mut ViewContext<Self>) {
+    fn move_to_next(
+        &mut self,
+        action: &MoveToNext,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.move_to_internal(
             Direction::Next,
             action.case_sensitive,
             !action.partial_word,
             action.regex,
+            window,
             cx,
         )
     }
 
-    fn move_to_prev(&mut self, action: &MoveToPrev, cx: &mut ViewContext<Self>) {
+    fn move_to_prev(
+        &mut self,
+        action: &MoveToPrev,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.move_to_internal(
             Direction::Prev,
             action.case_sensitive,
             !action.partial_word,
             action.regex,
+            window,
             cx,
         )
     }
 
-    fn move_to_next_match(&mut self, _: &MoveToNextMatch, cx: &mut ViewContext<Self>) {
-        self.move_to_match_internal(self.search.direction, cx)
+    fn move_to_next_match(
+        &mut self,
+        _: &MoveToNextMatch,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
+        self.move_to_match_internal(self.search.direction, window, cx)
     }
 
-    fn move_to_prev_match(&mut self, _: &MoveToPrevMatch, cx: &mut ViewContext<Self>) {
-        self.move_to_match_internal(self.search.direction.opposite(), cx)
+    fn move_to_prev_match(
+        &mut self,
+        _: &MoveToPrevMatch,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
+        self.move_to_match_internal(self.search.direction.opposite(), window, cx)
     }
 
-    fn search(&mut self, action: &Search, cx: &mut ViewContext<Self>) {
-        let Some(pane) = self.pane(cx) else {
+    fn search(&mut self, action: &Search, window: &mut Window, cx: &mut ViewContext<Self>) {
+        let Some(pane) = self.pane(window, cx) else {
             return;
         };
         let direction = if action.backwards {
@@ -159,14 +182,21 @@ impl Vim {
     }
 
     // hook into the existing to clear out any vim search state on cmd+f or edit -> find.
-    fn search_deploy(&mut self, _: &buffer_search::Deploy, cx: &mut ViewContext<Self>) {
+    fn search_deploy(
+        &mut self,
+        _: &buffer_search::Deploy,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.search = Default::default();
         cx.propagate();
     }
 
-    pub fn search_submit(&mut self, cx: &mut ViewContext<Self>) {
+    pub fn search_submit(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.store_visual_marks(cx);
-        let Some(pane) = self.pane(cx) else { return };
+        let Some(pane) = self.pane(window, cx) else {
+            return;
+        };
         let result = pane.update(cx, |pane, cx| {
             let search_bar = pane.toolbar().read(cx).item_of_type::<BufferSearchBar>()?;
             search_bar.update(cx, |search_bar, cx| {
@@ -180,7 +210,7 @@ impl Vim {
                     count = count.saturating_sub(1)
                 }
                 self.search.count = 1;
-                search_bar.select_match(direction, count, cx);
+                search_bar.select_match(direction, count, window, cx);
                 search_bar.focus_editor(&Default::default(), cx);
 
                 let prior_selections: Vec<_> = self.search.prior_selections.drain(..).collect();
@@ -224,8 +254,15 @@ impl Vim {
         );
     }
 
-    pub fn move_to_match_internal(&mut self, direction: Direction, cx: &mut ViewContext<Self>) {
-        let Some(pane) = self.pane(cx) else { return };
+    pub fn move_to_match_internal(
+        &mut self,
+        direction: Direction,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
+        let Some(pane) = self.pane(window, cx) else {
+            return;
+        };
         let count = Vim::take_count(cx).unwrap_or(1);
         let prior_selections = self.editor_selections(cx);
 
@@ -237,7 +274,7 @@ impl Vim {
                 if !search_bar.has_active_match() || !search_bar.show(cx) {
                     return false;
                 }
-                search_bar.select_match(direction, count, cx);
+                search_bar.select_match(direction, count, window, cx);
                 true
             })
         });
@@ -261,9 +298,12 @@ impl Vim {
         case_sensitive: bool,
         whole_word: bool,
         regex: bool,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
-        let Some(pane) = self.pane(cx) else { return };
+        let Some(pane) = self.pane(window, cx) else {
+            return;
+        };
         let count = Vim::take_count(cx).unwrap_or(1);
         let prior_selections = self.editor_selections(cx);
         let vim = cx.view().clone();
@@ -298,10 +338,11 @@ impl Vim {
             let Some(search) = search else { return false };
 
             let search_bar = search_bar.downgrade();
+            let window_handle = window.handle();
             cx.spawn(|_, mut cx| async move {
                 search.await?;
-                search_bar.update(&mut cx, |search_bar, cx| {
-                    search_bar.select_match(direction, count, cx);
+                search_bar.update_in_window(window_handle, &mut cx, |search_bar, window, cx| {
+                    search_bar.select_match(direction, count, window, cx);
 
                     vim.update(cx, |vim, cx| {
                         let new_selections = vim.editor_selections(cx);
@@ -328,8 +369,15 @@ impl Vim {
         }
     }
 
-    fn find_command(&mut self, action: &FindCommand, cx: &mut ViewContext<Self>) {
-        let Some(pane) = self.pane(cx) else { return };
+    fn find_command(
+        &mut self,
+        action: &FindCommand,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
+        let Some(pane) = self.pane(window, cx) else {
+            return;
+        };
         pane.update(cx, |pane, cx| {
             if let Some(search_bar) = pane.toolbar().read(cx).item_of_type::<BufferSearchBar>() {
                 let search = search_bar.update(cx, |search_bar, cx| {
@@ -358,22 +406,29 @@ impl Vim {
                 } else {
                     Direction::Next
                 };
+                let window_handle = window.handle();
                 cx.spawn(|_, mut cx| async move {
                     search.await?;
-                    search_bar.update(&mut cx, |search_bar, cx| {
-                        search_bar.select_match(direction, 1, cx)
-                    })?;
-                    anyhow::Ok(())
+                    search_bar.update_in_window(window_handle, &mut cx, |search_bar, window, cx| {
+                        search_bar.select_match(direction, 1, window, cx)
+                    })
                 })
                 .detach_and_log_err(cx);
             }
         })
     }
 
-    fn replace_command(&mut self, action: &ReplaceCommand, cx: &mut ViewContext<Self>) {
+    fn replace_command(
+        &mut self,
+        action: &ReplaceCommand,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let replacement = action.replacement.clone();
-        let Some(((pane, workspace), editor)) =
-            self.pane(cx).zip(self.workspace(cx)).zip(self.editor())
+        let Some(((pane, workspace), editor)) = self
+            .pane(window, cx)
+            .zip(self.workspace(window, cx))
+            .zip(self.editor())
         else {
             return;
         };
@@ -639,7 +694,7 @@ mod test {
 
         cx.run_until_parked();
 
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let highlights = editor.all_text_background_highlights(cx);
             assert_eq!(3, highlights.len());
             assert_eq!(
@@ -681,7 +736,7 @@ mod test {
         cx.simulate_keystrokes("/ d");
         cx.simulate_keystrokes("enter");
         cx.assert_state("aa\nbb\nˇdd\ncc\nbb\n", Mode::Normal);
-        cx.update_editor(|editor, cx| editor.move_to_beginning(&Default::default(), cx));
+        cx.update_editor(|editor, window, cx| editor.move_to_beginning(&Default::default(), cx));
         cx.assert_state("ˇaa\nbb\ndd\ncc\nbb\n", Mode::Normal);
         cx.simulate_keystrokes("/ b");
         cx.simulate_keystrokes("enter");

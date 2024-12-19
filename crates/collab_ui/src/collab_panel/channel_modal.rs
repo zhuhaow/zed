@@ -37,6 +37,7 @@ impl ChannelModal {
         channel_store: Model<ChannelStore>,
         channel_id: ChannelId,
         mode: Mode,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         cx.observe(&channel_store, |_, _, cx| cx.notify()).detach();
@@ -57,6 +58,7 @@ impl ChannelModal {
                     has_all_members: false,
                     mode,
                 },
+                window,
                 cx,
             )
             .modal(false)
@@ -74,16 +76,16 @@ impl ChannelModal {
             Mode::ManageMembers => Mode::InviteMembers,
             Mode::InviteMembers => Mode::ManageMembers,
         };
-        self.set_mode(mode, cx);
+        self.set_mode(mode, window, cx);
     }
 
-    fn set_mode(&mut self, mode: Mode, cx: &mut ViewContext<Self>) {
+    fn set_mode(&mut self, mode: Mode, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.picker.update(cx, |picker, cx| {
             let delegate = &mut picker.delegate;
             delegate.mode = mode;
             delegate.selected_index = 0;
             picker.set_query("", cx);
-            picker.update_matches(picker.query(cx), cx);
+            picker.update_matches(picker.query(cx), window, cx);
             cx.notify()
         });
         cx.notify()
@@ -137,8 +139,8 @@ impl Render for ChannelModal {
 
         v_flex()
             .key_context("ChannelModal")
-            .on_action(cx.listener(Self::toggle_mode))
-            .on_action(cx.listener(Self::dismiss))
+            .on_action(cx.listener2(Self::toggle_mode))
+            .on_action(cx.listener2(Self::dismiss))
             .elevation_3(cx)
             .w(rems(34.))
             .child(
@@ -168,13 +170,13 @@ impl Render for ChannelModal {
                                 } else {
                                     ui::ToggleState::Unselected
                                 },
-                                cx.listener(Self::set_channel_visibility),
+                                cx.listener2(Self::set_channel_visibility),
                             ))
                             .children(
                                 Some(
                                     Button::new("copy-link", "Copy Link")
                                         .label_size(LabelSize::Small)
-                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                        .on_click(cx.listener2(move |this, _, window, cx| {
                                             if let Some(channel) = this
                                                 .channel_store
                                                 .read(cx)
@@ -202,8 +204,8 @@ impl Render for ChannelModal {
                                         this.border_color(cx.theme().colors().border)
                                     })
                                     .child(Label::new("Manage Members"))
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.set_mode(Mode::ManageMembers, cx);
+                                    .on_click(cx.listener2(|this, _, window, cx| {
+                                        this.set_mode(Mode::ManageMembers, window, cx);
                                     })),
                             )
                             .child(
@@ -217,8 +219,8 @@ impl Render for ChannelModal {
                                         this.border_color(cx.theme().colors().border)
                                     })
                                     .child(Label::new("Invite Members"))
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.set_mode(Mode::InviteMembers, cx);
+                                    .on_click(cx.listener2(|this, _, window, cx| {
+                                        this.set_mode(Mode::InviteMembers, window, cx);
                                     })),
                             ),
                     ),
@@ -343,7 +345,7 @@ impl PickerDelegate for ChannelModalDelegate {
         }
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(&mut self, _: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>) {
         if let Some(selected_user) = self.user_at_index(self.selected_index) {
             if Some(selected_user.id) == self.user_store.read(cx).current_user().map(|user| user.id)
             {
@@ -563,7 +565,7 @@ impl ChannelModalDelegate {
 
             if role == ChannelRole::Admin || role == ChannelRole::Member {
                 let picker = picker.clone();
-                menu = menu.entry("Demote to Guest", None, move |cx| {
+                menu = menu.entry("Demote to Guest", None, move |window, cx| {
                     picker.update(cx, |picker, cx| {
                         picker
                             .delegate
@@ -580,7 +582,7 @@ impl ChannelModalDelegate {
                     "Demote to Member"
                 };
 
-                menu = menu.entry(label, None, move |cx| {
+                menu = menu.entry(label, None, move |window, cx| {
                     picker.update(cx, |picker, cx| {
                         picker
                             .delegate
@@ -591,7 +593,7 @@ impl ChannelModalDelegate {
 
             if role == ChannelRole::Member || role == ChannelRole::Guest {
                 let picker = picker.clone();
-                menu = menu.entry("Promote to Admin", None, move |cx| {
+                menu = menu.entry("Promote to Admin", None, move |window, cx| {
                     picker.update(cx, |picker, cx| {
                         picker
                             .delegate
@@ -603,7 +605,7 @@ impl ChannelModalDelegate {
             menu = menu.separator();
             menu = menu.entry("Remove from Channel", None, {
                 let picker = picker.clone();
-                move |cx| {
+                move |window, cx| {
                     picker.update(cx, |picker, cx| {
                         picker.delegate.remove_member(user_id, cx);
                     })

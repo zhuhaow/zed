@@ -14,19 +14,19 @@ actions!(
 );
 
 pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
-    Vim::action(editor, cx, |vim, _: &LineDown, cx| {
+    Vim::action(editor, cx, |vim, _: &LineDown, window, cx| {
         vim.scroll(false, cx, |c| ScrollAmount::Line(c.unwrap_or(1.)))
     });
-    Vim::action(editor, cx, |vim, _: &LineUp, cx| {
+    Vim::action(editor, cx, |vim, _: &LineUp, window, cx| {
         vim.scroll(false, cx, |c| ScrollAmount::Line(-c.unwrap_or(1.)))
     });
-    Vim::action(editor, cx, |vim, _: &PageDown, cx| {
+    Vim::action(editor, cx, |vim, _: &PageDown, window, cx| {
         vim.scroll(false, cx, |c| ScrollAmount::Page(c.unwrap_or(1.)))
     });
-    Vim::action(editor, cx, |vim, _: &PageUp, cx| {
+    Vim::action(editor, cx, |vim, _: &PageUp, window, cx| {
         vim.scroll(false, cx, |c| ScrollAmount::Page(-c.unwrap_or(1.)))
     });
-    Vim::action(editor, cx, |vim, _: &ScrollDown, cx| {
+    Vim::action(editor, cx, |vim, _: &ScrollDown, window, cx| {
         vim.scroll(true, cx, |c| {
             if let Some(c) = c {
                 ScrollAmount::Line(c)
@@ -35,7 +35,7 @@ pub fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             }
         })
     });
-    Vim::action(editor, cx, |vim, _: &ScrollUp, cx| {
+    Vim::action(editor, cx, |vim, _: &ScrollUp, window, cx| {
         vim.scroll(true, cx, |c| {
             if let Some(c) = c {
                 ScrollAmount::Line(-c)
@@ -222,29 +222,29 @@ mod test {
             Mode::Normal,
         );
 
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert_eq!(editor.snapshot(cx).scroll_position(), point(0., 0.))
         });
         cx.simulate_keystrokes("ctrl-e");
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert_eq!(editor.snapshot(cx).scroll_position(), point(0., 1.))
         });
         cx.simulate_keystrokes("2 ctrl-e");
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert_eq!(editor.snapshot(cx).scroll_position(), point(0., 3.))
         });
         cx.simulate_keystrokes("ctrl-y");
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert_eq!(editor.snapshot(cx).scroll_position(), point(0., 2.))
         });
 
         // does not select in normal mode
         cx.simulate_keystrokes("g g");
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert_eq!(editor.snapshot(cx).scroll_position(), point(0., 0.))
         });
         cx.simulate_keystrokes("ctrl-d");
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert_eq!(editor.snapshot(cx).scroll_position(), point(0., 3.0));
             assert_eq!(
                 editor.selections.newest(cx).range(),
@@ -254,11 +254,11 @@ mod test {
 
         // does select in visual mode
         cx.simulate_keystrokes("g g");
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert_eq!(editor.snapshot(cx).scroll_position(), point(0., 0.))
         });
         cx.simulate_keystrokes("v ctrl-d");
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert_eq!(editor.snapshot(cx).scroll_position(), point(0., 3.0));
             assert_eq!(
                 editor.selections.newest(cx).range(),

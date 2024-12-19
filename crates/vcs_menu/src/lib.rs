@@ -16,7 +16,7 @@ use workspace::{ModalView, Workspace};
 use zed_actions::branches::OpenRecent;
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(|workspace: &mut Workspace, _| {
+    cx.observe_new_views(|workspace: &mut Workspace, _, _| {
         workspace.register_action(BranchList::open);
     })
     .detach();
@@ -36,21 +36,26 @@ impl BranchList {
         cx: &mut ViewContext<Workspace>,
     ) {
         let this = cx.view().clone();
+        let window_handle = window.handle();
+
         cx.spawn(|_, mut cx| async move {
             // Modal branch picker has a longer trailoff than a popover one.
             let delegate = BranchListDelegate::new(this.clone(), 70, &cx).await?;
 
-            this.update(&mut cx, |workspace, cx| {
-                workspace.toggle_modal(cx, |cx| BranchList::new(delegate, 34., cx))
-            })?;
-
-            Ok(())
+            this.update_in_window(window_handle, &mut cx, |workspace, window, cx| {
+                workspace.toggle_modal(cx, |cx| BranchList::new(delegate, 34., window, cx));
+            })
         })
         .detach_and_prompt_err("Failed to read branches", cx, |_, _| None)
     }
 
-    fn new(delegate: BranchListDelegate, rem_width: f32, cx: &mut ViewContext<Self>) -> Self {
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+    fn new(
+        delegate: BranchListDelegate,
+        rem_width: f32,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Self {
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
         let _subscription = cx.subscribe(&picker, |_, _, _, cx| cx.emit(DismissEvent));
         Self {
             picker,
@@ -73,7 +78,7 @@ impl Render for BranchList {
         v_flex()
             .w(rems(self.rem_width))
             .child(self.picker.clone())
-            .on_mouse_down_out(cx.listener(|this, _, window, cx| {
+            .on_mouse_down_out(cx.listener2(|this, _, window, cx| {
                 this.picker.update(cx, |this, cx| {
                     this.cancel(&Default::default(), cx);
                 })
@@ -227,7 +232,7 @@ impl PickerDelegate for BranchListDelegate {
         })
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(&mut self, _: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>) {
         let Some(branch) = self.matches.get(self.selected_index()) else {
             return;
         };

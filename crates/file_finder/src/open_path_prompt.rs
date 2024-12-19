@@ -47,10 +47,14 @@ struct DirectoryState {
 }
 
 impl OpenPathPrompt {
-    pub(crate) fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
-        workspace.set_prompt_for_open_path(Box::new(|workspace, lister, cx| {
+    pub(crate) fn register(
+        workspace: &mut Workspace,
+        window: &mut Window,
+        cx: &mut ViewContext<Workspace>,
+    ) {
+        workspace.set_prompt_for_open_path(Box::new(|workspace, lister, window, cx| {
             let (tx, rx) = futures::channel::oneshot::channel();
-            Self::prompt_for_open_path(workspace, lister, tx, cx);
+            Self::prompt_for_open_path(workspace, lister, tx, window, cx);
             rx
         }));
     }
@@ -59,12 +63,13 @@ impl OpenPathPrompt {
         workspace: &mut Workspace,
         lister: DirectoryLister,
         tx: oneshot::Sender<Option<Vec<PathBuf>>>,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         workspace.toggle_modal(cx, |cx| {
             let delegate = OpenPathDelegate::new(tx, lister.clone());
 
-            let picker = Picker::uniform_list(delegate, cx).width(rems(34.));
+            let picker = Picker::uniform_list(delegate, window, cx).width(rems(34.));
             let query = lister.default_query(cx);
             picker.set_query(query, cx);
             picker
@@ -236,7 +241,7 @@ impl PickerDelegate for OpenPathDelegate {
         )
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(&mut self, _: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>) {
         let Some(m) = self.matches.get(self.selected_index) else {
             return;
         };

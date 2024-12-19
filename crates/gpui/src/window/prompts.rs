@@ -133,7 +133,7 @@ impl Render for FallbackPromptRenderer {
                     .text_sm()
                     .child(action.clone())
                     .id(ix)
-                    .on_click(cx.listener(move |_, _, window, cx| {
+                    .on_click(cx.listener2(move |_, _, window, cx| {
                         cx.emit(PromptResponse(ix));
                     }))
             }));

@@ -40,11 +40,11 @@ use fs::Fs;
 use futures::FutureExt;
 use gpui::{
     canvas, div, img, percentage, point, prelude::*, pulsating_between, size, Action, Animation,
-    AnimationExt, AnyElement, AnyView, AppContext, AsyncWindowContext, ClipboardEntry,
-    ClipboardItem, CursorStyle, Empty, Entity, EventEmitter, ExternalPaths, FocusHandle,
-    FocusableView, FontWeight, InteractiveElement, IntoElement, Model, ParentElement, Pixels,
-    Render, RenderImage, SharedString, Size, StatefulInteractiveElement, Styled, Subscription,
-    Task, Transformation, UpdateGlobal, View, WeakModel, WeakView,
+    AnimationExt, AnyElement, AnyView, AnyWindowHandle, AppContext, AsyncWindowContext,
+    ClipboardEntry, ClipboardItem, CursorStyle, Empty, Entity, EventEmitter, ExternalPaths,
+    FocusHandle, FocusableView, FontWeight, InteractiveElement, IntoElement, Model, ParentElement,
+    Pixels, Render, RenderImage, SharedString, Size, StatefulInteractiveElement, Styled,
+    Subscription, Task, Transformation, UpdateGlobal, View, WeakModel, WeakView,
 };
 use indexed_docs::IndexedDocsStore;
 use language::{
@@ -98,15 +98,15 @@ use zed_actions::InlineAssist;
 pub fn init(cx: &mut AppContext) {
     workspace::FollowableViewRegistry::register::<ContextEditor>(cx);
     cx.observe_new_views(
-        |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
+        |workspace: &mut Workspace, window: &mut Window, _cx: &mut ViewContext<Workspace>| {
             workspace
-                .register_action2(|workspace, _: &ToggleFocus, cx| {
+                .register_action(|workspace, _: &ToggleFocus, window, cx| {
                     let settings = AssistantSettings::get_global(cx);
                     if !settings.enabled {
                         return;
                     }
 
-                    workspace.toggle_panel_focus::<AssistantPanel>(cx);
+                    workspace.toggle_panel_focus::<AssistantPanel>(window, cx);
                 })
                 .register_action2(ContextEditor::quote_selection)
                 .register_action2(ContextEditor::insert_selection)
@@ -120,7 +120,9 @@ pub fn init(cx: &mut AppContext) {
     .detach();
 
     cx.observe_new_views(
-        |terminal_panel: &mut TerminalPanel, cx: &mut ViewContext<TerminalPanel>| {
+        |terminal_panel: &mut TerminalPanel,
+         window: &mut Window,
+         cx: &mut ViewContext<TerminalPanel>| {
             let settings = AssistantSettings::get_global(cx);
             terminal_panel.asssistant_enabled(settings.enabled, cx);
         },
@@ -224,7 +226,12 @@ impl PickerDelegate for SavedContextPickerDelegate {
         })
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some(metadata) = self.matches.get(self.selected_index) {
             cx.emit(SavedContextPickerEvent::Confirmed(metadata.clone()));
         }
@@ -314,6 +321,7 @@ impl AssistantPanel {
     pub fn load(
         workspace: WeakView<Workspace>,
         prompt_builder: Arc<PromptBuilder>,
+        window_handle: AnyWindowHandle,
         cx: AsyncWindowContext,
     ) -> Task<Result<View<Self>>> {
         cx.spawn(|mut cx| async move {
@@ -326,9 +334,9 @@ impl AssistantPanel {
                 })?
                 .await?;
 
-            workspace.update(&mut cx, |workspace, cx| {
+            workspace.update_in_window(window_handle, &mut cx, |workspace, window, cx| {
                 // TODO: deserialize state.
-                cx.new_view(|cx| Self::new(workspace, context_store, cx))
+                cx.new_view(|cx| Self::new(workspace, context_store, window, cx))
             })
         })
     }
@@ -336,6 +344,7 @@ impl AssistantPanel {
     fn new(
         workspace: &Workspace,
         context_store: Model<ContextStore>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let model_selector_menu_handle = PopoverMenuHandle::default();
@@ -345,6 +354,7 @@ impl AssistantPanel {
                 workspace,
                 model_selector_menu_handle.clone(),
                 model_summary_editor.clone(),
+                window,
                 cx,
             )
         });
@@ -423,7 +433,7 @@ impl AssistantPanel {
                 let focus_handle = pane.focus_handle(cx);
                 let left_children = IconButton::new("history", IconName::HistoryRerun)
                     .icon_size(IconSize::Small)
-                    .on_click(cx.listener({
+                    .on_click(cx.listener2({
                         let focus_handle = focus_handle.clone();
                         move |_, _, window, cx| {
                             focus_handle.focus(cx);
@@ -451,7 +461,7 @@ impl AssistantPanel {
                     .child(
                         IconButton::new("new-chat", IconName::Plus)
                             .icon_size(IconSize::Small)
-                            .on_click(cx.listener(|_, _, window, cx| {
+                            .on_click(cx.listener2(|_, _, window, cx| {
                                 cx.dispatch_action(NewContext.boxed_clone())
                             }))
                             .tooltip(move |window, cx| {
@@ -498,7 +508,7 @@ impl AssistantPanel {
 
         let subscriptions = vec![
             cx.observe(&pane, |_, _, cx| cx.notify()),
-            cx.subscribe(&pane, Self::handle_pane_event),
+            cx.subscribe_in_window(&pane, window, Self::handle_pane_event),
             cx.subscribe(&context_editor_toolbar, Self::handle_toolbar_event),
             cx.subscribe(&model_summary_editor, Self::handle_summary_editor_event),
             cx.subscribe(&context_store, Self::handle_context_store_event),
@@ -570,6 +580,7 @@ impl AssistantPanel {
         &mut self,
         pane: View<Pane>,
         event: &pane::Event,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         let update_model_summary = match event {
@@ -589,7 +600,7 @@ impl AssistantPanel {
             pane::Event::AddItem { item } => {
                 self.workspace
                     .update(cx, |workspace, cx| {
-                        item.added_to_pane(workspace, self.pane.clone(), cx)
+                        item.added_to_pane(workspace, self.pane.clone(), window, cx)
                     })
                     .ok();
                 true
@@ -885,7 +896,7 @@ impl AssistantPanel {
                     })?
                 } else {
                     workspace.update(&mut cx, |workspace, cx| {
-                        workspace.focus_panel::<AssistantPanel>(cx)
+                        workspace.focus_panel::<AssistantPanel>(window, cx)
                     })?;
                 }
 
@@ -1032,7 +1043,7 @@ impl AssistantPanel {
             cx.spawn(move |_, mut cx| async move {
                 workspace
                     .update(&mut cx, |workspace, cx| {
-                        workspace.focus_panel::<AssistantPanel>(cx);
+                        workspace.focus_panel::<AssistantPanel>(window, cx);
                     })
                     .ok();
             })
@@ -1114,7 +1125,7 @@ impl AssistantPanel {
         };
 
         if !panel.focus_handle(cx).contains_focused(cx) {
-            workspace.toggle_panel_focus::<AssistantPanel>(cx);
+            workspace.toggle_panel_focus::<AssistantPanel>(window, cx);
         }
 
         panel.update(cx, |this, cx| {
@@ -1352,15 +1363,15 @@ impl Render for AssistantPanel {
         v_flex()
             .key_context("AssistantPanel")
             .size_full()
-            .on_action(cx.listener(|this, _: &NewContext, window, cx| {
+            .on_action(cx.listener2(|this, _: &NewContext, window, cx| {
                 this.new_context(cx);
             }))
-            .on_action(cx.listener(|this, _: &ShowConfiguration, window, cx| {
+            .on_action(cx.listener2(|this, _: &ShowConfiguration, window, cx| {
                 this.show_configuration_tab(cx)
             }))
-            .on_action(cx.listener2(AssistantPanel::deploy_history))
-            .on_action(cx.listener2(AssistantPanel::deploy_prompt_library))
-            .on_action(cx.listener2(AssistantPanel::toggle_model_selector))
+            .on_action(cx.listener(AssistantPanel::deploy_history))
+            .on_action(cx.listener(AssistantPanel::deploy_prompt_library))
+            .on_action(cx.listener(AssistantPanel::toggle_model_selector))
             .child(registrar.size_full().child(self.pane.clone()))
             .into_any_element()
     }
@@ -1553,7 +1564,8 @@ impl ContextEditor {
         );
 
         let editor = cx.new_view(|cx| {
-            let mut editor = Editor::for_buffer(context.read(cx).buffer().clone(), None, cx);
+            let mut editor =
+                Editor::for_buffer(context.read(cx).buffer().clone(), None, window, cx);
             editor.set_soft_wrap_mode(SoftWrap::EditorWidth, cx);
             editor.set_show_line_numbers(false, cx);
             editor.set_show_git_diff_gutter(false, cx);
@@ -1734,7 +1746,8 @@ impl ContextEditor {
         if let Some(command) = self.slash_commands.command(name, cx) {
             self.editor.update(cx, |editor, cx| {
                 editor.transact(cx, |editor, cx| {
-                    editor.change_selections(Some(Autoscroll::fit()), cx, |s| s.try_cancel());
+                    editor
+                        .change_selections(Some, window(Autoscroll::fit()), cx, |s| s.try_cancel());
                     let snapshot = editor.buffer().read(cx).snapshot(cx);
                     let newest_cursor = editor.selections.newest::<Point>(cx).head();
                     if newest_cursor.column > 0
@@ -2516,6 +2529,7 @@ impl ContextEditor {
                     })
                     .collect(),
                 Some(project.clone()),
+                window,
                 cx,
             );
             resolved_patch.apply(&editor, cx);
@@ -3074,7 +3088,7 @@ impl ContextEditor {
         }
         // Activate the panel
         if !panel.focus_handle(cx).contains_focused(cx) {
-            workspace.toggle_panel_focus::<AssistantPanel>(cx);
+            workspace.toggle_panel_focus::<AssistantPanel>(window, cx);
         }
 
         panel.update(cx, |_, cx| {
@@ -3149,7 +3163,7 @@ impl ContextEditor {
 
             self.editor.update(cx, |editor, cx| {
                 editor.transact(cx, |this, cx| {
-                    this.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                    this.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                         s.select(selections);
                     });
                     this.insert("", cx);
@@ -3492,9 +3506,9 @@ impl ContextEditor {
                     this.border_color(theme.colors().text_accent)
                 })
                 .cursor(CursorStyle::PointingHand)
-                .on_click(cx.listener(move |this, _, window, cx| {
+                .on_click(cx.listener2(move |this, _, window, cx| {
                     this.editor.update(cx, |editor, cx| {
-                        editor.change_selections(None, cx, |selections| {
+                        editor.change_selections(None, window, cx, |selections| {
                             selections.select_ranges(vec![anchor..anchor]);
                         });
                     });
@@ -3585,7 +3599,7 @@ impl ContextEditor {
                         Button::new("sign-in", "Sign in")
                             .size(ButtonSize::Compact)
                             .style(ButtonStyle::Filled)
-                            .on_click(cx.listener(|this, _event, window, cx| {
+                            .on_click(cx.listener2(|this, _event, window, cx| {
                                 let client = this
                                     .workspace
                                     .update(cx, |workspace, _| workspace.client().clone())
@@ -3819,7 +3833,7 @@ impl ContextEditor {
                 h_flex()
                     .justify_end()
                     .mt_1()
-                    .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
+                    .child(Button::new("dismiss", "Dismiss").on_click(cx.listener2(
                         |this, _, window, cx| {
                             this.last_error = None;
                             cx.notify();
@@ -3852,14 +3866,14 @@ impl ContextEditor {
                 h_flex()
                     .justify_end()
                     .mt_1()
-                    .child(Button::new("subscribe", "Subscribe").on_click(cx.listener(
+                    .child(Button::new("subscribe", "Subscribe").on_click(cx.listener2(
                         |this, _, window, cx| {
                             this.last_error = None;
                             cx.open_url(&zed_urls::account_url(cx));
                             cx.notify();
                         },
                     )))
-                    .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
+                    .child(Button::new("dismiss", "Dismiss").on_click(cx.listener2(
                         |this, _, window, cx| {
                             this.last_error = None;
                             cx.notify();
@@ -3894,14 +3908,14 @@ impl ContextEditor {
                     .mt_1()
                     .child(
                         Button::new("subscribe", "Update Monthly Spend Limit").on_click(
-                            cx.listener(|this, _, window, cx| {
+                            cx.listener2(|this, _, window, cx| {
                                 this.last_error = None;
                                 cx.open_url(&zed_urls::account_url(cx));
                                 cx.notify();
                             }),
                         ),
                     )
-                    .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
+                    .child(Button::new("dismiss", "Dismiss").on_click(cx.listener2(
                         |this, _, window, cx| {
                             this.last_error = None;
                             cx.notify();
@@ -3939,7 +3953,7 @@ impl ContextEditor {
                 h_flex()
                     .justify_end()
                     .mt_1()
-                    .child(Button::new("dismiss", "Dismiss").on_click(cx.listener(
+                    .child(Button::new("dismiss", "Dismiss").on_click(cx.listener2(
                         |this, _, window, cx| {
                             this.last_error = None;
                             cx.notify();
@@ -4139,16 +4153,16 @@ impl Render for ContextEditor {
 
         v_flex()
             .key_context("ContextEditor")
-            .capture_action(cx.listener2(ContextEditor::cancel))
-            .capture_action(cx.listener2(ContextEditor::save))
-            .capture_action(cx.listener2(ContextEditor::copy))
-            .capture_action(cx.listener2(ContextEditor::cut))
-            .capture_action(cx.listener2(ContextEditor::paste))
-            .capture_action(cx.listener2(ContextEditor::cycle_message_role))
-            .capture_action(cx.listener2(ContextEditor::confirm_command))
-            .on_action(cx.listener2(ContextEditor::edit))
-            .on_action(cx.listener2(ContextEditor::assist))
-            .on_action(cx.listener2(ContextEditor::split))
+            .capture_action(cx.listener(ContextEditor::cancel))
+            .capture_action(cx.listener(ContextEditor::save))
+            .capture_action(cx.listener(ContextEditor::copy))
+            .capture_action(cx.listener(ContextEditor::cut))
+            .capture_action(cx.listener(ContextEditor::paste))
+            .capture_action(cx.listener(ContextEditor::cycle_message_role))
+            .capture_action(cx.listener(ContextEditor::confirm_command))
+            .on_action(cx.listener(ContextEditor::edit))
+            .on_action(cx.listener(ContextEditor::assist))
+            .on_action(cx.listener(ContextEditor::split))
             .size_full()
             .children(self.render_notice(cx))
             .child(
@@ -4468,6 +4482,7 @@ impl ContextEditorToolbarItem {
         workspace: &Workspace,
         model_selector_menu_handle: PopoverMenuHandle<LanguageModelSelector>,
         model_summary_editor: View<Editor>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         Self {
@@ -4483,6 +4498,7 @@ impl ContextEditorToolbarItem {
                             move |settings, _| settings.set_model(model.clone()),
                         );
                     },
+                    window,
                     cx,
                 )
             }),
@@ -4552,7 +4568,7 @@ impl Render for ContextEditorToolbarItem {
                     IconButton::new("regenerate-context", IconName::RefreshTitle)
                         .shape(ui::IconButtonShape::Square)
                         .tooltip(|window, cx| Tooltip::text("Regenerate Title", cx))
-                        .on_click(cx.listener(move |_, _, window, cx| {
+                        .on_click(cx.listener2(move |_, _, window, cx| {
                             cx.emit(ContextEditorToolbarItemEvent::RegenerateSummary)
                         })),
                 ),
@@ -4681,6 +4697,7 @@ impl ContextHistory {
         let picker = cx.new_view(|cx| {
             Picker::uniform_list(
                 SavedContextPickerDelegate::new(project, context_store.clone()),
+                window,
                 cx,
             )
             .modal(false)
@@ -4689,7 +4706,8 @@ impl ContextHistory {
 
         let _subscriptions = vec![
             cx.observe(&context_store, |this, _, cx| {
-                this.picker.update(cx, |picker, cx| picker.refresh(cx));
+                this.picker
+                    .update(cx, |picker, cx| picker.refresh(window, cx));
             }),
             cx.subscribe(&picker, Self::handle_picker_event),
         ];
@@ -4820,7 +4838,7 @@ impl ConfigurationView {
         let provider_name = provider.name().0.clone();
         let configuration_view = self.configuration_views.get(&provider.id()).cloned();
 
-        let open_new_context = cx.listener({
+        let open_new_context = cx.listener2({
             let provider = provider.clone();
             move |_, _, window, cx| {
                 cx.emit(ConfigurationViewEvent::NewProviderContextEditor(

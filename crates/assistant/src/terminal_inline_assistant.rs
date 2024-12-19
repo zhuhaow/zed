@@ -506,14 +506,14 @@ impl Render for PromptEditor {
                         .tooltip(|window, cx| {
                             Tooltip::for_action("Cancel Assist", &menu::Cancel, cx)
                         })
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         })),
                     IconButton::new("start", IconName::SparkleAlt)
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|window, cx| Tooltip::for_action("Generate", &menu::Confirm, cx))
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::StartRequested)
                         })),
                 ]
@@ -524,7 +524,7 @@ impl Render for PromptEditor {
                         .icon_color(Color::Muted)
                         .shape(IconButtonShape::Square)
                         .tooltip(|window, cx| Tooltip::text("Cancel Assist", cx))
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::CancelRequested)
                         })),
                     IconButton::new("stop", IconName::Stop)
@@ -538,7 +538,7 @@ impl Render for PromptEditor {
                                 cx,
                             )
                         })
-                        .on_click(cx.listener(|_, _, window, cx| {
+                        .on_click(cx.listener2(|_, _, window, cx| {
                             cx.emit(PromptEditorEvent::StopRequested)
                         })),
                 ]
@@ -549,7 +549,9 @@ impl Render for PromptEditor {
                     .shape(IconButtonShape::Square)
                     .tooltip(|window, cx| Tooltip::for_action("Cancel Assist", &menu::Cancel, cx))
                     .on_click(
-                        cx.listener(|_, _, window, cx| cx.emit(PromptEditorEvent::CancelRequested)),
+                        cx.listener2(|_, _, window, cx| {
+                            cx.emit(PromptEditorEvent::CancelRequested)
+                        }),
                     );
 
                 let has_error = matches!(status, CodegenStatus::Error(_));
@@ -567,7 +569,7 @@ impl Render for PromptEditor {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(|_, _, window, cx| {
+                            .on_click(cx.listener2(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::StartRequested);
                             })),
                     ]
@@ -580,7 +582,7 @@ impl Render for PromptEditor {
                             .tooltip(|window, cx| {
                                 Tooltip::for_action("Accept Generated Command", &menu::Confirm, cx)
                             })
-                            .on_click(cx.listener(|_, _, window, cx| {
+                            .on_click(cx.listener2(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested { execute: false });
                             })),
                         IconButton::new("confirm", IconName::Play)
@@ -593,7 +595,7 @@ impl Render for PromptEditor {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(|_, _, window, cx| {
+                            .on_click(cx.listener2(|_, _, window, cx| {
                                 cx.emit(PromptEditorEvent::ConfirmRequested { execute: true });
                             })),
                     ]
@@ -608,11 +610,11 @@ impl Render for PromptEditor {
             .py_2()
             .h_full()
             .w_full()
-            .on_action(cx.listener2(Self::confirm))
-            .on_action(cx.listener2(Self::secondary_confirm))
-            .on_action(cx.listener2(Self::cancel))
-            .on_action(cx.listener2(Self::move_up))
-            .on_action(cx.listener2(Self::move_down))
+            .on_action(cx.listener(Self::confirm))
+            .on_action(cx.listener(Self::secondary_confirm))
+            .on_action(cx.listener(Self::cancel))
+            .on_action(cx.listener(Self::move_up))
+            .on_action(cx.listener(Self::move_down))
             .child(
                 h_flex()
                     .w_12()
@@ -725,6 +727,7 @@ impl PromptEditor {
                             move |settings, _| settings.set_model(model.clone()),
                         );
                     },
+                    window,
                     cx,
                 )
             }),
@@ -987,7 +990,7 @@ impl PromptEditor {
                     cx.stop_propagation();
                     workspace
                         .update(cx, |workspace, cx| {
-                            workspace.focus_panel::<AssistantPanel>(cx)
+                            workspace.focus_panel::<AssistantPanel>(window, cx)
                         })
                         .ok();
                 });

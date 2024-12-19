@@ -1080,11 +1080,12 @@ impl AppContext {
         subscription
     }
 
+    // todo! make this observe new windows
     /// Arrange for the given function to be invoked whenever a view of the specified type is created.
     /// The function will be passed a mutable reference to the view along with an appropriate context.
     pub fn observe_new_views<V: 'static>(
         &self,
-        on_new: impl 'static + Fn(&mut V, &mut ViewContext<V>),
+        on_new: impl 'static + Fn(&mut V, &mut Window, &mut ViewContext<V>),
     ) -> Subscription {
         self.new_view_observer(
             TypeId::of::<V>(),
@@ -1093,7 +1094,7 @@ impl AppContext {
                     .downcast::<V>()
                     .unwrap()
                     .update(cx, |view_state, cx| {
-                        on_new(view_state, cx);
+                        on_new(view_state, todo!(), cx);
                     })
             }),
         )

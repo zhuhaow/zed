@@ -210,7 +210,12 @@ impl PickerDelegate for PromptPickerDelegate {
         })
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some(prompt) = self.matches.get(self.selected_index) {
             cx.emit(PromptPickerEvent::Confirmed {
                 prompt_id: prompt.id,
@@ -242,7 +247,7 @@ impl PickerDelegate for PromptPickerDelegate {
                     .icon_color(Color::Accent)
                     .shape(IconButtonShape::Square)
                     .tooltip(move |window, cx| Tooltip::text("Remove from Default Prompt", cx))
-                    .on_click(cx.listener(move |_, _, window, cx| {
+                    .on_click(cx.listener2(move |_, _, window, cx| {
                         cx.emit(PromptPickerEvent::ToggledDefault { prompt_id })
                     }))
             }))
@@ -267,7 +272,7 @@ impl PickerDelegate for PromptPickerDelegate {
                             .icon_color(Color::Muted)
                             .shape(IconButtonShape::Square)
                             .tooltip(move |window, cx| Tooltip::text("Delete Prompt", cx))
-                            .on_click(cx.listener(move |_, _, window, cx| {
+                            .on_click(cx.listener2(move |_, _, window, cx| {
                                 cx.emit(PromptPickerEvent::Deleted { prompt_id })
                             }))
                             .into_any_element()
@@ -288,7 +293,7 @@ impl PickerDelegate for PromptPickerDelegate {
                                     cx,
                                 )
                             })
-                            .on_click(cx.listener(move |_, _, window, cx| {
+                            .on_click(cx.listener2(move |_, _, window, cx| {
                                 cx.emit(PromptPickerEvent::ToggledDefault { prompt_id })
                             })),
                     ),
@@ -322,7 +327,7 @@ impl PromptLibrary {
         };
 
         let picker = cx.new_view(|cx| {
-            let picker = Picker::uniform_list(delegate, cx)
+            let picker = Picker::uniform_list(delegate, window, cx)
                 .modal(false)
                 .max_height(None);
             picker.focus(cx);
@@ -373,7 +378,8 @@ impl PromptLibrary {
 
         let prompt_id = PromptId::new();
         let save = self.store.save(prompt_id, None, false, "".into());
-        self.picker.update(cx, |picker, cx| picker.refresh(cx));
+        self.picker
+            .update(cx, |picker, cx| picker.refresh(window, cx));
         cx.spawn(|this, mut cx| async move {
             save.await?;
             this.update(&mut cx, |this, cx| this.load_prompt(prompt_id, true, cx))
@@ -428,7 +434,8 @@ impl PromptLibrary {
                                 .await
                                 .log_err();
                             this.update(&mut cx, |this, cx| {
-                                this.picker.update(cx, |picker, cx| picker.refresh(cx));
+                                this.picker
+                                    .update(cx, |picker, cx| picker.refresh(window, cx));
                                 cx.notify();
                             })?;
 
@@ -472,7 +479,8 @@ impl PromptLibrary {
             self.store
                 .save_metadata(prompt_id, prompt_metadata.title, !prompt_metadata.default)
                 .detach_and_log_err(cx);
-            self.picker.update(cx, |picker, cx| picker.refresh(cx));
+            self.picker
+                .update(cx, |picker, cx| picker.refresh(window, cx));
             cx.notify();
         }
     }
@@ -615,7 +623,8 @@ impl PromptLibrary {
                         }
                         this.prompt_editors.remove(&prompt_id);
                         this.store.delete(prompt_id).detach_and_log_err(cx);
-                        this.picker.update(cx, |picker, cx| picker.refresh(cx));
+                        this.picker
+                            .update(cx, |picker, cx| picker.refresh(window, cx));
                         cx.notify();
                     })?;
                 }
@@ -655,7 +664,8 @@ impl PromptLibrary {
             let save = self
                 .store
                 .save(new_id, Some(title.into()), false, body.into());
-            self.picker.update(cx, |picker, cx| picker.refresh(cx));
+            self.picker
+                .update(cx, |picker, cx| picker.refresh(window, cx));
             cx.spawn(|this, mut cx| async move {
                 save.await?;
                 this.update(&mut cx, |prompt_library, cx| {
@@ -701,7 +711,7 @@ impl PromptLibrary {
                     let panel = workspace
                         .update(cx, |workspace, window, cx| {
                             cx.activate_window();
-                            workspace.focus_panel::<AssistantPanel>(cx)
+                            workspace.focus_panel::<AssistantPanel>(window, cx)
                         })
                         .ok()
                         .flatten();
@@ -822,7 +832,7 @@ impl PromptLibrary {
     fn render_prompt_list(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         v_flex()
             .id("prompt-list")
-            .capture_action(cx.listener2(Self::focus_active_prompt))
+            .capture_action(cx.listener(Self::focus_active_prompt))
             .bg(cx.theme().colors().panel_background)
             .h_full()
             .px_1()
@@ -875,7 +885,7 @@ impl PromptLibrary {
                         .overflow_hidden()
                         .pl(DynamicSpacing::Base16.rems(cx))
                         .pt(DynamicSpacing::Base08.rems(cx))
-                        .on_click(cx.listener(move |_, _, window, cx| {
+                        .on_click(cx.listener2(move |_, _, window, cx| {
                             cx.focus(&focus_handle);
                         }))
                         .child(
@@ -889,7 +899,7 @@ impl PromptLibrary {
                                     h_flex().gap_1().child(
                                         div()
                                             .max_w_80()
-                                            .on_action(cx.listener2(Self::move_down_from_title))
+                                            .on_action(cx.listener(Self::move_down_from_title))
                                             .border_1()
                                             .border_color(transparent_black())
                                             .rounded_md()
@@ -1085,9 +1095,9 @@ impl PromptLibrary {
                         )
                         .child(
                             div()
-                                .on_action(cx.listener2(Self::focus_picker))
-                                .on_action(cx.listener2(Self::inline_assist))
-                                .on_action(cx.listener2(Self::move_up_from_body))
+                                .on_action(cx.listener(Self::focus_picker))
+                                .on_action(cx.listener(Self::inline_assist))
+                                .on_action(cx.listener(Self::move_up_from_body))
                                 .flex_grow()
                                 .h_full()
                                 .child(prompt_editor.body_editor.clone()),
@@ -1105,12 +1115,14 @@ impl Render for PromptLibrary {
         h_flex()
             .id("prompt-manager")
             .key_context("PromptLibrary")
-            .on_action(cx.listener(|this, &NewPrompt, window, cx| this.new_prompt(cx)))
-            .on_action(cx.listener(|this, &DeletePrompt, window, cx| this.delete_active_prompt(cx)))
+            .on_action(cx.listener2(|this, &NewPrompt, window, cx| this.new_prompt(cx)))
             .on_action(
-                cx.listener(|this, &DuplicatePrompt, window, cx| this.duplicate_active_prompt(cx)),
+                cx.listener2(|this, &DeletePrompt, window, cx| this.delete_active_prompt(cx)),
             )
-            .on_action(cx.listener(|this, &ToggleDefaultPrompt, window, cx| {
+            .on_action(
+                cx.listener2(|this, &DuplicatePrompt, window, cx| this.duplicate_active_prompt(cx)),
+            )
+            .on_action(cx.listener2(|this, &ToggleDefaultPrompt, window, cx| {
                 this.toggle_default_for_active_prompt(cx)
             }))
             .size_full()

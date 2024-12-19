@@ -425,8 +425,8 @@ impl EditorElement {
                 cx.propagate();
             }
         });
-        register_action2(view, cx, |editor, action, cx| {
-            if let Some(task) = editor.confirm_code_action(action, cx) {
+        register_action(view, cx, |editor, action, window, cx| {
+            if let Some(task) = editor.confirm_code_action(action, window, cx) {
                 task.detach_and_log_err(cx);
             } else {
                 cx.propagate();
@@ -5110,12 +5110,16 @@ fn deploy_blame_entry_context_menu(
     let context_menu = ContextMenu::build(cx, move |menu, _| {
         let sha = format!("{}", blame_entry.sha);
         menu.on_blur_subscription(Subscription::new(|| {}))
-            .entry("Copy commit SHA", None, move |cx| {
+            .entry("Copy commit SHA", None, move |window, cx| {
                 cx.write_to_clipboard(ClipboardItem::new_string(sha.clone()));
             })
             .when_some(
                 details.and_then(|details| details.permalink.clone()),
-                |this, url| this.entry("Open permalink", None, move |cx| cx.open_url(url.as_str())),
+                |this, url| {
+                    this.entry("Open permalink", None, move |window, cx| {
+                        cx.open_url(url.as_str())
+                    })
+                },
             )
     });
 
@@ -7345,7 +7349,7 @@ mod tests {
         init_test(cx, |_| {});
         let window = cx.add_window(|window, cx| {
             let buffer = MultiBuffer::build_simple(&sample_text(6, 6, 'a'), cx);
-            Editor::new(EditorMode::Full, buffer, None, true, cx)
+            Editor::new(EditorMode::Full, buffer, None, true, window, cx)
         });
 
         let editor = window.root(cx).unwrap();
@@ -7423,7 +7427,7 @@ mod tests {
 
         let window = cx.add_window(|window, cx| {
             let buffer = MultiBuffer::build_simple(&(sample_text(6, 6, 'a') + "\n"), cx);
-            Editor::new(EditorMode::Full, buffer, None, true, cx)
+            Editor::new(EditorMode::Full, buffer, None, true, window, cx)
         });
         let cx = &mut VisualTestContext::from_window(*window, cx);
         let editor = window.root(cx).unwrap();
@@ -7432,7 +7436,7 @@ mod tests {
         window
             .update(cx, |editor, window, cx| {
                 editor.cursor_shape = CursorShape::Block;
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.select_ranges([
                         Point::new(0, 0)..Point::new(1, 0),
                         Point::new(3, 2)..Point::new(3, 3),
@@ -7527,13 +7531,13 @@ mod tests {
                 ],
                 cx,
             );
-            Editor::new(EditorMode::Full, buffer, None, true, cx)
+            Editor::new(EditorMode::Full, buffer, None, true, window, cx)
         });
         let editor = window.root(cx).unwrap();
         let style = cx.update(|cx| editor.read(cx).style().unwrap().clone());
         let _state = window.update(cx, |editor, window, cx| {
             editor.cursor_shape = CursorShape::Block;
-            editor.change_selections(None, cx, |s| {
+            editor.change_selections(None, window, cx, |s| {
                 s.select_display_ranges([
                     DisplayPoint::new(DisplayRow(4), 0)..DisplayPoint::new(DisplayRow(7), 0),
                     DisplayPoint::new(DisplayRow(10), 0)..DisplayPoint::new(DisplayRow(13), 0),
@@ -7578,7 +7582,7 @@ mod tests {
 
         let window = cx.add_window(|window, cx| {
             let buffer = MultiBuffer::build_simple("", cx);
-            Editor::new(EditorMode::Full, buffer, None, true, cx)
+            Editor::new(EditorMode::Full, buffer, None, true, window, cx)
         });
         let cx = &mut VisualTestContext::from_window(*window, cx);
         let editor = window.root(cx).unwrap();
@@ -7804,7 +7808,7 @@ mod tests {
         );
         let window = cx.add_window(|window, cx| {
             let buffer = MultiBuffer::build_simple(input_text, cx);
-            Editor::new(editor_mode, buffer, None, true, cx)
+            Editor::new(editor_mode, buffer, None, true, window, cx)
         });
         let cx = &mut VisualTestContext::from_window(*window, cx);
         let editor = window.root(cx).unwrap();

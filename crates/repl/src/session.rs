@@ -468,7 +468,7 @@ impl Session {
 
         if move_down {
             editor.update(cx, move |editor, cx| {
-                editor.change_selections(Some(Autoscroll::top_relative(8)), cx, |selections| {
+                editor.change_selections(Some, window(Autoscroll::top_relative(8)), cx, |selections| {
                     selections.select_ranges([new_cursor_pos..new_cursor_pos]);
                 });
             });
@@ -644,7 +644,7 @@ impl Render for Session {
                 Some(
                     Button::new("interrupt", "Interrupt")
                         .style(ButtonStyle::Subtle)
-                        .on_click(cx.listener(move |session, _, window, cx| {
+                        .on_click(cx.listener2(move |session, _, window, cx| {
                             session.interrupt(cx);
                         })),
                 ),
@@ -674,7 +674,7 @@ impl Render for Session {
                 Button::new("shutdown", "Shutdown")
                     .style(ButtonStyle::Subtle)
                     .disabled(self.kernel.is_shutting_down())
-                    .on_click(cx.listener(move |session, _, window, cx| {
+                    .on_click(cx.listener2(move |session, _, window, cx| {
                         session.shutdown(cx);
                     })),
             )

@@ -28,7 +28,7 @@ impl FileContextPicker {
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let delegate = FileContextPickerDelegate::new(context_picker, workspace, context_store);
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx));
 
         Self { picker }
     }
@@ -189,7 +189,12 @@ impl PickerDelegate for FileContextPickerDelegate {
         })
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         let mat = &self.matches[self.selected_index];
 
         let workspace = self.workspace.clone();

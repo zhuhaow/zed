@@ -33,6 +33,7 @@ use gpui::{actions, ViewContext};
 use language::{Point, SelectionGoal};
 use log::error;
 use multi_buffer::MultiBufferRow;
+use ui::prelude::Window;
 
 actions!(
     vim,
@@ -75,17 +76,17 @@ pub(crate) fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
     Vim::action(editor, cx, Vim::toggle_comments);
     Vim::action(editor, cx, Vim::paste);
 
-    Vim::action(editor, cx, |vim, _: &DeleteLeft, cx| {
+    Vim::action(editor, cx, |vim, _: &DeleteLeft, window, cx| {
         vim.record_current_action(cx);
         let times = Vim::take_count(cx);
         vim.delete_motion(Motion::Left, times, cx);
     });
-    Vim::action(editor, cx, |vim, _: &DeleteRight, cx| {
+    Vim::action(editor, cx, |vim, _: &DeleteRight, window, cx| {
         vim.record_current_action(cx);
         let times = Vim::take_count(cx);
         vim.delete_motion(Motion::Right, times, cx);
     });
-    Vim::action(editor, cx, |vim, _: &ChangeToEndOfLine, cx| {
+    Vim::action(editor, cx, |vim, _: &ChangeToEndOfLine, window, cx| {
         vim.start_recording(cx);
         let times = Vim::take_count(cx);
         vim.change_motion(
@@ -96,7 +97,7 @@ pub(crate) fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             cx,
         );
     });
-    Vim::action(editor, cx, |vim, _: &DeleteToEndOfLine, cx| {
+    Vim::action(editor, cx, |vim, _: &DeleteToEndOfLine, window, cx| {
         vim.record_current_action(cx);
         let times = Vim::take_count(cx);
         vim.delete_motion(
@@ -107,7 +108,7 @@ pub(crate) fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             cx,
         );
     });
-    Vim::action(editor, cx, |vim, _: &JoinLines, cx| {
+    Vim::action(editor, cx, |vim, _: &JoinLines, window, cx| {
         vim.record_current_action(cx);
         let mut times = Vim::take_count(cx).unwrap_or(1);
         if vim.mode.is_visual() {
@@ -129,7 +130,7 @@ pub(crate) fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
         }
     });
 
-    Vim::action(editor, cx, |vim, _: &Undo, cx| {
+    Vim::action(editor, cx, |vim, _: &Undo, window, cx| {
         let times = Vim::take_count(cx);
         vim.update_editor(cx, |_, editor, cx| {
             for _ in 0..times.unwrap_or(1) {
@@ -137,7 +138,7 @@ pub(crate) fn register(editor: &mut Editor, cx: &mut ViewContext<Vim>) {
             }
         });
     });
-    Vim::action(editor, cx, |vim, _: &Redo, cx| {
+    Vim::action(editor, cx, |vim, _: &Redo, window, cx| {
         let times = Vim::take_count(cx);
         vim.update_editor(cx, |_, editor, cx| {
             for _ in 0..times.unwrap_or(1) {
@@ -266,17 +267,17 @@ impl Vim {
         });
     }
 
-    fn insert_after(&mut self, _: &InsertAfter, cx: &mut ViewContext<Self>) {
+    fn insert_after(&mut self, _: &InsertAfter, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.start_recording(cx);
         self.switch_mode(Mode::Insert, false, cx);
         self.update_editor(cx, |_, editor, cx| {
-            editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+            editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                 s.move_cursors_with(|map, cursor, _| (right(map, cursor, 1), SelectionGoal::None));
             });
         });
     }
 
-    fn insert_before(&mut self, _: &InsertBefore, cx: &mut ViewContext<Self>) {
+    fn insert_before(&mut self, _: &InsertBefore, window: &mut Window, cx: &mut ViewContext<Self>) {
         self.start_recording(cx);
         self.switch_mode(Mode::Insert, false, cx);
     }
@@ -284,6 +285,7 @@ impl Vim {
     fn insert_first_non_whitespace(
         &mut self,
         _: &InsertFirstNonWhitespace,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         self.start_recording(cx);
@@ -300,7 +302,12 @@ impl Vim {
         });
     }
 
-    fn insert_end_of_line(&mut self, _: &InsertEndOfLine, cx: &mut ViewContext<Self>) {
+    fn insert_end_of_line(
+        &mut self,
+        _: &InsertEndOfLine,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.start_recording(cx);
         self.switch_mode(Mode::Insert, false, cx);
         self.update_editor(cx, |_, editor, cx| {
@@ -312,19 +319,29 @@ impl Vim {
         });
     }
 
-    fn insert_at_previous(&mut self, _: &InsertAtPrevious, cx: &mut ViewContext<Self>) {
+    fn insert_at_previous(
+        &mut self,
+        _: &InsertAtPrevious,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.start_recording(cx);
         self.switch_mode(Mode::Insert, false, cx);
         self.update_editor(cx, |vim, editor, cx| {
             if let Some(marks) = vim.marks.get("^") {
-                editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                     s.select_anchor_ranges(marks.iter().map(|mark| *mark..*mark))
                 });
             }
         });
     }
 
-    fn insert_line_above(&mut self, _: &InsertLineAbove, cx: &mut ViewContext<Self>) {
+    fn insert_line_above(
+        &mut self,
+        _: &InsertLineAbove,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.start_recording(cx);
         self.switch_mode(Mode::Insert, false, cx);
         self.update_editor(cx, |_, editor, cx| {
@@ -360,7 +377,12 @@ impl Vim {
         });
     }
 
-    fn insert_line_below(&mut self, _: &InsertLineBelow, cx: &mut ViewContext<Self>) {
+    fn insert_line_below(
+        &mut self,
+        _: &InsertLineBelow,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.start_recording(cx);
         self.switch_mode(Mode::Insert, false, cx);
         self.update_editor(cx, |_, editor, cx| {
@@ -401,12 +423,17 @@ impl Vim {
         });
     }
 
-    fn yank_line(&mut self, _: &YankLine, cx: &mut ViewContext<Self>) {
+    fn yank_line(&mut self, _: &YankLine, window: &mut Window, cx: &mut ViewContext<Self>) {
         let count = Vim::take_count(cx);
         self.yank_motion(motion::Motion::CurrentLine, count, cx)
     }
 
-    fn toggle_comments(&mut self, _: &ToggleComments, cx: &mut ViewContext<Self>) {
+    fn toggle_comments(
+        &mut self,
+        _: &ToggleComments,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         self.record_current_action(cx);
         self.store_visual_marks(cx);
         self.update_editor(cx, |vim, editor, cx| {
@@ -421,7 +448,12 @@ impl Vim {
         }
     }
 
-    pub(crate) fn normal_replace(&mut self, text: Arc<str>, cx: &mut ViewContext<Self>) {
+    pub(crate) fn normal_replace(
+        &mut self,
+        text: Arc<str>,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let count = Vim::take_count(cx).unwrap_or(1);
         self.stop_recording(cx);
         self.update_editor(cx, |_, editor, cx| {

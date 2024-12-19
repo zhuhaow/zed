@@ -471,8 +471,8 @@ impl Render for ActivityIndicator {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let result = h_flex()
             .id("activity-indicator")
-            .on_action(cx.listener(Self::show_error_message))
-            .on_action(cx.listener(Self::dismiss_error_message));
+            .on_action(cx.listener2(Self::show_error_message))
+            .on_action(cx.listener2(Self::dismiss_error_message));
         let Some(content) = self.content_to_render(cx) else {
             return result;
         };
@@ -504,7 +504,7 @@ impl Render for ActivityIndicator {
                                 }
                             })
                             .when_some(content.on_click, |this, handler| {
-                                this.on_click(cx.listener(move |this, _, window, cx| {
+                                this.on_click(cx.listener2(move |this, _, window, cx| {
                                     handler(this, window, cx);
                                 }))
                                 .cursor(CursorStyle::PointingHand)
@@ -539,7 +539,7 @@ impl Render for ActivityIndicator {
                                             .child(Icon::new(IconName::XCircle))
                                             .into_any_element()
                                     },
-                                    move |cx| {
+                                    move |window, cx| {
                                         this.update(cx, |this, cx| {
                                             this.project.update(cx, |project, cx| {
                                                 project.cancel_language_server_work(

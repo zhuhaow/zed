@@ -35,7 +35,8 @@ async fn test_open_with_prev_tab_selected_and_cycle_on_toggle_action(
         .await;
 
     let project = Project::test(app_state.fs.clone(), ["/root".as_ref()], cx).await;
-    let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+    let (workspace, cx) =
+        cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
     let tab_1 = open_buffer("1.txt", &workspace, cx).await;
     let tab_2 = open_buffer("2.txt", &workspace, cx).await;
@@ -90,7 +91,8 @@ async fn test_open_with_last_tab_selected(cx: &mut gpui::TestAppContext) {
         .await;
 
     let project = Project::test(app_state.fs.clone(), ["/root".as_ref()], cx).await;
-    let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+    let (workspace, cx) =
+        cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
     let tab_1 = open_buffer("1.txt", &workspace, cx).await;
     let tab_2 = open_buffer("2.txt", &workspace, cx).await;
@@ -123,7 +125,8 @@ async fn test_open_item_on_modifiers_release(cx: &mut gpui::TestAppContext) {
         .await;
 
     let project = Project::test(app_state.fs.clone(), ["/root".as_ref()], cx).await;
-    let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+    let (workspace, cx) =
+        cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
     let tab_1 = open_buffer("1.txt", &workspace, cx).await;
     let tab_2 = open_buffer("2.txt", &workspace, cx).await;
@@ -150,7 +153,8 @@ async fn test_open_on_empty_pane(cx: &mut gpui::TestAppContext) {
     app_state.fs.as_fake().insert_tree("/root", json!({})).await;
 
     let project = Project::test(app_state.fs.clone(), ["/root".as_ref()], cx).await;
-    let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+    let (workspace, cx) =
+        cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
     cx.simulate_modifiers_change(Modifiers::control());
     let tab_switcher = open_tab_switcher(false, &workspace, cx);
@@ -172,7 +176,8 @@ async fn test_open_with_single_item(cx: &mut gpui::TestAppContext) {
         .await;
 
     let project = Project::test(app_state.fs.clone(), ["/root".as_ref()], cx).await;
-    let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+    let (workspace, cx) =
+        cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
     let tab = open_buffer("1.txt", &workspace, cx).await;
 
@@ -199,7 +204,8 @@ async fn test_close_selected_item(cx: &mut gpui::TestAppContext) {
         .await;
 
     let project = Project::test(app_state.fs.clone(), ["/root".as_ref()], cx).await;
-    let (workspace, cx) = cx.add_window_view(|cx| Workspace::test_new(project.clone(), cx));
+    let (workspace, cx) =
+        cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
     let tab_1 = open_buffer("1.txt", &workspace, cx).await;
     let tab_2 = open_buffer("2.txt", &workspace, cx).await;

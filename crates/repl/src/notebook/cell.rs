@@ -513,7 +513,7 @@ impl RenderableCell for CodeCell {
             CellControl::new("rerun-cell", CellControlType::RerunCell)
         } else {
             CellControl::new("run-cell", CellControlType::RunCell)
-                .on_click(cx.listener(move |this, _, window, cx| this.run(cx)))
+                .on_click(cx.listener2(move |this, _, window, cx| this.run(cx)))
         };
 
         Some(cell_control)

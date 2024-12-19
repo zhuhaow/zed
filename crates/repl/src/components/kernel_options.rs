@@ -113,7 +113,12 @@ impl PickerDelegate for KernelPickerDelegate {
         return Task::ready(());
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<Self>>,
+    ) {
         if let Some(kernelspec) = &self.selected_kernelspec {
             (self.on_select)(kernelspec.clone(), cx.window_context());
             cx.emit(DismissEvent);
@@ -244,7 +249,7 @@ impl<T: PopoverTrigger> RenderOnce for KernelSelector<T> {
         };
 
         let picker_view = cx.new_view(|cx| {
-            let picker = Picker::uniform_list(delegate, cx)
+            let picker = Picker::uniform_list(delegate, todo!(), cx)
                 .width(rems(30.))
                 .max_height(Some(rems(20.).into()));
             picker

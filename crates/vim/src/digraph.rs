@@ -6,7 +6,7 @@ use gpui::{impl_actions, AppContext, Keystroke, KeystrokeEvent};
 use serde::Deserialize;
 use settings::Settings;
 use std::sync::LazyLock;
-use ui::ViewContext;
+use ui::{prelude::Window, ViewContext};
 
 use crate::{state::Operator, Vim, VimSettings};
 
@@ -61,7 +61,7 @@ impl Vim {
         }
     }
 
-    fn literal(&mut self, action: &Literal, cx: &mut ViewContext<Self>) {
+    fn literal(&mut self, action: &Literal, window: &mut Window, cx: &mut ViewContext<Self>) {
         if let Some(Operator::Literal { prefix }) = self.active_operator() {
             if let Some(prefix) = prefix {
                 if let Some(keystroke) = Keystroke::parse(&action.0).ok() {

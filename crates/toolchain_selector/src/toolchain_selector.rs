@@ -26,13 +26,17 @@ pub struct ToolchainSelector {
 }
 
 impl ToolchainSelector {
-    fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
+    fn register(workspace: &mut Workspace, window: &mut Window, _: &mut ViewContext<Workspace>) {
         workspace.register_action(move |workspace, _: &Select, window, cx| {
-            Self::toggle(workspace, cx);
+            Self::toggle(workspace, window, cx);
         });
     }
 
-    fn toggle(workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) -> Option<()> {
+    fn toggle(
+        workspace: &mut Workspace,
+        window: &mut Window,
+        cx: &mut ViewContext<Workspace>,
+    ) -> Option<()> {
         let (_, buffer, _) = workspace
             .active_item(cx)?
             .act_as::<Editor>(cx)?
@@ -49,6 +53,7 @@ impl ToolchainSelector {
             .abs_path();
         let workspace_id = workspace.database_id()?;
         let weak = workspace.weak_handle();
+        let window_handle = window.handle();
         cx.spawn(move |workspace, mut cx| async move {
             let active_toolchain = workspace::WORKSPACE_DB
                 .toolchain(workspace_id, worktree_id, language_name.clone())
@@ -56,7 +61,7 @@ impl ToolchainSelector {
                 .ok()
                 .flatten();
             workspace
-                .update(&mut cx, |this, cx| {
+                .update_in_window(window_handle, &mut cx, |this, window, cx| {
                     this.toggle_modal(cx, move |cx| {
                         ToolchainSelector::new(
                             weak,
@@ -65,6 +70,7 @@ impl ToolchainSelector {
                             worktree_id,
                             worktree_root_path,
                             language_name,
+                            window,
                             cx,
                         )
                     });
@@ -83,6 +89,7 @@ impl ToolchainSelector {
         worktree_id: WorktreeId,
         worktree_root: Arc<Path>,
         language_name: LanguageName,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
         let view = cx.view().downgrade();
@@ -95,9 +102,10 @@ impl ToolchainSelector {
                 worktree_root,
                 project,
                 language_name,
+                window,
                 cx,
             );
-            Picker::uniform_list(delegate, cx)
+            Picker::uniform_list(delegate, window, cx)
         });
         Self { picker }
     }
@@ -140,8 +148,10 @@ impl ToolchainSelectorDelegate {
         worktree_abs_path_root: Arc<Path>,
         project: Model<Project>,
         language_name: LanguageName,
+        window: &mut Window,
         cx: &mut ViewContext<Picker<Self>>,
     ) -> Self {
+        let window_handle = window.handle();
         let _fetch_candidates_task = cx.spawn({
             let project = project.clone();
             move |this, mut cx| async move {
@@ -163,7 +173,7 @@ impl ToolchainSelectorDelegate {
                     .ok()?
                     .await?;
 
-                let _ = this.update(&mut cx, move |this, cx| {
+                let _ = this.update_in_window(window_handle, &mut cx, move |this, window, cx| {
                     this.delegate.candidates = available_toolchains;
 
                     if let Some(active_toolchain) = active_toolchain {
@@ -177,7 +187,7 @@ impl ToolchainSelectorDelegate {
                             this.delegate.set_selected_index(position, cx);
                         }
                     }
-                    this.update_matches(this.query(cx), cx);
+                    this.update_matches(this.query(cx), window, cx);
                 });
 
                 Some(())
@@ -217,7 +227,7 @@ impl PickerDelegate for ToolchainSelectorDelegate {
         self.matches.len()
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(&mut self, _: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>) {
         if let Some(string_match) = self.matches.get(self.selected_index) {
             let toolchain = self.candidates.toolchains[string_match.candidate_id].clone();
             if let Some(workspace_id) = self

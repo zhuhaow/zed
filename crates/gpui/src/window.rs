@@ -3798,10 +3798,22 @@ impl<'a> WindowContext<'a> {
     pub fn handler_for<V: Render>(
         &self,
         view: &View<V>,
-        f: impl Fn(&mut V, &mut ViewContext<V>) + 'static,
-    ) -> impl Fn(&mut WindowContext) {
+        f: impl Fn(&mut V, &mut Window, &mut ViewContext<V>) + 'static,
+    ) -> impl Fn(&mut Window, &mut WindowContext) {
         let view = view.downgrade();
-        move |cx: &mut WindowContext| {
+        move |window: &mut Window, cx: &mut WindowContext| {
+            view.update(cx, |view, cx| f(view, window, cx)).ok();
+        }
+    }
+
+    /// Returns a generic handler that invokes the given handler with the view and context associated with the given view handle.
+    pub fn handler_for2<V: Render>(
+        &self,
+        view: &View<V>,
+        f: impl Fn(&mut V, &mut ViewContext<V>) + 'static,
+    ) -> impl Fn(&mut Window, &mut WindowContext) {
+        let view = view.downgrade();
+        move |window: &mut Window, cx: &mut WindowContext| {
             view.update(cx, |view, cx| f(view, cx)).ok();
         }
     }
@@ -4641,7 +4653,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     /// Many GPUI callbacks take the form of `Fn(&E, &mut WindowContext)`,
     /// but it's often useful to be able to access view state in these
     /// callbacks. This method provides a convenient way to do so.
-    pub fn listener<E: ?Sized>(
+    pub fn listener2<E: ?Sized>(
         &self,
         f: impl Fn(&mut V, &E, &mut Window, &mut ViewContext<V>) + 'static,
     ) -> impl Fn(&E, &mut Window, &mut WindowContext) + 'static {
@@ -4656,7 +4668,7 @@ impl<'a, V: 'static> ViewContext<'a, V> {
     /// Many GPUI callbacks take the form of `Fn(&E, &mut WindowContext)`,
     /// but it's often useful to be able to access view state in these
     /// callbacks. This method provides a convenient way to do so.
-    pub fn listener2<E: ?Sized>(
+    pub fn listener<E: ?Sized>(
         &self,
         f: impl Fn(&mut V, &E, &mut ViewContext<V>) + 'static,
     ) -> impl Fn(&E, &mut Window, &mut WindowContext) + 'static {

@@ -44,10 +44,10 @@ pub fn init(cx: &mut AppContext) {
 }
 
 impl TabSwitcher {
-    fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
+    fn register(workspace: &mut Workspace, window: &mut Window, cx: &mut ViewContext<Workspace>) {
         workspace.register_action(|workspace, action: &Toggle, window, cx| {
             let Some(tab_switcher) = workspace.active_modal::<Self>(cx) else {
-                Self::open(action, workspace, cx);
+                Self::open(action, workspace, window, cx);
                 return;
             };
 
@@ -59,7 +59,12 @@ impl TabSwitcher {
         });
     }
 
-    fn open(action: &Toggle, workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) {
+    fn open(
+        action: &Toggle,
+        workspace: &mut Workspace,
+        window: &mut Window,
+        cx: &mut ViewContext<Workspace>,
+    ) {
         let mut weak_pane = workspace.active_pane().downgrade();
         for dock in [
             workspace.left_dock(),
@@ -83,13 +88,13 @@ impl TabSwitcher {
         workspace.toggle_modal(cx, |cx| {
             let delegate =
                 TabSwitcherDelegate::new(project, action, cx.view().downgrade(), weak_pane, cx);
-            TabSwitcher::new(delegate, cx)
+            TabSwitcher::new(delegate, window, cx)
         });
     }
 
-    fn new(delegate: TabSwitcherDelegate, cx: &mut ViewContext<Self>) -> Self {
+    fn new(delegate: TabSwitcherDelegate, window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
         Self {
-            picker: cx.new_view(|cx| Picker::nonsearchable_uniform_list(delegate, cx)),
+            picker: cx.new_view(|cx| Picker::nonsearchable_uniform_list(delegate, window, cx)),
             init_modifiers: cx.modifiers().modified().then_some(cx.modifiers()),
         }
     }
@@ -140,8 +145,8 @@ impl Render for TabSwitcher {
         v_flex()
             .key_context("TabSwitcher")
             .w(rems(PANEL_WIDTH_REMS))
-            .on_modifiers_changed(cx.listener(Self::handle_modifiers_changed))
-            .on_action(cx.listener(Self::handle_close_selected_item))
+            .on_modifiers_changed(cx.listener2(Self::handle_modifiers_changed))
+            .on_action(cx.listener2(Self::handle_close_selected_item))
             .child(self.picker.clone())
     }
 }
@@ -320,7 +325,12 @@ impl PickerDelegate for TabSwitcherDelegate {
         Task::ready(())
     }
 
-    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<TabSwitcherDelegate>>) {
+    fn confirm(
+        &mut self,
+        _secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Picker<TabSwitcherDelegate>>,
+    ) {
         let Some(pane) = self.pane.upgrade() else {
             return;
         };
@@ -396,7 +406,7 @@ impl PickerDelegate for TabSwitcherDelegate {
             // See the same handler in Picker for more details.
             .on_mouse_up(
                 MouseButton::Right,
-                cx.listener(move |picker, _: &MouseUpEvent, window, cx| {
+                cx.listener2(move |picker, _: &MouseUpEvent, window, cx| {
                     cx.stop_propagation();
                     picker.delegate.close_item_at(ix, cx);
                 }),

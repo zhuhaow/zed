@@ -358,7 +358,7 @@ impl ConfigurationView {
 
         Self {
             api_key_editor: cx.new_view(|cx| {
-                let mut editor = Editor::single_line(cx);
+                let mut editor = Editor::single_line(window, cx);
                 editor.set_placeholder_text("AIzaSy...", cx);
                 editor
             }),
@@ -448,7 +448,7 @@ impl Render for ConfigurationView {
         } else if self.should_render_editor(cx) {
             v_flex()
                 .size_full()
-                .on_action(cx.listener(Self::save_api_key))
+                .on_action(cx.listener2(Self::save_api_key))
                 .child(Label::new(INSTRUCTIONS[0]))
                 .child(h_flex().child(Label::new(INSTRUCTIONS[1])).child(
                     Button::new("google_console", GOOGLE_CONSOLE_URL)
@@ -500,7 +500,7 @@ impl Render for ConfigurationView {
                         .when(env_var_set, |this| {
                             this.tooltip(|window, cx| Tooltip::text(format!("To reset your API key, unset the {GOOGLE_AI_API_KEY_VAR} environment variable."), cx))
                         })
-                        .on_click(cx.listener(|this, _, window, cx| this.reset_api_key(cx))),
+                        .on_click(cx.listener2(|this, _, window, cx| this.reset_api_key(cx))),
                 )
                 .into_any()
         }

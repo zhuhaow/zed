@@ -125,8 +125,13 @@ impl FollowableItem for Editor {
                 });
 
                 cx.new_view(|cx| {
-                    let mut editor =
-                        Editor::for_multibuffer(multibuffer, Some(project.clone()), true, cx);
+                    let mut editor = Editor::for_multibuffer(
+                        multibuffer,
+                        Some(project.clone()),
+                        true,
+                        window,
+                        cx,
+                    );
                     editor.remote_id = Some(remote_id);
                     editor
                 })
@@ -560,7 +565,7 @@ impl Item for Editor {
             } else {
                 let nav_history = self.nav_history.take();
                 self.set_scroll_anchor(scroll_anchor, cx);
-                self.change_selections(Some(Autoscroll::fit()), cx, |s| {
+                self.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                     s.select_ranges([offset..offset])
                 });
                 self.nav_history = nav_history;
@@ -679,12 +684,13 @@ impl Item for Editor {
     fn clone_on_split(
         &self,
         _workspace_id: Option<WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Editor>>
     where
         Self: Sized,
     {
-        Some(cx.new_view(|cx| self.clone(cx)))
+        Some(cx.new_view(|cx| self.clone(window, cx)))
     }
 
     fn set_nav_history(&mut self, history: ItemNavHistory, _: &mut ViewContext<Self>) {
@@ -954,8 +960,11 @@ impl SerializableItem for Editor {
         workspace: WeakView<Workspace>,
         workspace_id: workspace::WorkspaceId,
         item_id: ItemId,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Task<Result<View<Self>>> {
+        let window_handle = window.handle();
+
         let serialized_editor = match DB
             .get_serialized_editor(item_id, workspace_id)
             .context("Failed to query editor state")
@@ -991,6 +1000,8 @@ impl SerializableItem for Editor {
                 ..
             } => cx.spawn(|mut cx| {
                 let project = project.clone();
+                let window_handle = window.handle();
+
                 async move {
                     let language = if let Some(language_name) = language {
                         let language_registry =
@@ -1019,9 +1030,9 @@ impl SerializableItem for Editor {
                         buffer.set_text(contents, cx);
                     })?;
 
-                    cx.update(|cx| {
+                    window_handle.update(&mut cx, |_, window, cx| {
                         cx.new_view(|cx| {
-                            let mut editor = Editor::for_buffer(buffer, Some(project), cx);
+                            let mut editor = Editor::for_buffer(buffer, Some(project), window, cx);
 
                             editor.read_scroll_position_from_db(item_id, workspace_id, cx);
                             editor
@@ -1073,9 +1084,10 @@ impl SerializableItem for Editor {
                                 })?;
                             }
 
-                            cx.update(|cx| {
+                            window_handle.update(&mut cx, |_, window, cx| {
                                 cx.new_view(|cx| {
-                                    let mut editor = Editor::for_buffer(buffer, Some(project), cx);
+                                    let mut editor =
+                                        Editor::for_buffer(buffer, Some(project), window, cx);
 
                                     editor.read_scroll_position_from_db(item_id, workspace_id, cx);
                                     editor
@@ -1085,7 +1097,7 @@ impl SerializableItem for Editor {
                     }
                     None => {
                         let open_by_abs_path = workspace.update(cx, |workspace, cx| {
-                            workspace.open_abs_path(abs_path.clone(), false, cx)
+                            workspace.open_abs_path(abs_path.clone(), false, window, cx)
                         });
                         cx.spawn(|mut cx| async move {
                             let editor = open_by_abs_path?.await?.downcast::<Editor>().with_context(|| format!("Failed to downcast to Editor after opening abs path {abs_path:?}"))?;
@@ -1110,6 +1122,7 @@ impl SerializableItem for Editor {
         workspace: &mut Workspace,
         item_id: ItemId,
         closing: bool,
+        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<Task<Result<()>>> {
         let mut serialize_dirty_buffers = self.serialize_dirty_buffers;
@@ -1190,9 +1203,10 @@ impl ProjectItem for Editor {
     fn for_project_item(
         project: Model<Project>,
         buffer: Model<Buffer>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self {
-        Self::for_buffer(buffer, Some(project), cx)
+        Self::for_buffer(buffer, Some(project), window, cx)
     }
 }
 
@@ -1297,7 +1311,7 @@ impl SearchableItem for Editor {
     ) {
         self.unfold_ranges(&[matches[index].clone()], false, true, cx);
         let range = self.range_for_match(&matches[index]);
-        self.change_selections(Some(Autoscroll::fit()), cx, |s| {
+        self.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
             s.select_ranges([range]);
         })
     }
@@ -1308,7 +1322,7 @@ impl SearchableItem for Editor {
         for m in matches {
             ranges.push(self.range_for_match(m))
         }
-        self.change_selections(None, cx, |s| s.select_ranges(ranges));
+        self.change_selections(None, window, cx, |s| s.select_ranges(ranges));
     }
     fn replace(
         &mut self,
@@ -1622,7 +1636,7 @@ mod tests {
 
     use super::*;
     use fs::MTime;
-    use gpui::{AppContext, VisualTestContext};
+    use gpui::{AnyWindowHandle, AppContext, VisualTestContext};
     use language::{LanguageMatcher, TestFile};
     use project::FakeFs;
     use std::path::{Path, PathBuf};
@@ -1641,10 +1655,11 @@ mod tests {
         workspace_id: WorkspaceId,
         workspace: View<Workspace>,
         project: Model<Project>,
+        window_handle: AnyWindowHandle,
         cx: &mut VisualTestContext,
     ) -> View<Editor> {
         workspace
-            .update(cx, |workspace, cx| {
+            .update_in_window(window_handle, cx, |workspace, window, cx| {
                 let pane = workspace.active_pane();
                 pane.update(cx, |_, cx| {
                     Editor::deserialize(
@@ -1652,6 +1667,7 @@ mod tests {
                         workspace.weak_handle(),
                         workspace_id,
                         item_id,
+                        window,
                         cx,
                     )
                 })
@@ -1686,6 +1702,7 @@ mod tests {
             let project = Project::test(fs.clone(), ["/file.rs".as_ref()], cx).await;
             let (workspace, cx) =
                 cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
+            let window = cx.window;
             let workspace_id = workspace::WORKSPACE_DB.next_id().await.unwrap();
             let item_id = 1234 as ItemId;
             let mtime = fs
@@ -1707,7 +1724,7 @@ mod tests {
                 .unwrap();
 
             let deserialized =
-                deserialize_editor(item_id, workspace_id, workspace, project, cx).await;
+                deserialize_editor(item_id, workspace_id, workspace, project, window, cx).await;
 
             deserialized.update(cx, |editor, cx| {
                 assert_eq!(editor.text(cx), "fn main() {}");
@@ -1723,6 +1740,7 @@ mod tests {
             let project = Project::test(fs.clone(), ["/file.rs".as_ref()], cx).await;
             let (workspace, cx) =
                 cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
+            let window = cx.window;
 
             let workspace_id = workspace::WORKSPACE_DB.next_id().await.unwrap();
 
@@ -1739,7 +1757,7 @@ mod tests {
                 .unwrap();
 
             let deserialized =
-                deserialize_editor(item_id, workspace_id, workspace, project, cx).await;
+                deserialize_editor(item_id, workspace_id, workspace, project, window, cx).await;
 
             deserialized.update(cx, |editor, cx| {
                 assert_eq!(editor.text(cx), ""); // The file should be empty as per our initial setup
@@ -1759,6 +1777,7 @@ mod tests {
 
             let (workspace, cx) =
                 cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
+            let window = cx.window;
 
             let workspace_id = workspace::WORKSPACE_DB.next_id().await.unwrap();
 
@@ -1775,7 +1794,7 @@ mod tests {
                 .unwrap();
 
             let deserialized =
-                deserialize_editor(item_id, workspace_id, workspace, project, cx).await;
+                deserialize_editor(item_id, workspace_id, workspace, project, window, cx).await;
 
             deserialized.update(cx, |editor, cx| {
                 assert_eq!(editor.text(cx), "hello");
@@ -1795,6 +1814,7 @@ mod tests {
             let project = Project::test(fs.clone(), ["/file.rs".as_ref()], cx).await;
             let (workspace, cx) =
                 cx.add_window_view(|window, cx| Workspace::test_new(project.clone(), window, cx));
+            let window = cx.window;
 
             let workspace_id = workspace::WORKSPACE_DB.next_id().await.unwrap();
 
@@ -1812,7 +1832,7 @@ mod tests {
                 .unwrap();
 
             let deserialized =
-                deserialize_editor(item_id, workspace_id, workspace, project, cx).await;
+                deserialize_editor(item_id, workspace_id, workspace, project, window, cx).await;
 
             deserialized.update(cx, |editor, cx| {
                 assert_eq!(editor.text(cx), "fn main() {}");

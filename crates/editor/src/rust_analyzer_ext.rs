@@ -67,6 +67,7 @@ pub fn expand_macro_recursively(
             cx,
         )
     });
+    let window_handle = cx.window_handle();
     cx.spawn(|_editor, mut cx| async move {
         let macro_expansion = expand_macro_task.await.context("expand macro")?;
         if macro_expansion.is_empty() {
@@ -77,7 +78,7 @@ pub fn expand_macro_recursively(
         let buffer = project
             .update(&mut cx, |project, cx| project.create_buffer(cx))?
             .await?;
-        workspace.update(&mut cx, |workspace, cx| {
+        workspace.update_in_window(window_handle, &mut cx, |workspace, window, cx| {
             buffer.update(cx, |buffer, cx| {
                 buffer.edit([(0..0, macro_expansion.expansion)], None, cx);
                 buffer.set_language(Some(rust_language), cx)
@@ -86,9 +87,9 @@ pub fn expand_macro_recursively(
                 MultiBuffer::singleton(buffer, cx).with_title(macro_expansion.name)
             });
             workspace.add_item_to_active_pane(
-                Box::new(
-                    cx.new_view(|cx| Editor::for_multibuffer(multibuffer, Some(project), true, cx)),
-                ),
+                Box::new(cx.new_view(|cx| {
+                    Editor::for_multibuffer(multibuffer, Some(project), true, window, cx)
+                })),
                 None,
                 true,
                 cx,

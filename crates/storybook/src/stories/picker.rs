@@ -69,7 +69,12 @@ impl PickerDelegate for Delegate {
         cx.notify();
     }
 
-    fn confirm(&mut self, secondary: bool, _cx: &mut gpui::ViewContext<Picker<Self>>) {
+    fn confirm(
+        &mut self,
+        secondary: bool,
+        window: &mut Window,
+        _cx: &mut gpui::ViewContext<Picker<Self>>,
+    ) {
         let candidate_ix = self.matches[self.selected_ix];
         let candidate = self.candidates[candidate_ix].string.clone();
 
@@ -109,7 +114,7 @@ impl PickerDelegate for Delegate {
 }
 
 impl PickerStory {
-    pub fn new(cx: &mut WindowContext) -> View<Self> {
+    pub fn new(window: &mut Window, cx: &mut WindowContext) -> View<Self> {
         cx.new_view(|cx| {
             cx.bind_keys([
                 KeyBinding::new("up", menu::SelectPrev, Some("picker")),
@@ -184,7 +189,7 @@ impl PickerStory {
                     ]);
                     delegate.update_matches("".into(), cx).detach();
 
-                    let picker = Picker::uniform_list(delegate, cx);
+                    let picker = Picker::uniform_list(delegate, window, cx);
                     picker.focus(cx);
                     picker
                 }),

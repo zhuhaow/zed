@@ -100,7 +100,7 @@ impl RenderOnce for BufferFontFamilyControl {
                             },
                             {
                                 let font_name = font_name.clone();
-                                move |cx| {
+                                move |window, cx| {
                                     Self::write(font_name.clone(), cx);
                                 }
                             },
@@ -198,7 +198,7 @@ impl RenderOnce for BufferFontWeightControl {
                         menu = menu.custom_entry(
                             move |_cx| Label::new(weight.0.to_string()).into_any_element(),
                             {
-                                move |cx| {
+                                move |window, cx| {
                                     Self::write(weight, cx);
                                 }
                             },
@@ -416,11 +416,11 @@ impl RenderOnce for RelativeLineNumbersControl {
             ContextMenu::build(cx, |menu, _cx| {
                 menu.custom_entry(
                     |_cx| Label::new("Ascending").into_any_element(),
-                    move |cx| Self::write(false, cx),
+                    move |window, cx| Self::write(false, cx),
                 )
                 .custom_entry(
                     |_cx| Label::new("Relative").into_any_element(),
-                    move |cx| Self::write(true, cx),
+                    move |window, cx| Self::write(true, cx),
                 )
             }),
         )

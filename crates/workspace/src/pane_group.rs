@@ -348,7 +348,7 @@ impl Member {
                                     |this, (leader_project_id, leader_user_id)| {
                                         this.cursor_pointer().on_mouse_down(
                                             MouseButton::Left,
-                                            cx.listener(move |this, _, window, cx| {
+                                            cx.listener2(move |this, _, window, cx| {
                                                 crate::join_in_room_project(
                                                     leader_project_id,
                                                     leader_user_id,

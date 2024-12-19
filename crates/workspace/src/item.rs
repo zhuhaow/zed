@@ -239,6 +239,7 @@ pub trait Item: FocusableView + EventEmitter<Self::Event> {
     fn clone_on_split(
         &self,
         _workspace_id: Option<WorkspaceId>,
+        _window: &mut Window,
         _: &mut ViewContext<Self>,
     ) -> Option<View<Self>>
     where
@@ -332,11 +333,12 @@ pub trait SerializableItem: Item {
     ) -> Task<Result<()>>;
 
     fn deserialize(
-        _project: Model<Project>,
-        _workspace: WeakView<Workspace>,
-        _workspace_id: WorkspaceId,
-        _item_id: ItemId,
-        _cx: &mut WindowContext,
+        project: Model<Project>,
+        workspace: WeakView<Workspace>,
+        workspace_id: WorkspaceId,
+        item_id: ItemId,
+        window: &mut Window,
+        cx: &mut WindowContext,
     ) -> Task<Result<View<Self>>>;
 
     fn serialize(
@@ -344,6 +346,7 @@ pub trait SerializableItem: Item {
         workspace: &mut Workspace,
         item_id: ItemId,
         closing: bool,
+        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<Task<Result<()>>>;
 
@@ -356,6 +359,7 @@ pub trait SerializableItemHandle: ItemHandle {
         &self,
         workspace: &mut Workspace,
         closing: bool,
+        window: &Window,
         cx: &mut WindowContext,
     ) -> Option<Task<Result<()>>>;
     fn should_serialize(&self, event: &dyn Any, cx: &AppContext) -> bool;
@@ -373,10 +377,11 @@ where
         &self,
         workspace: &mut Workspace,
         closing: bool,
+        window: &Window,
         cx: &mut WindowContext,
     ) -> Option<Task<Result<()>>> {
         self.update(cx, |this, cx| {
-            this.serialize(workspace, cx.entity_id().as_u64(), closing, cx)
+            this.serialize(workspace, cx.entity_id().as_u64(), closing, window, cx)
         })
     }
 
@@ -414,6 +419,7 @@ pub trait ItemHandle: 'static + Send {
     fn clone_on_split(
         &self,
         workspace_id: Option<WorkspaceId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<Box<dyn ItemHandle>>;
     fn added_to_pane(
@@ -601,9 +607,10 @@ impl<T: Item> ItemHandle for View<T> {
     fn clone_on_split(
         &self,
         workspace_id: Option<WorkspaceId>,
+        window: &mut Window,
         cx: &mut WindowContext,
     ) -> Option<Box<dyn ItemHandle>> {
-        self.update(cx, |item, cx| item.clone_on_split(workspace_id, cx))
+        self.update(cx, |item, cx| item.clone_on_split(workspace_id, window, cx))
             .map(|handle| Box::new(handle) as Box<dyn ItemHandle>)
     }
 
@@ -922,6 +929,7 @@ pub trait ProjectItem: Item {
     fn for_project_item(
         project: Model<Project>,
         item: Model<Self::Item>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Self
     where
@@ -1066,7 +1074,7 @@ pub mod test {
     };
     use project::{Project, ProjectEntryId, ProjectPath, WorktreeId};
     use std::{any::Any, cell::Cell, path::Path};
-    use ui::WindowContext;
+    use ui::{prelude::Window, WindowContext};
 
     pub struct TestProjectItem {
         pub entry_id: Option<ProjectEntryId>,
@@ -1289,6 +1297,7 @@ pub mod test {
         fn clone_on_split(
             &self,
             _workspace_id: Option<WorkspaceId>,
+            _window: &mut Window,
             cx: &mut ViewContext<Self>,
         ) -> Option<View<Self>>
         where
@@ -1372,6 +1381,7 @@ pub mod test {
             _workspace: WeakView<Workspace>,
             workspace_id: WorkspaceId,
             _item_id: ItemId,
+            window: &mut Window,
             cx: &mut WindowContext,
         ) -> Task<anyhow::Result<View<Self>>> {
             let view = cx.new_view(|cx| Self::new_deserialized(workspace_id, cx));
@@ -1391,6 +1401,7 @@ pub mod test {
             _workspace: &mut Workspace,
             _item_id: ItemId,
             _closing: bool,
+            window: &Window,
             _cx: &mut ViewContext<Self>,
         ) -> Option<Task<anyhow::Result<()>>> {
             if let Some(serialize) = self.serialize.take() {

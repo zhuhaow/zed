@@ -209,7 +209,7 @@ impl Editor {
         let editor_snapshot = self.snapshot(cx);
         if let Some(diff_hunk) = to_diff_hunk(hovered_hunk, &editor_snapshot.buffer_snapshot) {
             self.toggle_hunks_expanded(vec![diff_hunk], cx);
-            self.change_selections(None, cx, |selections| selections.refresh());
+            self.change_selections(None, window, cx, |selections| selections.refresh());
         }
     }
 
@@ -1151,7 +1151,7 @@ fn editor_with_deleted_text(
             );
         });
 
-        let mut editor = Editor::for_multibuffer(multi_buffer, None, true, cx);
+        let mut editor = Editor::for_multibuffer(multi_buffer, None, true, window, cx);
         editor.set_soft_wrap_mode(language::language_settings::SoftWrap::None, cx);
         editor.set_show_wrap_guides(false, cx);
         editor.set_show_gutter(false, cx);
@@ -1170,7 +1170,7 @@ fn editor_with_deleted_text(
         editor
             ._subscriptions
             .extend([cx.on_blur(&editor.focus_handle, |editor, window, cx| {
-                editor.change_selections(None, cx, |s| {
+                editor.change_selections(None, window, cx, |s| {
                     s.try_cancel();
                 });
             })]);
@@ -1404,8 +1404,8 @@ mod tests {
             multibuffer
         });
 
-        let editor =
-            cx.add_window(|window, cx| Editor::for_multibuffer(multibuffer, None, false, cx));
+        let editor = cx
+            .add_window(|window, cx| Editor::for_multibuffer(multibuffer, None, false, window, cx));
         editor
             .update(cx, |editor, window, cx| {
                 for (buffer, diff_base) in [

@@ -116,7 +116,7 @@ impl EditorTestContext {
         });
 
         let editor = cx.add_window(|window, cx| {
-            let editor = build_editor(buffer, cx);
+            let editor = build_editor(buffer, window, cx);
             editor.focus(cx);
             editor
         });
@@ -309,7 +309,7 @@ impl EditorTestContext {
         let (unmarked_text, selection_ranges) = marked_text_ranges(marked_text, true);
         self.editor.update(&mut self.cx, |editor, cx| {
             editor.set_text(unmarked_text, cx);
-            editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+            editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                 s.select_ranges(selection_ranges)
             })
         });
@@ -325,7 +325,7 @@ impl EditorTestContext {
         let (unmarked_text, selection_ranges) = marked_text_ranges(marked_text, true);
         self.editor.update(&mut self.cx, |editor, cx| {
             assert_eq!(editor.text(cx), unmarked_text);
-            editor.change_selections(Some(Autoscroll::fit()), cx, |s| {
+            editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| {
                 s.select_ranges(selection_ranges)
             })
         });

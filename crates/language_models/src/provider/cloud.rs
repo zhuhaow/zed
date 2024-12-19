@@ -904,37 +904,38 @@ impl Render for ConfigurationView {
         } else {
             "You have basic access to models from Anthropic through the Zed AI Free plan."
         });
-        let manage_subscription_button = if is_pro {
-            Some(
-                h_flex().child(
-                    Button::new("manage_settings", "Manage Subscription")
-                        .style(ButtonStyle::Tinted(TintColor::Accent))
-                        .on_click(
-                            cx.listener(|_, _, window, cx| cx.open_url(&zed_urls::account_url(cx))),
-                        ),
-                ),
-            )
-        } else if cx.has_flag::<ZedPro>() {
-            Some(
-                h_flex()
-                    .gap_2()
-                    .child(
-                        Button::new("learn_more", "Learn more")
-                            .style(ButtonStyle::Subtle)
-                            .on_click(cx.listener(|_, _, window, cx| cx.open_url(ZED_AI_URL))),
-                    )
-                    .child(
-                        Button::new("upgrade", "Upgrade")
-                            .style(ButtonStyle::Subtle)
-                            .color(Color::Accent)
-                            .on_click(cx.listener(|_, _, window, cx| {
+        let manage_subscription_button =
+            if is_pro {
+                Some(
+                    h_flex().child(
+                        Button::new("manage_settings", "Manage Subscription")
+                            .style(ButtonStyle::Tinted(TintColor::Accent))
+                            .on_click(cx.listener2(|_, _, window, cx| {
                                 cx.open_url(&zed_urls::account_url(cx))
                             })),
                     ),
-            )
-        } else {
-            None
-        };
+                )
+            } else if cx.has_flag::<ZedPro>() {
+                Some(
+                    h_flex()
+                        .gap_2()
+                        .child(
+                            Button::new("learn_more", "Learn more")
+                                .style(ButtonStyle::Subtle)
+                                .on_click(cx.listener2(|_, _, window, cx| cx.open_url(ZED_AI_URL))),
+                        )
+                        .child(
+                            Button::new("upgrade", "Upgrade")
+                                .style(ButtonStyle::Subtle)
+                                .color(Color::Accent)
+                                .on_click(cx.listener2(|_, _, window, cx| {
+                                    cx.open_url(&zed_urls::account_url(cx))
+                                })),
+                        ),
+                )
+            } else {
+                None
+            };
 
         if is_connected {
             v_flex()
@@ -954,7 +955,7 @@ impl Render for ConfigurationView {
                         .icon_color(Color::Muted)
                         .icon(IconName::Github)
                         .icon_position(IconPosition::Start)
-                        .on_click(cx.listener(move |this, _, window, cx| this.authenticate(cx))),
+                        .on_click(cx.listener2(move |this, _, window, cx| this.authenticate(cx))),
                 )
         }
     }

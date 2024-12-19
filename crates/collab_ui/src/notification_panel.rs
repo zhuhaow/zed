@@ -76,9 +76,9 @@ pub struct NotificationPresenter {
 actions!(notification_panel, [ToggleFocus]);
 
 pub fn init(cx: &mut AppContext) {
-    cx.observe_new_views(|workspace: &mut Workspace, _| {
+    cx.observe_new_views(|workspace: &mut Workspace, _, _| {
         workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
-            workspace.toggle_panel_focus::<NotificationPanel>(cx);
+            workspace.toggle_panel_focus::<NotificationPanel>(window, cx);
         });
     })
     .detach();
@@ -116,7 +116,7 @@ impl NotificationPanel {
                         })
                         .unwrap_or_else(|| div().into_any())
                 });
-            notification_list.set_scroll_handler(cx.listener(
+            notification_list.set_scroll_handler(cx.listener2(
                 |this, event: &ListScrollEvent, window, cx| {
                     if event.count.saturating_sub(event.visible_range.end) < LOADING_THRESHOLD {
                         if let Some(task) = this
@@ -259,8 +259,8 @@ impl NotificationPanel {
                 .when(can_navigate, |el| {
                     el.cursor(CursorStyle::PointingHand).on_click({
                         let notification = notification.clone();
-                        cx.listener(move |this, _, window, cx| {
-                            this.did_click_notification(&notification, cx)
+                        cx.listener2(move |this, _, window, cx| {
+                            this.did_click_notification(&notification, window, cx)
                         })
                     })
                 })
@@ -443,7 +443,12 @@ impl NotificationPanel {
         }
     }
 
-    fn did_click_notification(&mut self, notification: &Notification, cx: &mut ViewContext<Self>) {
+    fn did_click_notification(
+        &mut self,
+        notification: &Notification,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if let Notification::ChannelMessageMention {
             message_id,
             channel_id,
@@ -451,9 +456,10 @@ impl NotificationPanel {
         } = notification.clone()
         {
             if let Some(workspace) = self.workspace.upgrade() {
+                let window_handle = window.handle();
                 cx.window_context().defer(move |cx| {
-                    workspace.update(cx, |workspace, cx| {
-                        if let Some(panel) = workspace.focus_panel::<ChatPanel>(cx) {
+                    workspace.update_in_window(window_handle, cx, |workspace, window, cx| {
+                        if let Some(panel) = workspace.focus_panel::<ChatPanel>(window, cx) {
                             panel.update(cx, |panel, cx| {
                                 panel
                                     .select_channel(ChannelId(channel_id), Some(message_id), cx)
@@ -741,17 +747,22 @@ pub struct NotificationToast {
 }
 
 impl NotificationToast {
-    fn focus_notification_panel(&self, cx: &mut ViewContext<Self>) {
+    fn focus_notification_panel(&self, window: &mut Window, cx: &mut ViewContext<Self>) {
         let workspace = self.workspace.clone();
         let notification_id = self.notification_id;
+        let window_handle = window.handle();
         cx.window_context().defer(move |cx| {
             workspace
-                .update(cx, |workspace, cx| {
-                    if let Some(panel) = workspace.focus_panel::<NotificationPanel>(cx) {
+                .update_in_window(window_handle, cx, |workspace, window, cx| {
+                    if let Some(panel) = workspace.focus_panel::<NotificationPanel>(window, cx) {
                         panel.update(cx, |panel, cx| {
                             let store = panel.notification_store.read(cx);
                             if let Some(entry) = store.notification_for_id(notification_id) {
-                                panel.did_click_notification(&entry.clone().notification, cx);
+                                panel.did_click_notification(
+                                    &entry.clone().notification,
+                                    window,
+                                    cx,
+                                );
                             }
                         });
                     }
@@ -774,10 +785,10 @@ impl Render for NotificationToast {
             .child(Label::new(self.text.clone()))
             .child(
                 IconButton::new("close", IconName::Close)
-                    .on_click(cx.listener(|_, _, window, cx| cx.emit(DismissEvent))),
+                    .on_click(cx.listener2(|_, _, window, cx| cx.emit(DismissEvent))),
             )
-            .on_click(cx.listener(|this, _, window, cx| {
-                this.focus_notification_panel(cx);
+            .on_click(cx.listener2(|this, _, window, cx| {
+                this.focus_notification_panel(window, cx);
                 cx.emit(DismissEvent);
             }))
     }

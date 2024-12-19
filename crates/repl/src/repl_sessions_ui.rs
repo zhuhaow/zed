@@ -29,7 +29,7 @@ actions!(
 
 pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
-        |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
+        |workspace: &mut Workspace, window: &mut Window, _cx: &mut ViewContext<Workspace>| {
             workspace.register_action(|workspace, _: &Sessions, window, cx| {
                 let existing = workspace
                     .active_pane()
@@ -55,13 +55,15 @@ pub fn init(cx: &mut AppContext) {
     )
     .detach();
 
-    cx.observe_new_views(move |editor: &mut Editor, cx: &mut ViewContext<Editor>| {
+    cx.observe_new_views(move |editor: &mut
+
+        Editor, window: &mut Window, cx: &mut ViewContext<Editor>| {
         if !editor.use_modal_editing() || !editor.buffer().read(cx).is_singleton() {
             return;
         }
 
         cx.defer(|editor, cx| {
-            let workspace = Workspace::for_window(cx);
+            let workspace = Workspace::for_window(window, cx);
             let project = workspace.map(|workspace| workspace.read(cx).project().clone());
 
             let is_local_project = project
@@ -175,7 +177,8 @@ impl Item for ReplSessionsPage {
     fn clone_on_split(
         &self,
         _workspace_id: Option<WorkspaceId>,
-        _: &mut ViewContext<Self>,
+        window: &mut Window,
+        &mut ViewContext<Self>,
     ) -> Option<View<Self>> {
         None
     }

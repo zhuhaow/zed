@@ -14,14 +14,18 @@ pub struct ContactFinder {
 }
 
 impl ContactFinder {
-    pub fn new(user_store: Model<UserStore>, cx: &mut ViewContext<Self>) -> Self {
+    pub fn new(
+        user_store: Model<UserStore>,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Self {
         let delegate = ContactFinderDelegate {
             parent: cx.view().downgrade(),
             user_store,
             potential_contacts: Arc::from([]),
             selected_index: 0,
         };
-        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx).modal(false));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, window, cx).modal(false));
 
         Self { picker }
     }
@@ -106,7 +110,7 @@ impl PickerDelegate for ContactFinderDelegate {
         })
     }
 
-    fn confirm(&mut self, _: bool, cx: &mut ViewContext<Picker<Self>>) {
+    fn confirm(&mut self, _: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>) {
         if let Some(user) = self.potential_contacts.get(self.selected_index) {
             let user_store = self.user_store.read(cx);
             match user_store.contact_request_status(user) {

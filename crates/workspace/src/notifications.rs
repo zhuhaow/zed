@@ -323,7 +323,7 @@ impl Render for LanguageServerPrompt {
                                     ),
                             )
                             .child(ui::IconButton::new("close", ui::IconName::Close).on_click(
-                                cx.listener(|_, _, window, cx| cx.emit(gpui::DismissEvent)),
+                                cx.listener2(|_, _, window, cx| cx.emit(gpui::DismissEvent)),
                             )),
                     )
                     .child(
@@ -418,7 +418,7 @@ impl Render for ErrorMessagePrompt {
                                     }),
                             )
                             .child(ui::IconButton::new("close", ui::IconName::Close).on_click(
-                                cx.listener(|_, _, window, cx| cx.emit(gpui::DismissEvent)),
+                                cx.listener2(|_, _, window, cx| cx.emit(gpui::DismissEvent)),
                             )),
                     )
                     .child(
@@ -524,14 +524,14 @@ pub mod simple_message_notification {
                                 .id("cancel")
                                 .child(Icon::new(IconName::Close))
                                 .cursor_pointer()
-                                .on_click(cx.listener(|this, _, window, cx| this.dismiss(cx))),
+                                .on_click(cx.listener2(|this, _, window, cx| this.dismiss(cx))),
                         ),
                 )
                 .child(
                     h_flex()
                         .gap_3()
                         .children(self.click_message.iter().map(|message| {
-                            Button::new(message.clone(), message.clone()).on_click(cx.listener(
+                            Button::new(message.clone(), message.clone()).on_click(cx.listener2(
                                 |this, _, window, cx| {
                                     if let Some(on_click) = this.on_click.as_ref() {
                                         (on_click)(cx)
@@ -543,7 +543,7 @@ pub mod simple_message_notification {
                         .children(self.secondary_click_message.iter().map(|message| {
                             Button::new(message.clone(), message.clone())
                                 .style(ButtonStyle::Filled)
-                                .on_click(cx.listener(|this, _, window, cx| {
+                                .on_click(cx.listener2(|this, _, window, cx| {
                                     if let Some(on_click) = this.secondary_on_click.as_ref() {
                                         (on_click)(cx)
                                     };

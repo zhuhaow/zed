@@ -579,9 +579,9 @@ pub fn init(assets: impl AssetSource, cx: &mut AppContext) {
     init_settings(cx);
     file_icons::init(assets, cx);
 
-    cx.observe_new_views(|workspace: &mut Workspace, _| {
+    cx.observe_new_views(|workspace: &mut Workspace, window, _| {
         workspace.register_action(|workspace, _: &ToggleFocus, window, cx| {
-            workspace.toggle_panel_focus::<OutlinePanel>(cx);
+            workspace.toggle_panel_focus::<OutlinePanel>(window, cx);
         });
     })
     .detach();
@@ -622,7 +622,7 @@ impl OutlinePanel {
         let workspace_handle = cx.view().downgrade();
         let outline_panel = cx.new_view(|cx| {
             let filter_editor = cx.new_view(|cx| {
-                let mut editor = Editor::single_line(cx);
+                let mut editor = Editor::single_line(window, cx);
                 editor.set_placeholder_text("Filter...", cx);
                 editor
             });
@@ -834,20 +834,10 @@ impl OutlinePanel {
         }
     }
 
-    fn open_excerpts(&mut self, action: &editor::OpenExcerpts, cx: &mut ViewContext<Self>) {
-        if self.filter_editor.focus_handle(cx).is_focused(cx) {
-            cx.propagate()
-        } else if let Some((active_editor, selected_entry)) =
-            self.active_editor().zip(self.selected_entry().cloned())
-        {
-            self.scroll_editor_to_entry(&selected_entry, true, true, cx);
-            active_editor.update(cx, |editor, cx| editor.open_excerpts(action, cx));
-        }
-    }
-
-    fn open_excerpts_split(
+    fn open_excerpts(
         &mut self,
-        action: &editor::OpenExcerptsSplit,
+        action: &editor::OpenExcerpts,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         if self.filter_editor.focus_handle(cx).is_focused(cx) {
@@ -856,7 +846,25 @@ impl OutlinePanel {
             self.active_editor().zip(self.selected_entry().cloned())
         {
             self.scroll_editor_to_entry(&selected_entry, true, true, cx);
-            active_editor.update(cx, |editor, cx| editor.open_excerpts_in_split(action, cx));
+            active_editor.update(cx, |editor, cx| editor.open_excerpts(action, window, cx));
+        }
+    }
+
+    fn open_excerpts_split(
+        &mut self,
+        action: &editor::OpenExcerptsSplit,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
+        if self.filter_editor.focus_handle(cx).is_focused(cx) {
+            cx.propagate()
+        } else if let Some((active_editor, selected_entry)) =
+            self.active_editor().zip(self.selected_entry().cloned())
+        {
+            self.scroll_editor_to_entry(&selected_entry, true, true, cx);
+            active_editor.update(cx, |editor, cx| {
+                editor.open_excerpts_in_split(action, window, cx)
+            });
         }
     }
 
@@ -2211,7 +2219,7 @@ impl OutlinePanel {
             .id(item_id.clone())
             .on_click({
                 let clicked_entry = rendered_entry.clone();
-                cx.listener(move |outline_panel, event: &gpui::ClickEvent, window, cx| {
+                cx.listener2(move |outline_panel, event: &gpui::ClickEvent, window, cx| {
                     if event.down.button == MouseButton::Right || event.down.first_mouse {
                         return;
                     }
@@ -2230,7 +2238,7 @@ impl OutlinePanel {
                         list_item.child(h_flex().child(icon_element))
                     })
                     .child(h_flex().h_6().child(label_element).ml_1())
-                    .on_secondary_mouse_down(cx.listener(
+                    .on_secondary_mouse_down(cx.listener2(
                         move |outline_panel, event: &MouseDownEvent, window, cx| {
                             // Stop propagation to prevent the catch-all context menu for the project
                             // panel from being deployed.
@@ -3884,7 +3892,7 @@ impl OutlinePanel {
             div()
                 .occlude()
                 .id("project-panel-vertical-scroll")
-                .on_mouse_move(cx.listener(|_, _, window, cx| {
+                .on_mouse_move(cx.listener2(|_, _, window, cx| {
                     cx.notify();
                     cx.stop_propagation()
                 }))
@@ -3896,7 +3904,7 @@ impl OutlinePanel {
                 })
                 .on_mouse_up(
                     MouseButton::Left,
-                    cx.listener(|outline_panel, _, window, cx| {
+                    cx.listener2(|outline_panel, _, window, cx| {
                         if !outline_panel.vertical_scrollbar_state.is_dragging()
                             && !outline_panel.focus_handle.contains_focused(cx)
                         {
@@ -3907,7 +3915,7 @@ impl OutlinePanel {
                         cx.stop_propagation();
                     }),
                 )
-                .on_scroll_wheel(cx.listener(|_, _, window, cx| {
+                .on_scroll_wheel(cx.listener2(|_, _, window, cx| {
                     cx.notify();
                 }))
                 .h_full()
@@ -3943,7 +3951,7 @@ impl OutlinePanel {
             div()
                 .occlude()
                 .id("project-panel-horizontal-scroll")
-                .on_mouse_move(cx.listener(|_, _, window, cx| {
+                .on_mouse_move(cx.listener2(|_, _, window, cx| {
                     cx.notify();
                     cx.stop_propagation()
                 }))
@@ -3955,7 +3963,7 @@ impl OutlinePanel {
                 })
                 .on_mouse_up(
                     MouseButton::Left,
-                    cx.listener(|outline_panel, _, window, cx| {
+                    cx.listener2(|outline_panel, _, window, cx| {
                         if !outline_panel.horizontal_scrollbar_state.is_dragging()
                             && !outline_panel.focus_handle.contains_focused(cx)
                         {
@@ -3966,7 +3974,7 @@ impl OutlinePanel {
                         cx.stop_propagation();
                     }),
                 )
-                .on_scroll_wheel(cx.listener(|_, _, window, cx| {
+                .on_scroll_wheel(cx.listener2(|_, _, window, cx| {
                     cx.notify();
                 }))
                 .w_full()
@@ -4294,7 +4302,7 @@ impl OutlinePanel {
                             )
                         })
                         .shape(IconButtonShape::Square)
-                        .on_click(cx.listener(
+                        .on_click(cx.listener2(
                             |outline_panel, _, window, cx| {
                                 outline_panel.toggle_active_editor_pin(&ToggleActiveEditorPin, cx);
                             },
@@ -4504,7 +4512,7 @@ impl Render for OutlinePanel {
             .size_full()
             .overflow_hidden()
             .relative()
-            .on_hover(cx.listener(|this, hovered, window, cx| {
+            .on_hover(cx.listener2(|this, hovered, window, cx| {
                 if *hovered {
                     this.show_scrollbar = true;
                     this.hide_scrollbar_task.take();
@@ -4514,33 +4522,33 @@ impl Render for OutlinePanel {
                 }
             }))
             .key_context(self.dispatch_context(cx))
-            .on_action(cx.listener2(Self::open))
-            .on_action(cx.listener2(Self::cancel))
-            .on_action(cx.listener2(Self::select_next))
-            .on_action(cx.listener2(Self::select_prev))
-            .on_action(cx.listener2(Self::select_first))
-            .on_action(cx.listener2(Self::select_last))
-            .on_action(cx.listener2(Self::select_parent))
-            .on_action(cx.listener2(Self::expand_selected_entry))
-            .on_action(cx.listener2(Self::collapse_selected_entry))
-            .on_action(cx.listener2(Self::expand_all_entries))
-            .on_action(cx.listener2(Self::collapse_all_entries))
-            .on_action(cx.listener2(Self::copy_path))
-            .on_action(cx.listener2(Self::copy_relative_path))
-            .on_action(cx.listener2(Self::toggle_active_editor_pin))
-            .on_action(cx.listener2(Self::unfold_directory))
-            .on_action(cx.listener2(Self::fold_directory))
+            .on_action(cx.listener(Self::open))
+            .on_action(cx.listener(Self::cancel))
+            .on_action(cx.listener(Self::select_next))
+            .on_action(cx.listener(Self::select_prev))
+            .on_action(cx.listener(Self::select_first))
+            .on_action(cx.listener(Self::select_last))
+            .on_action(cx.listener(Self::select_parent))
+            .on_action(cx.listener(Self::expand_selected_entry))
+            .on_action(cx.listener(Self::collapse_selected_entry))
+            .on_action(cx.listener(Self::expand_all_entries))
+            .on_action(cx.listener(Self::collapse_all_entries))
+            .on_action(cx.listener(Self::copy_path))
+            .on_action(cx.listener(Self::copy_relative_path))
+            .on_action(cx.listener(Self::toggle_active_editor_pin))
+            .on_action(cx.listener(Self::unfold_directory))
+            .on_action(cx.listener(Self::fold_directory))
             .on_action(cx.listener2(Self::open_excerpts))
             .on_action(cx.listener2(Self::open_excerpts_split))
             .when(is_local, |el| {
-                el.on_action(cx.listener2(Self::reveal_in_finder))
+                el.on_action(cx.listener(Self::reveal_in_finder))
             })
             .when(is_local || is_via_ssh, |el| {
-                el.on_action(cx.listener2(Self::open_in_terminal))
+                el.on_action(cx.listener(Self::open_in_terminal))
             })
             .on_mouse_down(
                 MouseButton::Right,
-                cx.listener(move |outline_panel, event: &MouseDownEvent, window, cx| {
+                cx.listener2(move |outline_panel, event: &MouseDownEvent, window, cx| {
                     if let Some(entry) = outline_panel.selected_entry().cloned() {
                         outline_panel.deploy_context_menu(event.position, entry, cx)
                     } else if let Some(entry) = outline_panel.fs_entries.first().cloned() {
@@ -5098,6 +5106,7 @@ mod tests {
         });
         let workspace = add_outline_panel(&project, cx).await;
         let cx = &mut VisualTestContext::from_window(*workspace, cx);
+        let window = cx.window;
         let outline_panel = outline_panel(&workspace, cx);
         outline_panel.update(cx, |outline_panel, cx| outline_panel.set_active(true, cx));
 
@@ -5245,8 +5254,8 @@ mod tests {
             );
         });
 
-        outline_panel.update(cx, |outline_panel, cx| {
-            outline_panel.open_excerpts(&editor::OpenExcerpts, cx);
+        outline_panel.update_in_window(window, cx, |outline_panel, window, cx| {
+            outline_panel.open_excerpts(&editor::OpenExcerpts, window, cx);
         });
         cx.executor()
             .advance_clock(UPDATE_DEBOUNCE + Duration::from_millis(100));
@@ -5500,7 +5509,7 @@ mod tests {
         project: &Model<Project>,
         cx: &mut TestAppContext,
     ) -> WindowHandle<Workspace> {
-        let window = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
+        let window = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         let outline_panel = window
             .update(cx, |_, window, cx| cx.spawn(OutlinePanel::load))

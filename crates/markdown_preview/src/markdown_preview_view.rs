@@ -77,6 +77,7 @@ impl MarkdownPreviewView {
                         workspace.split_pane(
                             workspace.active_pane().clone(),
                             workspace::SplitDirection::Right,
+                            window,
                             cx,
                         )
                     });
@@ -190,7 +191,7 @@ impl MarkdownPreviewView {
                                 .id(ix)
                                 .when(should_apply_padding, |this| this.pb_3())
                                 .group("markdown-block")
-                                .on_click(cx.listener(
+                                .on_click(cx.listener2(
                                     move |this, event: &ClickEvent, window, cx| {
                                         if event.down.click_count == 2 {
                                             if let Some(source_range) = this
@@ -381,11 +382,17 @@ impl MarkdownPreviewView {
         })
     }
 
-    fn move_cursor_to_block(&self, cx: &mut ViewContext<Self>, selection: Range<usize>) {
+    fn move_cursor_to_block(
+        &self,
+        selection: Range<usize>,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if let Some(state) = &self.active_editor {
             state.editor.update(cx, |editor, cx| {
                 editor.change_selections(
                     Some(Autoscroll::Strategy(AutoscrollStrategy::Center)),
+                    window,
                     cx,
                     |selections| selections.select_ranges(vec![selection]),
                 );

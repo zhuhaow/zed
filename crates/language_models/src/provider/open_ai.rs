@@ -382,7 +382,7 @@ struct ConfigurationView {
 impl ConfigurationView {
     fn new(state: gpui::Model<State>, cx: &mut ViewContext<Self>) -> Self {
         let api_key_editor = cx.new_view(|cx| {
-            let mut editor = Editor::single_line(cx);
+            let mut editor = Editor::single_line(window, cx);
             editor.set_placeholder_text("sk-000000000000000000000000000000000000000000000000", cx);
             editor
         });
@@ -500,7 +500,7 @@ impl Render for ConfigurationView {
         } else if self.should_render_editor(cx) {
             v_flex()
                 .size_full()
-                .on_action(cx.listener(Self::save_api_key))
+                .on_action(cx.listener2(Self::save_api_key))
                 .child(Label::new(INSTRUCTIONS[0]))
                 .child(h_flex().child(Label::new(INSTRUCTIONS[1])).child(
                     Button::new("openai_console", OPENAI_CONSOLE_URL)
@@ -560,7 +560,7 @@ impl Render for ConfigurationView {
                         .when(env_var_set, |this| {
                             this.tooltip(|window, cx| Tooltip::text(format!("To reset your API key, unset the {OPENAI_API_KEY_VAR} environment variable."), cx))
                         })
-                        .on_click(cx.listener(|this, _, window, cx| this.reset_api_key(cx))),
+                        .on_click(cx.listener2(|this, _, window, cx| this.reset_api_key(cx))),
                 )
                 .into_any()
         }

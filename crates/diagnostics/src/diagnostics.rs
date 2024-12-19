@@ -108,13 +108,13 @@ impl Render for ProjectDiagnosticsEditor {
                 el.key_context("EmptyPane")
             })
             .size_full()
-            .on_action(cx.listener(Self::toggle_warnings))
+            .on_action(cx.listener2(Self::toggle_warnings))
             .child(child)
     }
 }
 
 impl ProjectDiagnosticsEditor {
-    fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
+    fn register(workspace: &mut Workspace, window: &mut Window, _: &mut ViewContext<Workspace>) {
         workspace.register_action(Self::deploy);
     }
 
@@ -589,7 +589,7 @@ impl ProjectDiagnosticsEditor {
             } else {
                 groups = self.path_states.get(path_ix)?.diagnostic_groups.as_slice();
                 new_excerpt_ids_by_selection_id =
-                    editor.change_selections(Some(Autoscroll::fit()), cx, |s| s.refresh());
+                    editor.change_selections(Some, window(Autoscroll::fit()), cx, |s| s.refresh());
                 selections = editor.selections.all::<usize>(cx);
             }
 
@@ -620,7 +620,7 @@ impl ProjectDiagnosticsEditor {
                     }
                 }
             }
-            editor.change_selections(None, cx, |s| {
+            editor.change_selections(None, window, cx, |s| {
                 s.select(selections);
             });
             Some(())
@@ -752,6 +752,7 @@ impl Item for ProjectDiagnosticsEditor {
     fn clone_on_split(
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>>
     where

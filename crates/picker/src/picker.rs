@@ -100,7 +100,7 @@ pub trait PickerDelegate: Sized + 'static {
     fn confirm_update_query(&mut self, _cx: &mut ViewContext<Picker<Self>>) -> Option<String> {
         None
     }
-    fn confirm(&mut self, secondary: bool, cx: &mut ViewContext<Picker<Self>>);
+    fn confirm(&mut self, secondary: bool, window: &mut Window, cx: &mut ViewContext<Picker<Self>>);
     /// Instead of interacting with currently selected entry, treats editor input literally,
     /// performing some kind of action on it.
     fn confirm_input(&mut self, _secondary: bool, _: &mut ViewContext<Picker<Self>>) {}
@@ -173,38 +173,50 @@ impl<D: PickerDelegate> Picker<D> {
     /// A picker, which displays its matches using `gpui::uniform_list`, all matches should have the same height.
     /// The picker allows the user to perform search items by text.
     /// If `PickerDelegate::render_match` can return items with different heights, use `Picker::list`.
-    pub fn uniform_list(delegate: D, cx: &mut ViewContext<Self>) -> Self {
+    pub fn uniform_list(delegate: D, window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
         let head = Head::editor(
             delegate.placeholder_text(cx),
             Self::on_input_editor_event,
+            window,
             cx,
         );
 
-        Self::new(delegate, ContainerKind::UniformList, head, cx)
+        Self::new(delegate, ContainerKind::UniformList, head, window, cx)
     }
 
     /// A picker, which displays its matches using `gpui::uniform_list`, all matches should have the same height.
     /// If `PickerDelegate::render_match` can return items with different heights, use `Picker::list`.
-    pub fn nonsearchable_uniform_list(delegate: D, cx: &mut ViewContext<Self>) -> Self {
+    pub fn nonsearchable_uniform_list(
+        delegate: D,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Self {
         let head = Head::empty(Self::on_empty_head_blur, cx);
 
-        Self::new(delegate, ContainerKind::UniformList, head, cx)
+        Self::new(delegate, ContainerKind::UniformList, head, window, cx)
     }
 
     /// A picker, which displays its matches using `gpui::list`, matches can have different heights.
     /// The picker allows the user to perform search items by text.
     /// If `PickerDelegate::render_match` only returns items with the same height, use `Picker::uniform_list` as its implementation is optimized for that.
-    pub fn list(delegate: D, cx: &mut ViewContext<Self>) -> Self {
+    pub fn list(delegate: D, window: &mut Window, cx: &mut ViewContext<Self>) -> Self {
         let head = Head::editor(
             delegate.placeholder_text(cx),
             Self::on_input_editor_event,
+            window,
             cx,
         );
 
-        Self::new(delegate, ContainerKind::List, head, cx)
+        Self::new(delegate, ContainerKind::List, head, window, cx)
     }
 
-    fn new(delegate: D, container: ContainerKind, head: Head, cx: &mut ViewContext<Self>) -> Self {
+    fn new(
+        delegate: D,
+        container: ContainerKind,
+        head: Head,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) -> Self {
         let mut this = Self {
             delegate,
             head,
@@ -215,7 +227,7 @@ impl<D: PickerDelegate> Picker<D> {
             max_height: Some(rems(18.).into()),
             is_modal: true,
         };
-        this.update_matches("".to_string(), cx);
+        this.update_matches("".to_string(), window, cx);
         // give the delegate 4ms to render the first set of suggestions.
         this.delegate
             .finalize_update_matches("".to_string(), Duration::from_millis(4), cx);
@@ -344,7 +356,7 @@ impl<D: PickerDelegate> Picker<D> {
         }
     }
 
-    fn confirm(&mut self, _: &menu::Confirm, cx: &mut ViewContext<Self>) {
+    fn confirm(&mut self, _: &menu::Confirm, window: &mut Window, cx: &mut ViewContext<Self>) {
         if self.pending_update_matches.is_some()
             && !self
                 .delegate
@@ -353,11 +365,16 @@ impl<D: PickerDelegate> Picker<D> {
             self.confirm_on_update = Some(false)
         } else {
             self.pending_update_matches.take();
-            self.do_confirm(false, cx);
+            self.do_confirm(false, window, cx);
         }
     }
 
-    fn secondary_confirm(&mut self, _: &menu::SecondaryConfirm, cx: &mut ViewContext<Self>) {
+    fn secondary_confirm(
+        &mut self,
+        _: &menu::SecondaryConfirm,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if self.pending_update_matches.is_some()
             && !self
                 .delegate
@@ -365,7 +382,7 @@ impl<D: PickerDelegate> Picker<D> {
         {
             self.confirm_on_update = Some(true)
         } else {
-            self.do_confirm(true, cx);
+            self.do_confirm(true, window, cx);
         }
     }
 
@@ -373,7 +390,12 @@ impl<D: PickerDelegate> Picker<D> {
         self.delegate.confirm_input(input.secondary, cx);
     }
 
-    fn confirm_completion(&mut self, _: &ConfirmCompletion, cx: &mut ViewContext<Self>) {
+    fn confirm_completion(
+        &mut self,
+        _: &ConfirmCompletion,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         if let Some(new_query) = self.delegate.confirm_completion(self.query(cx), cx) {
             self.set_query(new_query, cx);
         } else {
@@ -381,19 +403,25 @@ impl<D: PickerDelegate> Picker<D> {
         }
     }
 
-    fn handle_click(&mut self, ix: usize, secondary: bool, cx: &mut ViewContext<Self>) {
+    fn handle_click(
+        &mut self,
+        ix: usize,
+        secondary: bool,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         cx.stop_propagation();
         cx.prevent_default();
         self.set_selected_index(ix, false, cx);
-        self.do_confirm(secondary, cx)
+        self.do_confirm(secondary, window, cx)
     }
 
-    fn do_confirm(&mut self, secondary: bool, cx: &mut ViewContext<Self>) {
+    fn do_confirm(&mut self, secondary: bool, window: &mut Window, cx: &mut ViewContext<Self>) {
         if let Some(update_query) = self.delegate.confirm_update_query(cx) {
             self.set_query(update_query, cx);
             self.delegate.set_selected_index(0, cx);
         } else {
-            self.delegate.confirm(secondary, cx)
+            self.delegate.confirm(secondary, window, cx)
         }
     }
 
@@ -401,6 +429,7 @@ impl<D: PickerDelegate> Picker<D> {
         &mut self,
         _: View<Editor>,
         event: &editor::EditorEvent,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) {
         let Head::Editor(ref editor) = &self.head else {
@@ -409,7 +438,7 @@ impl<D: PickerDelegate> Picker<D> {
         match event {
             editor::EditorEvent::BufferEdited => {
                 let query = editor.read(cx).text(cx);
-                self.update_matches(query, cx);
+                self.update_matches(query, window, cx);
             }
             editor::EditorEvent::Blurred => {
                 self.cancel(&menu::Cancel, cx);
@@ -438,21 +467,27 @@ impl<D: PickerDelegate> Picker<D> {
         }
     }
 
-    pub fn refresh(&mut self, cx: &mut ViewContext<Self>) {
+    pub fn refresh(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         let query = self.query(cx);
-        self.update_matches(query, cx);
+        self.update_matches(query, window, cx);
     }
 
-    pub fn update_matches(&mut self, query: String, cx: &mut ViewContext<Self>) {
+    pub fn update_matches(
+        &mut self,
+        query: String,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
         let delegate_pending_update_matches = self.delegate.update_matches(query, cx);
 
-        self.matches_updated(cx);
+        self.matches_updated(window, cx);
         // This struct ensures that we can synchronously drop the task returned by the
         // delegate's `update_matches` method and the task that the picker is spawning.
         // If we simply capture the delegate's task into the picker's task, when the picker's
         // task gets synchronously dropped, the delegate's task would keep running until
         // the picker's task has a chance of being scheduled, because dropping a task happens
         // asynchronously.
+        let window_handle = window.handle();
         self.pending_update_matches = Some(PendingUpdateMatches {
             delegate_update_matches: Some(delegate_pending_update_matches),
             _task: cx.spawn(|this, mut cx| async move {
@@ -465,14 +500,14 @@ impl<D: PickerDelegate> Picker<D> {
                         .unwrap()
                 })?;
                 delegate_pending_update_matches.await;
-                this.update(&mut cx, |this, cx| {
-                    this.matches_updated(cx);
+                this.update_in_window(window_handle, &mut cx, |this, window, cx| {
+                    this.matches_updated(window, cx);
                 })
             }),
         });
     }
 
-    fn matches_updated(&mut self, cx: &mut ViewContext<Self>) {
+    fn matches_updated(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) {
         if let ElementContainer::List(state) = &mut self.element_container {
             state.reset(self.delegate.match_count());
         }
@@ -481,7 +516,7 @@ impl<D: PickerDelegate> Picker<D> {
         self.scroll_to_item_index(index);
         self.pending_update_matches = None;
         if let Some(secondary) = self.confirm_on_update.take() {
-            self.do_confirm(secondary, cx);
+            self.do_confirm(secondary, window, cx);
         }
         cx.notify();
     }
@@ -498,7 +533,7 @@ impl<D: PickerDelegate> Picker<D> {
             editor.update(cx, |editor, cx| {
                 editor.set_text(query, cx);
                 let editor_offset = editor.buffer().read(cx).len(cx);
-                editor.change_selections(Some(Autoscroll::Next), cx, |s| {
+                editor.change_selections(Some, window(Autoscroll::Next), cx, |s| {
                     s.select_ranges(Some(editor_offset..editor_offset))
                 });
             });
@@ -518,8 +553,8 @@ impl<D: PickerDelegate> Picker<D> {
         div()
             .id(("item", ix))
             .cursor_pointer()
-            .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
-                this.handle_click(ix, event.down.modifiers.secondary(), cx)
+            .on_click(cx.listener2(move |this, event: &ClickEvent, window, cx| {
+                this.handle_click(ix, event.down.modifiers.secondary(), window, cx)
             }))
             // As of this writing, GPUI intercepts `ctrl-[mouse-event]`s on macOS
             // and produces right mouse button events. This matches platforms norms
@@ -527,10 +562,10 @@ impl<D: PickerDelegate> Picker<D> {
             // switcher) can't be clicked on. Hence, this handler.
             .on_mouse_up(
                 MouseButton::Right,
-                cx.listener(move |this, event: &MouseUpEvent, window, cx| {
+                cx.listener2(move |this, event: &MouseUpEvent, window, cx| {
                     // We specifically want to use the platform key here, as
                     // ctrl will already be held down for the tab switcher.
-                    this.handle_click(ix, event.modifiers.platform, cx)
+                    this.handle_click(ix, event.modifiers.platform, window, cx)
                 }),
             )
             .children(
@@ -606,15 +641,15 @@ impl<D: PickerDelegate> Render for Picker<D> {
             //
             // We should revisit how the `Picker` is styled to make it more composable.
             .when(self.is_modal, |this| this.elevation_3(cx))
-            .on_action(cx.listener2(Self::select_next))
-            .on_action(cx.listener2(Self::select_prev))
-            .on_action(cx.listener2(Self::select_first))
-            .on_action(cx.listener2(Self::select_last))
-            .on_action(cx.listener2(Self::cancel))
+            .on_action(cx.listener(Self::select_next))
+            .on_action(cx.listener(Self::select_prev))
+            .on_action(cx.listener(Self::select_first))
+            .on_action(cx.listener(Self::select_last))
+            .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener2(Self::confirm))
             .on_action(cx.listener2(Self::secondary_confirm))
             .on_action(cx.listener2(Self::confirm_completion))
-            .on_action(cx.listener2(Self::confirm_input))
+            .on_action(cx.listener(Self::confirm_input))
             .children(match &self.head {
                 Head::Editor(editor) => {
                     if editor_position == PickerEditorPosition::Start {
