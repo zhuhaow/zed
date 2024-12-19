@@ -2430,7 +2430,7 @@ impl Project {
         } else {
             if first_insertion {
                 let this = cx.weak_model();
-                cx.defer(move |cx| {
+                cx.defer(move |_, cx| {
                     if let Some(this) = this.upgrade() {
                         this.update(cx, |this, cx| {
                             this.recalculate_buffer_diffs(cx).detach();

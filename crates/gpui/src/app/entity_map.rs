@@ -414,7 +414,7 @@ impl<T: 'static> Model<T> {
     pub fn update<C, R>(
         &self,
         cx: &mut C,
-        update: impl FnOnce(&mut T, &mut C::EntityContext<'_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut C::EntityContext<'_, '_, T>) -> R,
     ) -> C::Result<R>
     where
         C: Context,
@@ -608,7 +608,7 @@ impl<T: 'static> WeakModel<T> {
     pub fn update<C, R>(
         &self,
         cx: &mut C,
-        update: impl FnOnce(&mut T, &mut C::EntityContext<'_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut C::EntityContext<'_, '_, T>) -> R,
     ) -> Result<R>
     where
         C: Context,

@@ -1417,7 +1417,7 @@ impl AppContext {
 
 impl Context for AppContext {
     type Result<T> = T;
-    type EntityContext<'a, T: 'static> = ModelContext<'a, T>;
+    type EntityContext<'a, 'b, T: 'static> = ModelContext<'a, T>;
 
     /// Build an entity that is owned by the application. The given function will be invoked with
     /// a `ModelContext` and must return an object representing the entity. A `Model` handle will be returned,
@@ -1429,7 +1429,7 @@ impl Context for AppContext {
         self.update(|cx| {
             let slot = cx.entities.reserve();
             let model = slot.clone();
-            let entity = build_model(&mut ModelContext::new(cx, slot.downgrade()));
+            let entity = build_model(&mut ModelContext::new(cx, &slot));
             cx.entities.insert(slot, entity);
 
             // Non-generic part to avoid leaking SubscriberSet to invokers of `new_view`.
@@ -1457,7 +1457,7 @@ impl Context for AppContext {
     ) -> Self::Result<Model<T>> {
         self.update(|cx| {
             let slot = reservation.0;
-            let entity = build_model(&mut ModelContext::new(cx, slot.downgrade()));
+            let entity = build_model(&mut ModelContext::new(cx, &slot));
             cx.entities.insert(slot, entity)
         })
     }
@@ -1471,7 +1471,7 @@ impl Context for AppContext {
     ) -> R {
         self.update(|cx| {
             let mut entity = cx.entities.lease(model);
-            let result = update(&mut entity, &mut ModelContext::new(cx, model.downgrade()));
+            let result = update(&mut entity, &mut ModelContext::new(cx, &model));
             cx.entities.end_lease(entity);
             result
         })

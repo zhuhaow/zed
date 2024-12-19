@@ -16,30 +16,31 @@ use std::{
 pub struct ModelContext<'a, T> {
     #[deref]
     #[deref_mut]
-    app: &'a mut AppContext,
-    model_state: WeakModel<T>,
+    pub(crate) app: &'a mut AppContext,
+    pub(crate) entity: &'a Model<T>,
 }
 
 impl<'a, T: 'static> ModelContext<'a, T> {
-    pub(crate) fn new(app: &'a mut AppContext, model_state: WeakModel<T>) -> Self {
-        Self { app, model_state }
+    pub(crate) fn new(app: &'a mut AppContext, model_state: &'a Model<T>) -> Self {
+        Self {
+            app,
+            entity: model_state,
+        }
     }
 
     /// The entity id of the model backing this context.
     pub fn entity_id(&self) -> EntityId {
-        self.model_state.entity_id
+        self.entity.entity_id
     }
 
     /// Returns a handle to the model belonging to this context.
     pub fn handle(&self) -> Model<T> {
-        self.weak_model()
-            .upgrade()
-            .expect("The entity must be alive if we have a model context")
+        self.entity.clone()
     }
 
     /// Returns a weak handle to the model belonging to this context.
     pub fn weak_model(&self) -> WeakModel<T> {
-        self.model_state.clone()
+        self.entity.downgrade()
     }
 
     /// Arranges for the given function to be called whenever [`ModelContext::notify`] or
@@ -97,7 +98,7 @@ impl<'a, T: 'static> ModelContext<'a, T> {
         T: 'static,
     {
         let (subscription, activate) = self.app.release_listeners.insert(
-            self.model_state.entity_id,
+            self.entity.entity_id,
             Box::new(move |this, cx| {
                 let this = this.downcast_mut().expect("invalid entity type");
                 on_release(this, cx);
@@ -146,7 +147,7 @@ impl<'a, T: 'static> ModelContext<'a, T> {
             TypeId::of::<G>(),
             Box::new(move |cx| handle.update(cx, |view, cx| f(view, cx)).is_ok()),
         );
-        self.defer(move |_| activate());
+        self.defer(move |_, _| activate());
         subscription
     }
 
@@ -179,15 +180,20 @@ impl<'a, T: 'static> ModelContext<'a, T> {
 
     /// Tell GPUI that this model has changed and observers of it should be notified.
     pub fn notify(&mut self) {
-        if self
-            .app
-            .pending_notifications
-            .insert(self.model_state.entity_id)
-        {
+        if self.app.pending_notifications.insert(self.entity.entity_id) {
             self.app.pending_effects.push_back(Effect::Notify {
-                emitter: self.model_state.entity_id,
+                emitter: self.entity.entity_id,
             });
         }
+    }
+
+    /// Schedules the given function to be run at the end of the current effect cycle, allowing entities
+    /// that are currently on the stack to be returned to the app.
+    pub fn defer(&mut self, f: impl 'static + FnOnce(&mut T, &mut ModelContext<T>)) {
+        let entity = self.entity.clone();
+        self.app.defer(move |cx| {
+            entity.update(cx, f);
+        });
     }
 
     /// Spawn the future returned by the given function.
@@ -212,7 +218,7 @@ impl<'a, T> ModelContext<'a, T> {
         Evt: 'static,
     {
         self.app.pending_effects.push_back(Effect::Emit {
-            emitter: self.model_state.entity_id,
+            emitter: self.entity.entity_id,
             event_type: TypeId::of::<Evt>(),
             event: Box::new(event),
         });
@@ -221,7 +227,7 @@ impl<'a, T> ModelContext<'a, T> {
 
 impl<'a, T> Context for ModelContext<'a, T> {
     type Result<U> = U;
-    type EntityContext<'b, U: 'static> = ModelContext<'b, U>;
+    type EntityContext<'b, 'c, U: 'static> = ModelContext<'b, U>;
 
     fn new_model<U: 'static>(
         &mut self,
