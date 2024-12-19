@@ -377,7 +377,7 @@ impl TerminalPanel {
             })
             .unwrap_or((None, None));
         let kind = TerminalKind::Shell(working_directory);
-        let window = cx.window_handle();
+        let window = window.handle();
         let terminal = project
             .update(cx, |project, cx| {
                 project.create_terminal_with_venv(kind, python_venv_directory, window, cx)
@@ -694,7 +694,7 @@ impl TerminalPanel {
                 "terminal not yet supported for remote projects"
             )));
         }
-        let window = cx.window_handle();
+        let window = window.handle();
         let project = workspace.project().downgrade();
         cx.spawn(move |workspace, mut cx| async move {
             let terminal = project
@@ -830,7 +830,7 @@ impl TerminalPanel {
     ) -> Task<Option<()>> {
         let reveal = spawn_task.reveal;
         let reveal_target = spawn_task.reveal_target;
-        let window = cx.window_handle();
+        let window = window.handle();
         let task_workspace = self.workspace.clone();
         cx.spawn(move |terminal_panel, mut cx| async move {
             let project = terminal_panel

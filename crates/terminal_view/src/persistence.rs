@@ -237,7 +237,7 @@ async fn deserialize_pane_group(
                         let kind = TerminalKind::Shell(
                             working_directory.as_deref().map(Path::to_path_buf),
                         );
-                        let window = cx.window_handle();
+                        let window = window.handle();
                         let terminal = project
                             .update(cx, |project, cx| project.create_terminal(kind, window, cx));
                         Some(Some(terminal))

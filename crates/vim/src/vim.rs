@@ -386,7 +386,8 @@ impl Vim {
     }
 
     pub fn workspace(&self, cx: &mut ViewContext<Self>) -> Option<View<Workspace>> {
-        cx.window_handle()
+        window
+            .handle()
             .downcast::<Workspace>()
             .and_then(|handle| handle.root(cx).ok())
     }

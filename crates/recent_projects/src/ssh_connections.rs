@@ -517,7 +517,7 @@ pub fn connect_over_ssh(
     ui: View<SshPrompt>,
     cx: &mut WindowContext,
 ) -> Task<Result<Option<Model<SshRemoteClient>>>> {
-    let window = cx.window_handle();
+    let window = window.handle();
     let known_password = connection_options.password.clone();
     let (tx, rx) = oneshot::channel();
     ui.update(cx, |ui, _cx| ui.set_cancellation_tx(tx));
@@ -582,7 +582,7 @@ pub async fn open_ssh_project(
                 });
 
                 Some(Arc::new(SshClientDelegate {
-                    window: cx.window_handle(),
+                    window: window.handle(),
                     ui: ui.downgrade(),
                     known_password: connection_options.password.clone(),
                 }))

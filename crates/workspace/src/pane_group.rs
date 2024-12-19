@@ -891,6 +891,7 @@ mod element {
             child_start: Point<Pixels>,
             container_size: Size<Pixels>,
             workspace: WeakView<Workspace>,
+            window: &mut Window,
             cx: &mut WindowContext,
         ) {
             let min_size = match axis {
@@ -965,7 +966,7 @@ mod element {
             }
 
             workspace
-                .update(cx, |this, cx| this.serialize_workspace(cx))
+                .update(cx, |this, cx| this.serialize_workspace(window, cx))
                 .log_err();
             cx.stop_propagation();
             cx.refresh();
@@ -1199,7 +1200,7 @@ mod element {
                                     let mut borrow = flexes.lock();
                                     *borrow = vec![1.; borrow.len()];
                                     workspace
-                                        .update(cx, |this, cx| this.serialize_workspace(cx))
+                                        .update(cx, |this, cx| this.serialize_workspace(window, cx))
                                         .log_err();
 
                                     cx.refresh();
@@ -1225,6 +1226,7 @@ mod element {
                                     child_bounds.origin,
                                     bounds.size,
                                     workspace.clone(),
+                                    window,
                                     cx,
                                 )
                             }

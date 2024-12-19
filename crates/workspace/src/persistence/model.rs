@@ -8,7 +8,7 @@ use db::sqlez::{
     bindable::{Bind, Column, StaticColumnCount},
     statement::Statement,
 };
-use gpui::{AsyncWindowContext, Model, View, WeakView};
+use gpui::{AnyWindowHandle, AsyncWindowContext, Model, View, WeakView, WindowHandle};
 use project::Project;
 use remote::ssh_session::SshProjectId;
 use serde::{Deserialize, Serialize};
@@ -333,6 +333,7 @@ impl SerializedPaneGroup {
         project: &Model<Project>,
         workspace_id: WorkspaceId,
         workspace: WeakView<Workspace>,
+        window_handle: AnyWindowHandle,
         cx: &mut AsyncWindowContext,
     ) -> Option<(Member, Option<View<Pane>>, Vec<Option<Box<dyn ItemHandle>>>)> {
         match self {
@@ -346,7 +347,7 @@ impl SerializedPaneGroup {
                 let mut items = Vec::new();
                 for child in children {
                     if let Some((new_member, active_pane, new_items)) = child
-                        .deserialize(project, workspace_id, workspace.clone(), cx)
+                        .deserialize(project, workspace_id, workspace.clone(), window_handle, cx)
                         .await
                     {
                         members.push(new_member);
@@ -371,7 +372,9 @@ impl SerializedPaneGroup {
             }
             SerializedPaneGroup::Pane(serialized_pane) => {
                 let pane = workspace
-                    .update(cx, |workspace, cx| workspace.add_pane(cx).downgrade())
+                    .update_in_window(window_handle, cx, |workspace, window, cx| {
+                        workspace.add_pane(window, cx).downgrade()
+                    })
                     .log_err()?;
                 let active = serialized_pane.active;
                 let new_items = serialized_pane

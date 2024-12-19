@@ -1870,7 +1870,7 @@ impl PromptEditor {
     ) {
         match event {
             EditorEvent::Edited { .. } => {
-                if let Some(workspace) = cx.window_handle().downcast::<Workspace>() {
+                if let Some(workspace) = window.handle().downcast::<Workspace>() {
                     workspace
                         .update(cx, |workspace, window, cx| {
                             let is_via_ssh = workspace

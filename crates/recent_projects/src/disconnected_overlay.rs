@@ -93,7 +93,7 @@ impl DisconnectedOverlay {
             return;
         };
 
-        let Some(window) = cx.window_handle().downcast::<Workspace>() else {
+        let Some(window) = window.handle().downcast::<Workspace>() else {
             return;
         };
 

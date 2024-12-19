@@ -1082,7 +1082,7 @@ impl Item for TerminalView {
         workspace_id: Option<WorkspaceId>,
         cx: &mut ViewContext<Self>,
     ) -> Option<View<Self>> {
-        let window = cx.window_handle();
+        let window = window.handle();
         let terminal = self
             .project
             .update(cx, |project, cx| {
@@ -1210,7 +1210,7 @@ impl SerializableItem for TerminalView {
         item_id: workspace::ItemId,
         cx: &mut WindowContext,
     ) -> Task<anyhow::Result<View<Self>>> {
-        let window = cx.window_handle();
+        let window = window.handle();
         cx.spawn(|mut cx| async move {
             let cwd = cx
                 .update(|cx| {

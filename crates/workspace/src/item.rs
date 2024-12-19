@@ -31,7 +31,7 @@ use std::{
     time::Duration,
 };
 use theme::Theme;
-use ui::{Color, Element as _, Icon, IntoElement, Label, LabelCommon};
+use ui::{prelude::Window, Color, Element as _, Icon, IntoElement, Label, LabelCommon};
 use util::ResultExt;
 
 pub const LEADER_UPDATE_THROTTLE: Duration = Duration::from_millis(200);
@@ -420,6 +420,7 @@ pub trait ItemHandle: 'static + Send {
         &self,
         workspace: &mut Workspace,
         pane: View<Pane>,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     );
     fn deactivated(&self, cx: &mut WindowContext);
@@ -610,6 +611,7 @@ impl<T: Item> ItemHandle for View<T> {
         &self,
         workspace: &mut Workspace,
         pane: View<Pane>,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         let weak_item = self.downgrade();
@@ -760,8 +762,11 @@ impl<T: Item> ItemHandle for View<T> {
             .detach();
         }
 
-        cx.defer(|workspace, cx| {
-            workspace.serialize_workspace(cx);
+        let window_handle = window.handle();
+        cx.defer(move |workspace, cx| {
+            window_handle.update(cx, |_, window, cx| {
+                workspace.serialize_workspace(window, todo!());
+            });
         });
     }
 

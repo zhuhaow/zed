@@ -21,9 +21,9 @@ impl ModeIndicator {
         .detach();
 
         let handle = cx.view().clone();
-        let window = cx.window_handle();
+        let window = window.handle();
         cx.observe_new_views::<Vim>(move |_, cx| {
-            if cx.window_handle() != window {
+            if window.handle() != window {
                 return;
             }
             let vim = cx.view().clone();

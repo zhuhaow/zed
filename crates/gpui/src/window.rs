@@ -4186,6 +4186,39 @@ impl<'a, V: 'static> ViewContext<'a, V> {
         )
     }
 
+    /// Observe another model or view for changes to its state, as tracked by [`ModelContext::notify`].
+    pub fn observe_in_window<V2, E>(
+        &mut self,
+        entity: &E,
+        window: &Window,
+        mut on_notify: impl FnMut(&mut V, E, &mut Window, &mut ViewContext<'_, V>) + 'static,
+    ) -> Subscription
+    where
+        V2: 'static,
+        V: 'static,
+        E: Entity<V2>,
+    {
+        let view = self.view().downgrade();
+        let entity_id = entity.entity_id();
+        let entity = entity.downgrade();
+        let window_handle = self.window.handle;
+        self.app.new_observer(
+            entity_id,
+            Box::new(move |cx| {
+                window_handle
+                    .update(cx, |_, window, cx| {
+                        if let Some(handle) = E::upgrade_from(&entity) {
+                            view.update(cx, |this, cx| on_notify(this, handle, window, cx))
+                                .is_ok()
+                        } else {
+                            false
+                        }
+                    })
+                    .unwrap_or(false)
+            }),
+        )
+    }
+
     /// Subscribe to events emitted by another model or view.
     /// The entity to which you're subscribing must implement the [`EventEmitter`] trait.
     /// The callback will be invoked with a reference to the current view, a handle to the emitting entity (either a [`View`] or [`Model`]), the event, and a view context for the current view.
@@ -4214,6 +4247,47 @@ impl<'a, V: 'static> ViewContext<'a, V> {
                                 let event = event.downcast_ref().expect("invalid event type");
                                 view.update(cx, |this, cx| on_event(this, handle, event, cx))
                                     .is_ok()
+                            } else {
+                                false
+                            }
+                        })
+                        .unwrap_or(false)
+                }),
+            ),
+        )
+    }
+
+    /// Subscribe to events emitted by another model or view.
+    /// The entity to which you're subscribing must implement the [`EventEmitter`] trait.
+    /// The callback will be invoked with a reference to the current view, a handle to the emitting entity (either a [`View`] or [`Model`]), the event, and a view context for the current view.
+    pub fn subscribe_in_window<V2, E, Evt>(
+        &mut self,
+        entity: &E,
+        window: &Window,
+        mut on_event: impl FnMut(&mut V, E, &Evt, &mut Window, &mut ViewContext<'_, V>) + 'static,
+    ) -> Subscription
+    where
+        V2: EventEmitter<Evt>,
+        E: Entity<V2>,
+        Evt: 'static,
+    {
+        let view = self.view().downgrade();
+        let entity_id = entity.entity_id();
+        let handle = entity.downgrade();
+        let window_handle = window.handle;
+        self.app.new_subscription(
+            entity_id,
+            (
+                TypeId::of::<Evt>(),
+                Box::new(move |event, cx| {
+                    window_handle
+                        .update(cx, |_, window, cx| {
+                            if let Some(handle) = E::upgrade_from(&handle) {
+                                let event = event.downcast_ref().expect("invalid event type");
+                                view.update(cx, |this, cx| {
+                                    on_event(this, handle, event, window, cx)
+                                })
+                                .is_ok()
                             } else {
                                 false
                             }

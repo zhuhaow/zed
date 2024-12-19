@@ -126,7 +126,7 @@ pub(crate) fn show_no_more_matches(cx: &mut WindowContext) {
     cx.defer(|cx| {
         struct NotifType();
         let notification_id = NotificationId::unique::<NotifType>();
-        let Some(workspace) = cx.window_handle().downcast::<Workspace>() else {
+        let Some(workspace) = window.handle().downcast::<Workspace>() else {
             return;
         };
         workspace

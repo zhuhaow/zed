@@ -18,12 +18,12 @@ pub fn initiate_sign_in(cx: &mut WindowContext) {
         return;
     };
     let status = copilot.read(cx).status();
-    let Some(workspace) = cx.window_handle().downcast::<Workspace>() else {
+    let Some(workspace) = window.handle().downcast::<Workspace>() else {
         return;
     };
     match status {
         Status::Starting { task } => {
-            let Some(workspace) = cx.window_handle().downcast::<Workspace>() else {
+            let Some(workspace) = window.handle().downcast::<Workspace>() else {
                 return;
             };
 
@@ -44,22 +44,24 @@ pub fn initiate_sign_in(cx: &mut WindowContext) {
                 task.await;
                 if let Some(copilot) = cx.update(|cx| Copilot::global(cx)).ok().flatten() {
                     workspace
-                        .update(&mut cx, |workspace, cx| match copilot.read(cx).status() {
-                            Status::Authorized => workspace.show_toast(
-                                Toast::new(
-                                    NotificationId::unique::<CopilotStartingToast>(),
-                                    "Copilot has started!",
-                                ),
-                                cx,
-                            ),
-                            _ => {
-                                workspace.dismiss_toast(
-                                    &NotificationId::unique::<CopilotStartingToast>(),
+                        .update(&mut cx, |workspace, window, cx| {
+                            match copilot.read(cx).status() {
+                                Status::Authorized => workspace.show_toast(
+                                    Toast::new(
+                                        NotificationId::unique::<CopilotStartingToast>(),
+                                        "Copilot has started!",
+                                    ),
                                     cx,
-                                );
-                                copilot
-                                    .update(cx, |copilot, cx| copilot.sign_in(cx))
-                                    .detach_and_log_err(cx);
+                                ),
+                                _ => {
+                                    workspace.dismiss_toast(
+                                        &NotificationId::unique::<CopilotStartingToast>(),
+                                        cx,
+                                    );
+                                    copilot
+                                        .update(cx, |copilot, cx| copilot.sign_in(cx))
+                                        .detach_and_log_err(cx);
+                                }
                             }
                         })
                         .log_err();

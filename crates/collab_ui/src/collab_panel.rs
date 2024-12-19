@@ -1964,7 +1964,7 @@ impl CollabPanel {
         let Some(workspace) = self.workspace.upgrade() else {
             return;
         };
-        let Some(handle) = cx.window_handle().downcast::<Workspace>() else {
+        let Some(handle) = window.handle().downcast::<Workspace>() else {
             return;
         };
         workspace::join_channel(

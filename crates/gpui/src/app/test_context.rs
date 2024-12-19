@@ -225,7 +225,7 @@ impl TestAppContext {
     /// the returned one. `let (view, cx) = cx.add_window_view(...);`
     pub fn add_window_view<F, V>(&mut self, build_root_view: F) -> (View<V>, &mut VisualTestContext)
     where
-        F: FnOnce(&mut ViewContext<V>) -> V,
+        F: FnOnce(&mut Window, &mut ViewContext<V>) -> V,
         V: 'static + Render,
     {
         let mut cx = self.app.borrow_mut();
@@ -236,7 +236,7 @@ impl TestAppContext {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
                     ..Default::default()
                 },
-                |window, cx| cx.new_view(build_root_view),
+                |window, cx| cx.new_view(|cx| build_root_view(window, cx)),
             )
             .unwrap();
         drop(cx);

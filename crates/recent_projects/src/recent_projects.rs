@@ -282,6 +282,7 @@ impl PickerDelegate for RecentProjectsDelegate {
                                             .update(&mut cx, |workspace, cx| {
                                                 workspace.prepare_to_close(
                                                     CloseIntent::ReplaceWindow,
+                                                    window,
                                                     cx,
                                                 )
                                             })?
@@ -289,8 +290,9 @@ impl PickerDelegate for RecentProjectsDelegate {
                                         if continue_replacing {
                                             workspace
                                                 .update(&mut cx, |workspace, cx| {
-                                                    workspace
-                                                        .open_workspace_for_paths(true, paths, cx)
+                                                    workspace.open_workspace_for_paths(
+                                                        true, paths, window, cx,
+                                                    )
                                                 })?
                                                 .await
                                         } else {
@@ -298,14 +300,14 @@ impl PickerDelegate for RecentProjectsDelegate {
                                         }
                                     })
                                 } else {
-                                    workspace.open_workspace_for_paths(false, paths, cx)
+                                    workspace.open_workspace_for_paths(false, paths, window, cx)
                                 }
                             }
                             SerializedWorkspaceLocation::Ssh(ssh_project) => {
                                 let app_state = workspace.app_state().clone();
 
                                 let replace_window = if replace_current_window {
-                                    cx.window_handle().downcast::<Workspace>()
+                                    window.handle().downcast::<Workspace>()
                                 } else {
                                     None
                                 };

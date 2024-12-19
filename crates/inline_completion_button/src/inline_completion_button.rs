@@ -84,8 +84,7 @@ impl Render for InlineCompletionButton {
                         IconButton::new("copilot-error", icon)
                             .icon_size(IconSize::Small)
                             .on_click(cx.listener(move |_, _, window, cx| {
-                                if let Some(workspace) = cx.window_handle().downcast::<Workspace>()
-                                {
+                                if let Some(workspace) = window.handle().downcast::<Workspace>() {
                                     workspace
                                         .update(cx, |workspace, window, cx| {
                                             workspace.show_toast(
@@ -308,7 +307,7 @@ impl InlineCompletionButton {
                 ),
                 None,
                 move |cx| {
-                    if let Some(workspace) = cx.window_handle().downcast::<Workspace>() {
+                    if let Some(workspace) = window.handle().downcast::<Workspace>() {
                         if let Ok(workspace) = workspace.root_view(cx) {
                             let workspace = workspace.downgrade();
                             cx.spawn(|cx| {

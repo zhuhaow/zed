@@ -31,9 +31,7 @@ pub fn init(client: Arc<Client>, cx: &mut AppContext) {
                 }
             })
             .detach();
-            editors
-                .borrow_mut()
-                .insert(editor_handle, cx.window_handle());
+            editors.borrow_mut().insert(editor_handle, window.handle());
             let provider = all_language_settings(None, cx).inline_completions.provider;
             assign_inline_completion_provider(editor, provider, &client, cx);
         }
