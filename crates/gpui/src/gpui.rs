@@ -165,12 +165,12 @@ pub trait Context {
     /// Defines the context type used when updating an entity within this context.
     /// This associated type specifies the appropriate context for entity updates,
     /// allowing for context-specific operations and ensuring type safety.
-    type EntityContext<'a, 'b, T: 'static>;
+    type EntityContext<'a, 'b, 'c, T: 'static>;
 
     /// Create a new model in the app context.
     fn new_model<T: 'static>(
         &mut self,
-        build_model: impl FnOnce(&mut Self::EntityContext<'_, '_, T>) -> T,
+        build_model: impl FnOnce(&mut Self::EntityContext<'_, '_, '_, T>) -> T,
     ) -> Self::Result<Model<T>>;
 
     /// Reserve a slot for a model to be inserted later.
@@ -183,14 +183,14 @@ pub trait Context {
     fn insert_model<T: 'static>(
         &mut self,
         reservation: Reservation<T>,
-        build_model: impl FnOnce(&mut Self::EntityContext<'_, '_, T>) -> T,
+        build_model: impl FnOnce(&mut Self::EntityContext<'_, '_, '_, T>) -> T,
     ) -> Self::Result<Model<T>>;
 
     /// Update a model in the app context.
     fn update_model<T, R>(
         &mut self,
         handle: &Model<T>,
-        update: impl FnOnce(&mut T, &mut Self::EntityContext<'_, '_, T>) -> R,
+        update: impl FnOnce(&mut T, &mut Self::EntityContext<'_, '_, '_, T>) -> R,
     ) -> Self::Result<R>
     where
         T: 'static;

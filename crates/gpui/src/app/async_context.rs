@@ -20,7 +20,7 @@ pub struct AsyncAppContext {
 
 impl Context for AsyncAppContext {
     type Result<T> = Result<T>;
-    type EntityContext<'a, 'b, T: 'static> = ModelContext<'a, T>;
+    type EntityContext<'a, 'b, T: 'static> = ModelContext<'a, 'b, T>;
 
     fn new_model<T: 'static>(
         &mut self,

@@ -413,16 +413,17 @@ impl AppContext {
         self.pending_effects.push_back(Effect::Refresh);
     }
 
-    pub(crate) fn update<R>(&mut self, update: impl FnOnce(&mut Self) -> R) -> R {
-        self.pending_updates += 1;
-        let result = update(self);
-        if !self.flushing_effects && self.pending_updates == 1 {
-            self.flushing_effects = true;
-            self.flush_effects();
-            self.flushing_effects = false;
-        }
-        self.pending_updates -= 1;
-        result
+    pub(crate) fn update<'a, R>(&'a mut self, update: impl FnOnce(&'a mut Self) -> R) -> R {
+        todo!()
+        // self.pending_updates += 1;
+        // let result = update(self);
+        // if !self.flushing_effects && self.pending_updates == 1 {
+        //     self.flushing_effects = true;
+        //     self.flush_effects();
+        //     self.flushing_effects = false;
+        // }
+        // self.pending_updates -= 1;
+        // result
     }
 
     /// Arrange a callback to be invoked when the given model or view calls `notify` on its respective context.
@@ -1413,11 +1414,23 @@ impl AppContext {
     pub fn get_name(&self) -> &'static str {
         self.name.as_ref().unwrap()
     }
+
+    fn insert_model2<'a, T: 'static>(
+        &'a mut self,
+        reservation: Reservation<T>,
+        build_model: impl FnOnce(&mut ModelContext<'a, 'b, T>) -> T,
+    ) -> Model<T> {
+        self.update(|cx| {
+            let slot = reservation.0;
+            let entity = build_model(&mut ModelContext::new(cx, &slot));
+            cx.entities.insert(slot, entity)
+        })
+    }
 }
 
 impl Context for AppContext {
     type Result<T> = T;
-    type EntityContext<'a, 'b, T: 'static> = ModelContext<'a, T>;
+    type EntityContext<'a, 'b, T: 'static> = ModelContext<'a, 'b, T>;
 
     /// Build an entity that is owned by the application. The given function will be invoked with
     /// a `ModelContext` and must return an object representing the entity. A `Model` handle will be returned,

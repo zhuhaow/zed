@@ -31,7 +31,7 @@ pub struct TestAppContext {
 
 impl Context for TestAppContext {
     type Result<T> = T;
-    type EntityContext<'a, 'b, T: 'static> = ModelContext<'a, T>;
+    type EntityContext<'a, 'b, T: 'static> = ModelContext<'a, 'b, T>;
 
     fn new_model<T: 'static>(
         &mut self,
