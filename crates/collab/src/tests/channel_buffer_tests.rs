@@ -610,6 +610,7 @@ async fn test_channel_buffer_changes(
     let (server, client_a, client_b, channel_id) = TestServer::start2(cx_a, cx_b).await;
     let (_, cx_a) = client_a.build_test_workspace(cx_a).await;
     let (workspace_b, cx_b) = client_b.build_test_workspace(cx_b).await;
+    let window_b = cx_b.window;
     let channel_store_b = client_b.channel_store().clone();
 
     // Editing the channel notes should set them to dirty
@@ -642,8 +643,8 @@ async fn test_channel_buffer_changes(
 
     // Closing the buffer should re-enable change tracking
     cx_b.update(|cx| {
-        workspace_b.update(cx, |workspace, cx| {
-            workspace.close_all_items_and_panes(&Default::default(), cx)
+        workspace_b.update_in_window(window_b, cx, |workspace, window, cx| {
+            workspace.close_all_items_and_panes(&Default::default(), window, cx)
         });
     });
     deterministic.run_until_parked();

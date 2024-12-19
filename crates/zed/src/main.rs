@@ -699,7 +699,7 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
 
                 let mut promises = Vec::new();
                 for (channel_id, heading) in request.open_channel_notes {
-                    promises.push(cx.update_window(workspace_window.into(), |_, _, cx| {
+                    promises.push(cx.update_window(workspace_window, |_, _, cx| {
                         ChannelView::open(
                             client::ChannelId(channel_id),
                             heading,
@@ -826,9 +826,12 @@ async fn restore_or_create_workspace(
         cx.update(|cx| show_welcome_view(app_state, cx))?.await?;
     } else {
         cx.update(|cx| {
-            workspace::open_new(Default::default(), app_state, cx, |workspace, cx| {
-                Editor::new_file(workspace, &Default::default(), cx)
-            })
+            workspace::open_new(
+                Default::default(),
+                app_state,
+                cx,
+                |workspace, window, cx| Editor::new_file(workspace, &Default::default(), cx),
+            )
         })?
         .await?;
     }

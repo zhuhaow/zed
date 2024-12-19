@@ -216,7 +216,7 @@ impl QuickActionBar {
                             .size(IconSize::XSmall)
                             .color(Color::Muted),
                     )
-                    .tooltip(move |cx| Tooltip::text("REPL Menu", cx))
+                    .tooltip(move |window, cx| Tooltip::text("REPL Menu", cx))
                     .width(rems(1.).into())
                     .disabled(menu_state.popover_disabled),
             );
@@ -241,8 +241,8 @@ impl QuickActionBar {
             })
             .size(ButtonSize::Compact)
             .style(ButtonStyle::Subtle)
-            .tooltip(move |cx| Tooltip::text(menu_state.tooltip.clone(), cx))
-            .on_click(|_, cx| cx.dispatch_action(Box::new(repl::Run {})))
+            .tooltip(move |window, cx| Tooltip::text(menu_state.tooltip.clone(), cx))
+            .on_click(|_, window, cx| cx.dispatch_action(Box::new(repl::Run {})))
             .into_any_element();
 
         Some(
@@ -269,8 +269,8 @@ impl QuickActionBar {
                         .size(ButtonSize::Compact)
                         .icon_color(Color::Muted)
                         .style(ButtonStyle::Subtle)
-                        .tooltip(move |cx| Tooltip::text(tooltip.clone(), cx))
-                        .on_click(|_, cx| cx.dispatch_action(Box::new(repl::Run {}))),
+                        .tooltip(move |window, cx| Tooltip::text(tooltip.clone(), cx))
+                        .on_click(|_, window, cx| cx.dispatch_action(Box::new(repl::Run {}))),
                 )
                 .into_any_element(),
         )
@@ -339,7 +339,7 @@ impl QuickActionBar {
                                 .size(IconSize::XSmall),
                         ),
                 )
-                .tooltip(move |cx| Tooltip::text("Select Kernel", cx)),
+                .tooltip(move |window, cx| Tooltip::text("Select Kernel", cx)),
         )
         .with_handle(menu_handle.clone())
         .into_any_element()
@@ -360,8 +360,8 @@ impl QuickActionBar {
                         .size(ButtonSize::Compact)
                         .icon_color(Color::Muted)
                         .style(ButtonStyle::Subtle)
-                        .tooltip(move |cx| Tooltip::text(tooltip.clone(), cx))
-                        .on_click(|_, cx| {
+                        .tooltip(move |window, cx| Tooltip::text(tooltip.clone(), cx))
+                        .on_click(|_, window, cx| {
                             cx.open_url(&format!("{}#installation", ZED_REPL_DOCUMENTATION))
                         }),
                 )

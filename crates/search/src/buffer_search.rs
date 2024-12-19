@@ -1863,7 +1863,7 @@ mod tests {
                     search_bar.select_all_matches(&SelectAllMatches, cx);
                 });
                 assert!(
-                    editor.update(cx, |this, cx| !this.is_focused(window_context())),
+                    editor.update(cx, |this, cx| !this.is_focused(cx.window_context())),
                     "Should not switch focus to editor if SelectAllMatches does not find any matches"
                 );
                 search_bar.update(cx, |search_bar,  cx| {
@@ -2244,7 +2244,7 @@ mod tests {
             .unwrap();
 
         options.search_bar.update_in_window(
-            options.window,
+            options.cx.window,
             options.cx,
             |search_bar, window, cx| {
                 search_bar.replacement_editor.update(cx, |editor, cx| {

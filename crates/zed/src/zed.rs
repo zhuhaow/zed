@@ -192,11 +192,11 @@ pub fn initialize_workspace(
         auto_update_ui::notify_of_any_new_update(cx);
 
         let handle = cx.view().downgrade();
-        cx.on_window_should_close(move |cx| {
+        cx.on_window_should_close(move |window, cx| {
             handle
                 .update(cx, |workspace, cx| {
                     // We'll handle closing asynchronously
-                    workspace.close_window(&Default::default(), cx);
+                    workspace.close_window(&Default::default(), window, cx);
                     false
                 })
                 .unwrap_or(true)
@@ -377,9 +377,9 @@ fn initialize_panels(prompt_builder: Arc<PromptBuilder>, cx: &mut ViewContext<Wo
             }
 
             if is_assistant2_enabled {
-                workspace.register_action(assistant2::InlineAssistant::inline_assist);
+                workspace.register_action2(assistant2::InlineAssistant::inline_assist);
             } else {
-                workspace.register_action(assistant::AssistantPanel::inline_assist);
+                workspace.register_action2(assistant::AssistantPanel::inline_assist);
             }
         })
     })
@@ -392,24 +392,24 @@ fn register_actions(
     cx: &mut ViewContext<Workspace>,
 ) {
     workspace
-        .register_action(about)
-        .register_action(|_, _: &Minimize, cx| {
+        .register_action2(about)
+        .register_action2(|_, _: &Minimize, cx| {
             cx.minimize_window();
         })
-        .register_action(|_, _: &Zoom, cx| {
+        .register_action2(|_, _: &Zoom, cx| {
             cx.zoom_window();
         })
-        .register_action(|_, _: &ToggleFullScreen, cx| {
+        .register_action2(|_, _: &ToggleFullScreen, cx| {
             cx.toggle_fullscreen();
         })
-        .register_action(|_, action: &OpenZedUrl, cx| {
+        .register_action2(|_, action: &OpenZedUrl, cx| {
             OpenListener::global(cx).open_urls(vec![action.url.clone()])
         })
-        .register_action(|_, action: &OpenBrowser, cx| cx.open_url(&action.url))
-        .register_action(move |_, _: &zed_actions::IncreaseBufferFontSize, cx| {
+        .register_action2(|_, action: &OpenBrowser, cx| cx.open_url(&action.url))
+        .register_action2(move |_, _: &zed_actions::IncreaseBufferFontSize, cx| {
             theme::adjust_buffer_font_size(cx, |size| *size += px(1.0))
         })
-        .register_action(|workspace, _: &workspace::Open, cx| {
+        .register_action2(|workspace, _: &workspace::Open, cx| {
             workspace
                 .client()
                 .telemetry()
@@ -444,32 +444,32 @@ fn register_actions(
             })
             .detach()
         })
-        .register_action(move |_, _: &zed_actions::DecreaseBufferFontSize, cx| {
+        .register_action2(move |_, _: &zed_actions::DecreaseBufferFontSize, cx| {
             theme::adjust_buffer_font_size(cx, |size| *size -= px(1.0))
         })
-        .register_action(move |_, _: &zed_actions::ResetBufferFontSize, cx| {
+        .register_action2(move |_, _: &zed_actions::ResetBufferFontSize, cx| {
             theme::reset_buffer_font_size(cx)
         })
-        .register_action(move |_, _: &zed_actions::IncreaseUiFontSize, cx| {
+        .register_action2(move |_, _: &zed_actions::IncreaseUiFontSize, cx| {
             theme::adjust_ui_font_size(cx, |size| *size += px(1.0))
         })
-        .register_action(move |_, _: &zed_actions::DecreaseUiFontSize, cx| {
+        .register_action2(move |_, _: &zed_actions::DecreaseUiFontSize, cx| {
             theme::adjust_ui_font_size(cx, |size| *size -= px(1.0))
         })
-        .register_action(move |_, _: &zed_actions::ResetUiFontSize, cx| {
+        .register_action2(move |_, _: &zed_actions::ResetUiFontSize, cx| {
             theme::reset_ui_font_size(cx)
         })
-        .register_action(move |_, _: &zed_actions::IncreaseBufferFontSize, cx| {
+        .register_action2(move |_, _: &zed_actions::IncreaseBufferFontSize, cx| {
             theme::adjust_buffer_font_size(cx, |size| *size += px(1.0))
         })
-        .register_action(move |_, _: &zed_actions::DecreaseBufferFontSize, cx| {
+        .register_action2(move |_, _: &zed_actions::DecreaseBufferFontSize, cx| {
             theme::adjust_buffer_font_size(cx, |size| *size -= px(1.0))
         })
-        .register_action(move |_, _: &zed_actions::ResetBufferFontSize, cx| {
+        .register_action2(move |_, _: &zed_actions::ResetBufferFontSize, cx| {
             theme::reset_buffer_font_size(cx)
         })
-        .register_action(install_cli)
-        .register_action(|_, _: &install_cli::RegisterZedScheme, cx| {
+        .register_action2(install_cli)
+        .register_action2(|_, _: &install_cli::RegisterZedScheme, cx| {
             cx.spawn(|workspace, mut cx| async move {
                 register_zed_scheme(&cx).await?;
                 workspace.update(&mut cx, |workspace, cx| {
@@ -490,10 +490,10 @@ fn register_actions(
             })
             .detach_and_prompt_err("Error registering zed:// scheme", cx, |_, _| None);
         })
-        .register_action(|workspace, _: &OpenLog, cx| {
+        .register_action2(|workspace, _: &OpenLog, cx| {
             open_log_file(workspace, cx);
         })
-        .register_action(|workspace, _: &zed_actions::OpenLicenses, cx| {
+        .register_action2(|workspace, _: &zed_actions::OpenLicenses, cx| {
             open_bundled_file(
                 workspace,
                 asset_str::<Assets>("licenses.md"),
@@ -502,14 +502,14 @@ fn register_actions(
                 cx,
             );
         })
-        .register_action(
+        .register_action2(
             move |workspace: &mut Workspace,
                   _: &zed_actions::OpenTelemetryLog,
                   cx: &mut ViewContext<Workspace>| {
                 open_telemetry_log_file(workspace, cx);
             },
         )
-        .register_action(
+        .register_action2(
             move |_: &mut Workspace,
                   _: &zed_actions::OpenKeymap,
                   cx: &mut ViewContext<Workspace>| {
@@ -520,7 +520,7 @@ fn register_actions(
                 );
             },
         )
-        .register_action(
+        .register_action2(
             move |_: &mut Workspace, _: &OpenSettings, cx: &mut ViewContext<Workspace>| {
                 open_settings_file(
                     paths::settings_file(),
@@ -529,12 +529,12 @@ fn register_actions(
                 );
             },
         )
-        .register_action(
+        .register_action2(
             |_: &mut Workspace, _: &OpenAccountSettings, cx: &mut ViewContext<Workspace>| {
                 cx.open_url(&zed_urls::account_url(cx));
             },
         )
-        .register_action(
+        .register_action2(
             move |_: &mut Workspace, _: &OpenTasks, cx: &mut ViewContext<Workspace>| {
                 open_settings_file(
                     paths::tasks_file(),
@@ -543,9 +543,9 @@ fn register_actions(
                 );
             },
         )
-        .register_action(open_project_settings_file)
-        .register_action(open_project_tasks_file)
-        .register_action(
+        .register_action2(open_project_settings_file)
+        .register_action2(open_project_tasks_file)
+        .register_action2(
             move |workspace: &mut Workspace,
                   _: &zed_actions::OpenDefaultKeymap,
                   cx: &mut ViewContext<Workspace>| {
@@ -558,7 +558,7 @@ fn register_actions(
                 );
             },
         )
-        .register_action(
+        .register_action2(
             move |workspace: &mut Workspace,
                   _: &OpenDefaultSettings,
                   cx: &mut ViewContext<Workspace>| {
@@ -571,35 +571,35 @@ fn register_actions(
                 );
             },
         )
-        .register_action(
+        .register_action2(
             |workspace: &mut Workspace,
              _: &project_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
                 workspace.toggle_panel_focus::<ProjectPanel>(cx);
             },
         )
-        .register_action(
+        .register_action2(
             |workspace: &mut Workspace,
              _: &outline_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
                 workspace.toggle_panel_focus::<OutlinePanel>(cx);
             },
         )
-        .register_action(
+        .register_action2(
             |workspace: &mut Workspace,
              _: &collab_ui::collab_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
                 workspace.toggle_panel_focus::<collab_ui::collab_panel::CollabPanel>(cx);
             },
         )
-        .register_action(
+        .register_action2(
             |workspace: &mut Workspace,
              _: &collab_ui::chat_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
                 workspace.toggle_panel_focus::<collab_ui::chat_panel::ChatPanel>(cx);
             },
         )
-        .register_action(
+        .register_action2(
             |workspace: &mut Workspace,
              _: &collab_ui::notification_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
@@ -607,37 +607,47 @@ fn register_actions(
                     .toggle_panel_focus::<collab_ui::notification_panel::NotificationPanel>(cx);
             },
         )
-        .register_action(
+        .register_action2(
             |workspace: &mut Workspace,
              _: &terminal_panel::ToggleFocus,
              cx: &mut ViewContext<Workspace>| {
                 workspace.toggle_panel_focus::<TerminalPanel>(cx);
             },
         )
-        .register_action({
+        .register_action2({
             let app_state = Arc::downgrade(&app_state);
             move |_, _: &NewWindow, cx| {
                 if let Some(app_state) = app_state.upgrade() {
-                    open_new(Default::default(), app_state, cx, |workspace, cx| {
-                        Editor::new_file(workspace, &Default::default(), cx)
-                    })
+                    open_new(
+                        Default::default(),
+                        app_state,
+                        cx,
+                        |workspace, window, cx| {
+                            Editor::new_file(workspace, &Default::default(), cx)
+                        },
+                    )
                     .detach();
                 }
             }
         })
-        .register_action({
+        .register_action2({
             let app_state = Arc::downgrade(&app_state);
             move |_, _: &NewFile, cx| {
                 if let Some(app_state) = app_state.upgrade() {
-                    open_new(Default::default(), app_state, cx, |workspace, cx| {
-                        Editor::new_file(workspace, &Default::default(), cx)
-                    })
+                    open_new(
+                        Default::default(),
+                        app_state,
+                        cx,
+                        |workspace, window, cx| {
+                            Editor::new_file(workspace, &Default::default(), cx)
+                        },
+                    )
                     .detach();
                 }
             }
         });
     if workspace.project().read(cx).is_via_ssh() {
-        workspace.register_action({
+        workspace.register_action2({
             move |workspace, _: &OpenServerSettings, cx| {
                 let open_server_settings = workspace
                     .project()
@@ -1564,16 +1574,14 @@ mod tests {
         let window_is_edited = |window: WindowHandle<Workspace>, cx: &mut TestAppContext| {
             cx.update(|cx| window.read(cx).unwrap().is_edited())
         };
-        let pane = window.read_with(cx, |workspace, _| workspace.active_pane().clone());
-        let editor = window
-            .read_with(cx, |workspace, cx| {
-                workspace
-                    .active_item(cx)
-                    .unwrap()
-                    .downcast::<Editor>()
-                    .unwrap()
-            })
-            .unwrap();
+        let pane = window.read_with(cx, |workspace, window, _| workspace.active_pane().clone());
+        let editor = window.read_with(cx, |workspace, window, cx| {
+            workspace
+                .active_item(cx)
+                .unwrap()
+                .downcast::<Editor>()
+                .unwrap()
+        });
 
         assert!(!window_is_edited(window, cx));
 
@@ -1647,15 +1655,13 @@ mod tests {
             })
             .unwrap();
 
-        let editor = window
-            .read_with(cx, |workspace, cx| {
-                workspace
-                    .active_item(cx)
-                    .unwrap()
-                    .downcast::<Editor>()
-                    .unwrap()
-            })
-            .unwrap();
+        let editor = window.read_with(cx, |workspace, window, cx| {
+            workspace
+                .active_item(cx)
+                .unwrap()
+                .downcast::<Editor>()
+                .unwrap()
+        });
         assert!(!window_is_edited(window, cx));
 
         // Editing the buffer marks the window as edited.
@@ -1708,15 +1714,13 @@ mod tests {
             cx.update(|cx| window.read(cx).unwrap().is_edited())
         };
 
-        let editor = window
-            .read_with(cx, |workspace, cx| {
-                workspace
-                    .active_item(cx)
-                    .unwrap()
-                    .downcast::<Editor>()
-                    .unwrap()
-            })
-            .unwrap();
+        let editor = window.read_with(cx, |workspace, window, cx| {
+            workspace
+                .active_item(cx)
+                .unwrap()
+                .downcast::<Editor>()
+                .unwrap()
+        });
 
         assert!(!window_is_edited(window, cx));
 
@@ -1783,7 +1787,7 @@ mod tests {
                 Default::default(),
                 app_state.clone(),
                 cx,
-                |workspace, cx| Editor::new_file(workspace, &Default::default(), cx),
+                |workspace, window, cx| Editor::new_file(workspace, &Default::default(), cx),
             )
         })
         .await
@@ -1922,18 +1926,17 @@ mod tests {
             .await
             .unwrap();
 
-        window
-            .read_with(cx, |w, cx| {
-                assert_eq!(
-                    w.active_pane()
-                        .read(cx)
-                        .active_item()
-                        .unwrap()
-                        .project_path(cx),
-                    Some(file2.clone())
-                );
-            })
-            .unwrap();
+        window.read_with(cx, |workspace, window, cx| {
+            assert_eq!(
+                workspace
+                    .active_pane()
+                    .read(cx)
+                    .active_item()
+                    .unwrap()
+                    .project_path(cx),
+                Some(file2.clone())
+            );
+        });
 
         // Open the third entry twice concurrently. Only one pane item is added.
         let (t1, t2) = window
@@ -2031,7 +2034,7 @@ mod tests {
 
         // Open a file within an existing worktree.
         window
-            .update(cx, |view, cx| {
+            .update(cx, |view, window, cx| {
                 view.open_paths(vec!["/dir1/a.txt".into()], OpenVisible::All, None, cx)
             })
             .unwrap()
@@ -2055,7 +2058,7 @@ mod tests {
 
         // Open a file outside of any existing worktree.
         window
-            .update(cx, |view, cx| {
+            .update(cx, |view, window, cx| {
                 view.open_paths(vec!["/dir2/b.txt".into()], OpenVisible::All, None, cx)
             })
             .unwrap()
@@ -2090,7 +2093,7 @@ mod tests {
 
         // Ensure opening a directory and one of its children only adds one worktree.
         window
-            .update(cx, |view, cx| {
+            .update(cx, |view, window, cx| {
                 view.open_paths(
                     vec!["/dir3".into(), "/dir3/c.txt".into()],
                     OpenVisible::All,
@@ -2130,7 +2133,7 @@ mod tests {
 
         // Ensure opening invisibly a file outside an existing worktree adds a new, invisible worktree.
         window
-            .update(cx, |view, cx| {
+            .update(cx, |view, window, cx| {
                 view.open_paths(vec!["/d.txt".into()], OpenVisible::None, None, cx)
             })
             .unwrap()
@@ -2243,7 +2246,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            opened_workspace.root_view(cx).unwrap().entity_id(),
+            opened_workspace.root_view(cx).entity_id(),
             workspace.entity_id(),
             "Excluded files in subfolders of a workspace root should be opened in the workspace"
         );
@@ -2324,7 +2327,7 @@ mod tests {
 
         // Open a file within an existing worktree.
         window
-            .update(cx, |view, cx| {
+            .update(cx, |view, window, cx| {
                 view.open_paths(
                     vec![PathBuf::from("/root/a.txt")],
                     OpenVisible::All,
@@ -2389,15 +2392,13 @@ mod tests {
 
         // Create a new untitled buffer
         cx.dispatch_action(window.into(), NewFile);
-        let editor = window
-            .read_with(cx, |workspace, cx| {
-                workspace
-                    .active_item(cx)
-                    .unwrap()
-                    .downcast::<Editor>()
-                    .unwrap()
-            })
-            .unwrap();
+        let editor = window.read_with(cx, |workspace, window, cx| {
+            workspace
+                .active_item(cx)
+                .unwrap()
+                .downcast::<Editor>()
+                .unwrap()
+        });
 
         window
             .update(cx, |_, window, cx| {
@@ -2519,15 +2520,13 @@ mod tests {
 
         // Create a new untitled buffer
         cx.dispatch_action(window.into(), NewFile);
-        let editor = window
-            .read_with(cx, |workspace, cx| {
-                workspace
-                    .active_item(cx)
-                    .unwrap()
-                    .downcast::<Editor>()
-                    .unwrap()
-            })
-            .unwrap();
+        let editor = window.read_with(cx, |workspace, window, cx| {
+            workspace
+                .active_item(cx)
+                .unwrap()
+                .downcast::<Editor>()
+                .unwrap()
+        });
         window
             .update(cx, |_, window, cx| {
                 editor.update(cx, |editor, cx| {
@@ -2632,12 +2631,10 @@ mod tests {
         );
 
         cx.background_executor.run_until_parked();
-        window
-            .read_with(cx, |workspace, _| {
-                assert_eq!(workspace.panes().len(), 1);
-                assert_eq!(workspace.active_pane(), &pane_1);
-            })
-            .unwrap();
+        window.read_with(cx, |workspace, _, _| {
+            assert_eq!(workspace.panes().len(), 1);
+            assert_eq!(workspace.active_pane(), &pane_1);
+        });
 
         cx.dispatch_action(
             window.into(),
@@ -2683,7 +2680,7 @@ mod tests {
             project.languages().add(markdown_language())
         });
         let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
-        let pane = workspace.read_with(cx, |workspace, _| workspace.active_pane().clone());
+        let pane = workspace.read_with(cx, |workspace, window, _| workspace.active_pane().clone());
 
         let entries = cx.update(|cx| workspace.root(cx).unwrap().file_project_paths(cx));
         let file1 = entries[0].clone();
@@ -3064,7 +3061,7 @@ mod tests {
             project.languages().add(markdown_language())
         });
         let workspace = cx.add_window(|cx| Workspace::test_new(project, cx));
-        let pane = workspace.read_with(cx, |workspace, _| workspace.active_pane().clone());
+        let pane = workspace.read_with(cx, |workspace, window, _| workspace.active_pane().clone());
 
         let entries = cx.update(|cx| workspace.root(cx).unwrap().file_project_paths(cx));
         let file1 = entries[0].clone();
@@ -3266,12 +3263,10 @@ mod tests {
             workspace: &WindowHandle<Workspace>,
             cx: &TestAppContext,
         ) -> Option<ProjectPath> {
-            workspace
-                .read_with(cx, |workspace, cx| {
-                    let item = workspace.active_item(cx)?;
-                    item.project_path(cx)
-                })
-                .unwrap()
+            workspace.read_with(cx, |workspace, window, cx| {
+                let item = workspace.active_item(cx)?;
+                item.project_path(cx)
+            })
         }
     }
 
@@ -3338,10 +3333,10 @@ mod tests {
         });
         workspace
             .update(cx, |workspace, window, cx| {
-                workspace.register_action(|_, _: &A, _cx| {});
-                workspace.register_action(|_, _: &B, _cx| {});
-                workspace.register_action(|_, _: &ActivatePreviousPane, _cx| {});
-                workspace.register_action(|_, _: &ActivatePrevItem, _cx| {});
+                workspace.register_action2(|_, _: &A, _cx| {});
+                workspace.register_action2(|_, _: &B, _cx| {});
+                workspace.register_action2(|_, _: &ActivatePreviousPane, _cx| {});
+                workspace.register_action2(|_, _: &ActivatePrevItem, _cx| {});
                 cx.notify();
             })
             .unwrap();
@@ -3409,10 +3404,10 @@ mod tests {
         use diagnostics::Deploy;
 
         workspace
-            .update(cx, |workspace, _| {
-                workspace.register_action(|_, _: &A, _cx| {});
-                workspace.register_action(|_, _: &B, _cx| {});
-                workspace.register_action(|_, _: &Deploy, _cx| {});
+            .update(cx, |workspace, _, _| {
+                workspace.register_action2(|_, _: &A, _cx| {});
+                workspace.register_action2(|_, _: &B, _cx| {});
+                workspace.register_action2(|_, _: &Deploy, _cx| {});
             })
             .unwrap();
         app_state

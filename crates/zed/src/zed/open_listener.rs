@@ -339,7 +339,7 @@ async fn open_workspaces(
                     env,
                     ..Default::default()
                 };
-                workspace::open_new(open_options, app_state, cx, |workspace, cx| {
+                workspace::open_new(open_options, app_state, cx, |workspace, window, cx| {
                     Editor::new_file(workspace, &Default::default(), cx)
                 })
                 .detach();

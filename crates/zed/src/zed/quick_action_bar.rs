@@ -164,7 +164,7 @@ impl Render for QuickActionBar {
                         .style(ButtonStyle::Subtle)
                         .toggle_state(self.toggle_selections_handle.is_deployed())
                         .when(!self.toggle_selections_handle.is_deployed(), |this| {
-                            this.tooltip(|cx| Tooltip::text("Selection Controls", cx))
+                            this.tooltip(|window, cx| Tooltip::text("Selection Controls", cx))
                         }),
                 )
                 .with_handle(self.toggle_selections_handle.clone())
@@ -214,7 +214,7 @@ impl Render for QuickActionBar {
                         .style(ButtonStyle::Subtle)
                         .toggle_state(self.toggle_settings_handle.is_deployed())
                         .when(!self.toggle_settings_handle.is_deployed(), |this| {
-                            this.tooltip(|cx| Tooltip::text("Editor Controls", cx))
+                            this.tooltip(|window, cx| Tooltip::text("Editor Controls", cx))
                         }),
                 )
                 .anchor(Corner::TopRight)
@@ -408,10 +408,10 @@ impl RenderOnce for QuickActionBarButton {
             .icon_size(IconSize::Small)
             .style(ButtonStyle::Subtle)
             .toggle_state(self.toggled)
-            .tooltip(move |cx| {
+            .tooltip(move |window, cx| {
                 Tooltip::for_action_in(tooltip.clone(), &*action, &self.focus_handle, cx)
             })
-            .on_click(move |event, cx| (self.on_click)(event, cx))
+            .on_click(move |event, window, cx| (self.on_click)(event, cx))
     }
 }
 

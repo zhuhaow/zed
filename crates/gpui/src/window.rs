@@ -3808,11 +3808,16 @@ impl<'a> WindowContext<'a> {
 
     /// Register a callback that can interrupt the closing of the current window based the returned boolean.
     /// If the callback returns false, the window won't be closed.
-    pub fn on_window_should_close(&self, f: impl Fn(&mut WindowContext) -> bool + 'static) {
+    pub fn on_window_should_close(
+        &self,
+        f: impl Fn(&mut Window, &mut WindowContext) -> bool + 'static,
+    ) {
         let mut this = self.to_async();
         self.window
             .platform_window
-            .on_should_close(Box::new(move || this.update(|cx| f(cx)).unwrap_or(true)))
+            .on_should_close(Box::new(move || {
+                this.update(|cx| f(todo!(), cx)).unwrap_or(true)
+            }))
     }
 
     /// Register an action listener on the window for the next frame. The type of action

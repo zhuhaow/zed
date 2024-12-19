@@ -37,7 +37,7 @@ impl QuickActionBar {
             .shape(IconButtonShape::Square)
             .icon_size(IconSize::Small)
             .style(ButtonStyle::Subtle)
-            .tooltip(move |cx| {
+            .tooltip(move |window, cx| {
                 Tooltip::with_meta(
                     "Preview Markdown",
                     Some(&markdown_preview::OpenPreview),
@@ -48,7 +48,7 @@ impl QuickActionBar {
                     cx,
                 )
             })
-            .on_click(move |_, cx| {
+            .on_click(move |_, window, cx| {
                 if let Some(workspace) = workspace.upgrade() {
                     workspace.update(cx, |_, cx| {
                         if cx.modifiers().alt {

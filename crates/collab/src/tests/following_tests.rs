@@ -701,6 +701,7 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
 
     // Client A opens a file.
     let (workspace_a, cx_a) = client_a.build_workspace(&project_a, cx_a);
+    let window_a = cx_a.window;
     workspace_a
         .update(cx_a, |workspace, cx| {
             workspace.open_path((worktree_id, "1.txt"), None, true, cx)
@@ -712,6 +713,7 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
 
     // Client B opens a different file.
     let (workspace_b, cx_b) = client_b.build_workspace(&project_b, cx_b);
+    let window_b = cx_b.window;
     workspace_b
         .update(cx_b, |workspace, cx| {
             workspace.open_path((worktree_id, "2.txt"), None, true, cx)
@@ -738,10 +740,10 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
     executor.run_until_parked();
 
     // Clients A and B return focus to the original files they had open
-    workspace_a.update(cx_a, |workspace, cx| {
+    workspace_a.update_in_window(window_a, cx_a, |workspace, window, cx| {
         workspace.activate_next_pane(window, cx)
     });
-    workspace_b.update(cx_b, |workspace, cx| {
+    workspace_b.update_in_window(window_b, cx_b, |workspace, window, cx| {
         workspace.activate_next_pane(window, cx)
     });
     executor.run_until_parked();
@@ -836,7 +838,7 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
     );
 
     // Client A focuses their right pane, in which they're following client B.
-    workspace_a.update(cx_a, |workspace, cx| {
+    workspace_a.update_in_window(window_a, cx_a, |workspace, window, cx| {
         workspace.activate_next_pane(window, cx)
     });
     executor.run_until_parked();
@@ -884,7 +886,7 @@ async fn test_peers_following_each_other(cx_a: &mut TestAppContext, cx_b: &mut T
 
     // Client B focuses their right pane, in which they're following client A,
     // who is following them.
-    workspace_b.update(cx_b, |workspace, cx| {
+    workspace_b.update_in_window(window_b, cx_b, |workspace, window, cx| {
         workspace.activate_next_pane(window, cx)
     });
     executor.run_until_parked();
