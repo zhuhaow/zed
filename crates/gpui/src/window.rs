@@ -1,20 +1,20 @@
 use crate::{
-    point, prelude::*, px, size, transparent_black, Action, AnyDrag, AnyElement, AnyTooltip,
-    AnyView, AppContext, Arena, Asset, AsyncWindowContext, AvailableSpace, Background, Bounds,
-    BoxShadow, Context, Corners, CursorStyle, Decorations, DevicePixels, DispatchActionListener,
-    DispatchNodeId, DispatchTree, DisplayId, Edges, Effect, Entity, EntityId, EventEmitter,
-    FileDropEvent, Flatten, FontId, Global, GlobalElementId, GlyphId, GpuSpecs, Hsla, InputHandler,
-    IsZero, KeyBinding, KeyContext, KeyDownEvent, KeyEvent, Keystroke, KeystrokeEvent,
-    KeystrokeObserver, LayoutId, LineLayoutIndex, Model, ModelContext, Modifiers,
-    ModifiersChangedEvent, MonochromeSprite, MouseButton, MouseEvent, MouseMoveEvent, MouseUpEvent,
-    Path, Pixels, PlatformAtlas, PlatformDisplay, PlatformInput, PlatformInputHandler,
-    PlatformWindow, Point, PolychromeSprite, PromptLevel, Quad, Render, RenderGlyphParams,
-    RenderImage, RenderImageParams, RenderSvgParams, Replay, ResizeEdge, ScaledPixels, Scene,
-    Shadow, SharedString, Size, StrikethroughStyle, Style, SubscriberSet, Subscription,
-    TaffyLayoutEngine, Task, TextStyle, TextStyleRefinement, TransformationMatrix, Underline,
-    UnderlineStyle, VisualContext, WeakModel, WindowAppearance, WindowBackgroundAppearance,
-    WindowBounds, WindowControls, WindowDecorations, WindowOptions, WindowParams, WindowTextSystem,
-    SUBPIXEL_VARIANTS,
+    point, prelude::*, px, size, transparent_black, Action, AnyDrag, AnyElement, AnyModel,
+    AnyTooltip, AnyView, AppContext, Arena, Asset, AsyncWindowContext, AvailableSpace, Background,
+    Bounds, BoxShadow, Context, Corners, CursorStyle, Decorations, DevicePixels,
+    DispatchActionListener, DispatchNodeId, DispatchTree, DisplayId, Edges, Effect, Entity,
+    EntityId, EventEmitter, FileDropEvent, Flatten, FontId, Global, GlobalElementId, GlyphId,
+    GpuSpecs, Hsla, InputHandler, IsZero, KeyBinding, KeyContext, KeyDownEvent, KeyEvent,
+    Keystroke, KeystrokeEvent, KeystrokeObserver, LayoutId, LineLayoutIndex, Model, ModelContext,
+    Modifiers, ModifiersChangedEvent, MonochromeSprite, MouseButton, MouseEvent, MouseMoveEvent,
+    MouseUpEvent, Path, Pixels, PlatformAtlas, PlatformDisplay, PlatformInput,
+    PlatformInputHandler, PlatformWindow, Point, PolychromeSprite, PromptLevel, Quad, Render,
+    RenderGlyphParams, RenderImage, RenderImageParams, RenderSvgParams, Replay, ResizeEdge,
+    ScaledPixels, Scene, Shadow, SharedString, Size, StrikethroughStyle, Style, SubscriberSet,
+    Subscription, TaffyLayoutEngine, Task, TextStyle, TextStyleRefinement, TransformationMatrix,
+    Underline, UnderlineStyle, VisualContext, WeakModel, WindowAppearance,
+    WindowBackgroundAppearance, WindowBounds, WindowControls, WindowDecorations, WindowOptions,
+    WindowParams, WindowTextSystem, SUBPIXEL_VARIANTS,
 };
 use anyhow::{anyhow, Context as _, Result};
 use collections::{FxHashMap, FxHashSet};
@@ -37,7 +37,7 @@ use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
     mem,
-    ops::{DerefMut, Range},
+    ops::Range,
     rc::Rc,
     sync::{
         atomic::{AtomicUsize, Ordering::SeqCst},
@@ -1129,7 +1129,7 @@ impl Window {
     pub fn spawn<Fut, R>(
         &self,
         f: impl FnOnce(AsyncWindowContext) -> Fut,
-        cx: &mut AppContext,
+        cx: &AppContext,
     ) -> Task<R>
     where
         R: 'static,
@@ -3781,50 +3781,24 @@ impl<'a> WindowContext<'a> {
 
     /// Mark the window as dirty, scheduling it to be redrawn on the next frame.
     pub fn refresh(&mut self) {
-        if self.window.draw_phase == DrawPhase::None {
-            self.window.refreshing = true;
-            self.window.dirty.set(true);
-        }
+        self.window.refresh();
     }
 
     /// Indicate that this view has changed, which will invoke any observers and also mark the window as dirty.
     /// If this view or any of its ancestors are *cached*, notifying it will cause it or its ancestors to be redrawn.
     /// Note that this method will always cause a redraw, the entire window is refreshed if view_id is None.
     pub fn notify(&mut self, view_id: Option<EntityId>) {
-        let Some(view_id) = view_id else {
-            self.refresh();
-            return;
-        };
-
-        for view_id in self
-            .window
-            .rendered_frame
-            .dispatch_tree
-            .view_path(view_id)
-            .into_iter()
-            .rev()
-        {
-            if !self.window.dirty_views.insert(view_id) {
-                break;
-            }
-        }
-
-        if self.window.draw_phase == DrawPhase::None {
-            self.window.dirty.set(true);
-            self.app.push_effect(Effect::Notify { emitter: view_id });
-        }
+        self.window.notify(view_id, self.app);
     }
 
     /// Close this window.
     pub fn remove_window(&mut self) {
-        self.window.removed = true;
+        self.window.remove_window();
     }
 
     /// Obtain the currently focused [`FocusHandle`]. If no elements are focused, returns `None`.
     pub fn focused(&self) -> Option<FocusHandle> {
-        self.window
-            .focus
-            .and_then(|id| FocusHandle::for_id(id, &self.app.focus_handles))
+        self.window.focused(self.app)
     }
 
     /// Move focus to the element associated with the given [`FocusHandle`].
@@ -3834,77 +3808,49 @@ impl<'a> WindowContext<'a> {
 
     /// Remove focus from all elements within this context's window.
     pub fn blur(&mut self) {
-        if !self.window.focus_enabled {
-            return;
-        }
-
-        self.window.focus = None;
-        self.refresh();
+        self.window.blur();
     }
 
     /// Blur the window and don't allow anything in it to be focused again.
     pub fn disable_focus(&mut self) {
-        self.blur();
-        self.window.focus_enabled = false;
+        self.window.disable_focus();
     }
 
     /// Accessor for the text system.
     pub fn text_system(&self) -> &Arc<WindowTextSystem> {
-        &self.window.text_system
+        self.window.text_system()
     }
 
     /// The current text style. Which is composed of all the style refinements provided to `with_text_style`.
     pub fn text_style(&self) -> TextStyle {
-        let mut style = TextStyle::default();
-        for refinement in &self.window.text_style_stack {
-            style.refine(refinement);
-        }
-        style
+        self.window.text_style()
     }
 
     /// Check if the platform window is maximized
     /// On some platforms (namely Windows) this is different than the bounds being the size of the display
     pub fn is_maximized(&self) -> bool {
-        self.window.platform_window.is_maximized()
+        self.window.is_maximized()
     }
 
     /// request a certain window decoration (Wayland)
     pub fn request_decorations(&self, decorations: WindowDecorations) {
-        self.window.platform_window.request_decorations(decorations);
+        self.window.request_decorations(decorations);
     }
 
     /// Start a window resize operation (Wayland)
     pub fn start_window_resize(&self, edge: ResizeEdge) {
-        self.window.platform_window.start_window_resize(edge);
+        self.window.start_window_resize(edge);
     }
 
     /// Return the `WindowBounds` to indicate that how a window should be opened
     /// after it has been closed
     pub fn window_bounds(&self) -> WindowBounds {
-        self.window.platform_window.window_bounds()
+        self.window.window_bounds()
     }
 
     /// Dispatch the given action on the currently focused element.
     pub fn dispatch_action(&mut self, action: Box<dyn Action>) {
-        let focus_handle = self.focused();
-
-        let window = self.window.handle;
-        self.app.defer(move |cx| {
-            window
-                .update(cx, |_, cx| {
-                    let node_id = focus_handle
-                        .and_then(|handle| {
-                            cx.window
-                                .rendered_frame
-                                .dispatch_tree
-                                .focusable_node_id(handle.id)
-                        })
-                        .unwrap_or_else(|| cx.window.rendered_frame.dispatch_tree.root_node_id());
-
-                    cx.dispatch_action_on_node(node_id, action.as_ref());
-                })
-                .log_err();
-        })
+        self.window.dispatch_action(action, self.app);
     }
 
     pub(crate) fn dispatch_keystroke_observers(
@@ -3912,30 +3858,14 @@ impl<'a> WindowContext<'a> {
         event: &dyn Any,
         action: Option<Box<dyn Action>>,
     ) {
-        let Some(key_down_event) = event.downcast_ref::<KeyDownEvent>() else {
-            return;
-        };
-
-        self.keystroke_observers
-            .clone()
-            .retain(&(), move |callback| {
-                (callback)(
-                    &KeystrokeEvent {
-                        keystroke: key_down_event.keystroke.clone(),
-                        action: action.as_ref().map(|action| action.boxed_clone()),
-                    },
-                    self,
-                )
-            });
+        self.window
+            .dispatch_keystroke_observers(event, action, self.app);
     }
 
     /// Schedules the given function to be run at the end of the current effect cycle, allowing entities
     /// that are currently on the stack to be returned to the app.
     pub fn defer(&mut self, f: impl FnOnce(&mut WindowContext) + 'static) {
-        let handle = self.window.handle;
-        self.app.defer(move |cx| {
-            handle.update(cx, |_, cx| f(cx)).ok();
-        });
+        self.window.defer(self.app, f);
     }
 
     /// Subscribe to events emitted by a model or view.
@@ -3944,29 +3874,12 @@ impl<'a> WindowContext<'a> {
     pub fn observe<E, T>(
         &mut self,
         entity: &E,
-        mut on_notify: impl FnMut(E, &mut WindowContext<'_>) + 'static,
+        on_notify: impl FnMut(E, &mut WindowContext<'_>) + 'static,
     ) -> Subscription
     where
         E: Entity<T>,
     {
-        let entity_id = entity.entity_id();
-        let entity = entity.downgrade();
-        let window_handle = self.window.handle;
-        self.app.new_observer(
-            entity_id,
-            Box::new(move |cx| {
-                window_handle
-                    .update(cx, |_, cx| {
-                        if let Some(handle) = E::upgrade_from(&entity) {
-                            on_notify(handle, cx);
-                            true
-                        } else {
-                            false
-                        }
-                    })
-                    .unwrap_or(false)
-            }),
-        )
+        self.window.observe(entity, self.app, on_notify)
     }
 
     /// Subscribe to events emitted by a model or view.
@@ -3975,69 +3888,38 @@ impl<'a> WindowContext<'a> {
     pub fn subscribe<Emitter, E, Evt>(
         &mut self,
         entity: &E,
-        mut on_event: impl FnMut(E, &Evt, &mut WindowContext<'_>) + 'static,
+        on_event: impl FnMut(E, &Evt, &mut WindowContext<'_>) + 'static,
     ) -> Subscription
     where
         Emitter: EventEmitter<Evt>,
         E: Entity<Emitter>,
         Evt: 'static,
     {
-        let entity_id = entity.entity_id();
-        let entity = entity.downgrade();
-        let window_handle = self.window.handle;
-        self.app.new_subscription(
-            entity_id,
-            (
-                TypeId::of::<Evt>(),
-                Box::new(move |event, cx| {
-                    window_handle
-                        .update(cx, |_, cx| {
-                            if let Some(handle) = E::upgrade_from(&entity) {
-                                let event = event.downcast_ref().expect("invalid event type");
-                                on_event(handle, event, cx);
-                                true
-                            } else {
-                                false
-                            }
-                        })
-                        .unwrap_or(false)
-                }),
-            ),
-        )
+        self.window.subscribe(entity, on_event, self.app)
     }
 
     /// Register a callback to be invoked when the given Model or View is released.
     pub fn observe_release<E, T>(
-        &self,
+        &mut self,
         entity: &E,
-        mut on_release: impl FnOnce(&mut T, &mut WindowContext) + 'static,
+        on_release: impl FnOnce(&mut T, &mut WindowContext) + 'static,
     ) -> Subscription
     where
         E: Entity<T>,
         T: 'static,
     {
-        let entity_id = entity.entity_id();
-        let window_handle = self.window.handle;
-        let (subscription, activate) = self.app.release_listeners.insert(
-            entity_id,
-            Box::new(move |entity, cx| {
-                let entity = entity.downcast_mut().expect("invalid entity type");
-                let _ = window_handle.update(cx, |_, cx| on_release(entity, cx));
-            }),
-        );
-        activate();
-        subscription
+        self.window.observe_release(entity, on_release, self.app)
     }
 
     /// Creates an [`AsyncWindowContext`], which has a static lifetime and can be held across
     /// await points in async code.
     pub fn to_async(&self) -> AsyncWindowContext {
-        AsyncWindowContext::new(self.app.to_async(), self.window.handle)
+        self.window.to_async(self.app)
     }
 
     /// Schedule the given closure to be run directly after the current frame is rendered.
     pub fn on_next_frame(&self, callback: impl FnOnce(&mut WindowContext) + 'static) {
-        RefCell::borrow_mut(&self.window.next_frame_callbacks).push(Box::new(callback));
+        self.window.on_next_frame(callback);
     }
 
     /// Schedule a frame to be drawn on the next animation frame.
@@ -4047,8 +3929,7 @@ impl<'a> WindowContext<'a> {
     ///
     /// If called from within a view, it will notify that view on the next frame. Otherwise, it will refresh the entire window.
     pub fn request_animation_frame(&self) {
-        let parent_id = self.parent_view_id();
-        self.on_next_frame(move |cx| cx.notify(parent_id));
+        self.window.request_animation_frame();
     }
 
     /// Spawn the future returned by the given closure on the application thread pool.
@@ -4059,25 +3940,11 @@ impl<'a> WindowContext<'a> {
         R: 'static,
         Fut: Future<Output = R> + 'static,
     {
-        self.app
-            .spawn(|app| f(AsyncWindowContext::new(app, self.window.handle)))
+        self.window.spawn(f, self.app)
     }
 
     fn bounds_changed(&mut self) {
-        self.window.scale_factor = self.window.platform_window.scale_factor();
-        self.window.viewport_size = self.window.platform_window.content_size();
-        self.window.display_id = self
-            .window
-            .platform_window
-            .display()
-            .map(|display| display.id());
-
-        self.refresh();
-
-        self.window
-            .bounds_observers
-            .clone()
-            .retain(&(), |callback| callback(self));
+        self.window.bounds_changed(self.app);
     }
 
     /// Returns the bounds of the current window in the global coordinate space, which could span across multiple displays.
@@ -6708,7 +6575,7 @@ impl WindowContext<'_> {
 
 impl Context for WindowContext<'_> {
     type Result<T> = T;
-    type EntityContext<'a, 'b, T: 'static> = ViewContext<'a, T>;
+    type EntityContext<'a, 'b, T: 'static> = ViewContext<'a, 'b, T>;
 
     fn new_model<T>(
         &mut self,
@@ -6717,8 +6584,26 @@ impl Context for WindowContext<'_> {
     where
         T: 'static,
     {
-        self.app
-            .new_model(|cx| build_model(&mut ViewContext::new(cx, self.window)))
+        self.app.update(|cx| {
+            let slot = cx.entities.reserve();
+            let model = slot.clone();
+            let entity = (|cx| build_model(&mut ViewContext::new(cx, self.window)))(
+                &mut ModelContext::new(cx, &slot),
+            );
+            cx.entities.insert(slot, entity);
+
+            // Non-generic part to avoid leaking SubscriberSet to invokers of `new_view`.
+            fn notify_observers(cx: &mut AppContext, tid: TypeId, model: AnyModel) {
+                cx.new_model_observers.clone().retain(&tid, |observer| {
+                    let any_model = model.clone();
+                    (observer)(any_model, cx);
+                    true
+                });
+            }
+            notify_observers(cx, TypeId::of::<T>(), AnyModel::from(model.clone()));
+
+            model
+        })
     }
 
     fn reserve_model<T: 'static>(&mut self) -> Self::Result<crate::Reservation<T>> {
@@ -6732,7 +6617,7 @@ impl Context for WindowContext<'_> {
     ) -> Self::Result<Model<T>> {
         self.app.update(|cx| {
             let slot = reservation.0;
-            let entity = build_model(&mut ViewContext::new(cx, self.window, &slot));
+            let entity = build_model(&mut ViewContext::new(cx, &slot));
             cx.entities.insert(slot, entity)
         })
     }
@@ -7396,7 +7281,7 @@ impl<'a, 'b, V: 'static> ViewContext<'a, 'b, V> {
     where
         V: FocusableView,
     {
-        self.defer(|view, cx| view.focus_handle(cx).focus(cx))
+        self.defer(|view, cx| view.focus_handle(cx).focus(cx.window_context()))
     }
 
     /// Convenience method for accessing view state in an event callback.
@@ -7412,6 +7297,11 @@ impl<'a, 'b, V: 'static> ViewContext<'a, 'b, V> {
         move |e: &E, cx: &mut WindowContext| {
             view.update(cx, |view, cx| f(view, e, cx)).ok();
         }
+    }
+
+    /// Move focus to the element associated with the given [`FocusHandle`].
+    pub fn focus(&mut self, handle: &FocusHandle) {
+        self.window.focus(handle)
     }
 }
 
