@@ -556,7 +556,7 @@ pub async fn open_ssh_project(
                 None,
                 cx,
             );
-            cx.new_view(|cx| Workspace::new(None, project, app_state.clone(), cx))
+            cx.new_view(|cx| Workspace::new(None, project, app_state.clone(), window, cx))
         })?
     };
 

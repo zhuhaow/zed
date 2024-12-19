@@ -5,7 +5,7 @@ use url::Url;
 
 use crate::lsp_ext::find_specific_language_server_in_selection;
 
-use crate::{element::register_action, Editor, SwitchSourceHeader};
+use crate::{element::register_action2, Editor, SwitchSourceHeader};
 
 const CLANGD_SERVER_NAME: &str = "clangd";
 
@@ -89,6 +89,6 @@ pub fn apply_related_actions(editor: &View<Editor>, cx: &mut WindowContext) {
         find_specific_language_server_in_selection(e, cx, is_c_language, CLANGD_SERVER_NAME)
             .is_some()
     }) {
-        register_action(editor, cx, switch_source_header);
+        register_action2(editor, cx, switch_source_header);
     }
 }

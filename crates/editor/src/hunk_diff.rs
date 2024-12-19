@@ -1404,7 +1404,8 @@ mod tests {
             multibuffer
         });
 
-        let editor = cx.add_window(|cx| Editor::for_multibuffer(multibuffer, None, false, cx));
+        let editor =
+            cx.add_window(|window, cx| Editor::for_multibuffer(multibuffer, None, false, cx));
         editor
             .update(cx, |editor, window, cx| {
                 for (buffer, diff_base) in [

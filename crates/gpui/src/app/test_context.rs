@@ -184,7 +184,7 @@ impl TestAppContext {
     /// can be retrieved with `self.test_window(handle)`
     pub fn add_window<F, V>(&mut self, build_window: F) -> WindowHandle<V>
     where
-        F: FnOnce(&mut ViewContext<V>) -> V,
+        F: FnOnce(&mut Window, &mut ViewContext<V>) -> V,
         V: 'static + Render,
     {
         let mut cx = self.app.borrow_mut();
@@ -196,7 +196,7 @@ impl TestAppContext {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |window, cx| cx.new_view(build_window),
+            |window, cx| cx.new_view(|cx| build_window(window, cx)),
         )
         .unwrap()
     }

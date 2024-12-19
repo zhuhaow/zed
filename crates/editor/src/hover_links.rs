@@ -16,6 +16,7 @@ use project::{
 use settings::Settings;
 use std::ops::Range;
 use theme::ActiveTheme as _;
+use ui::prelude::Window;
 use util::{maybe, ResultExt, TryFutureExt as _};
 
 #[derive(Debug)]
@@ -161,17 +162,19 @@ impl Editor {
         &mut self,
         point: PointForPosition,
         modifiers: Modifiers,
+        window: &mut Window,
         cx: &mut ViewContext<Editor>,
     ) {
-        let reveal_task = self.cmd_click_reveal_task(point, modifiers, cx);
+        let reveal_task = self.cmd_click_reveal_task(point, modifiers, window, cx);
+        let window_handle = window.handle();
         cx.spawn(|editor, mut cx| async move {
             let definition_revealed = reveal_task.await.log_err().unwrap_or(Navigated::No);
             let find_references = editor
-                .update(&mut cx, |editor, cx| {
+                .update_in_window(window_handle, &mut cx, |editor, window, cx| {
                     if definition_revealed == Navigated::Yes {
                         return None;
                     }
-                    editor.find_all_references(&FindAllReferences, cx)
+                    editor.find_all_references(&FindAllReferences, window, cx)
                 })
                 .ok()
                 .flatten();
@@ -201,6 +204,7 @@ impl Editor {
         &mut self,
         point: PointForPosition,
         modifiers: Modifiers,
+        window: &mut Window,
         cx: &mut ViewContext<Editor>,
     ) -> Task<anyhow::Result<Navigated>> {
         if let Some(hovered_link_state) = self.hovered_link_state.take() {
@@ -233,7 +237,7 @@ impl Editor {
                     })
                     .collect();
 
-                return self.navigate_to_hover_links(None, links, modifiers.alt, cx);
+                return self.navigate_to_hover_links(None, links, modifiers.alt, window, cx);
             }
         }
 
@@ -250,9 +254,9 @@ impl Editor {
 
         if point.as_valid().is_some() {
             if modifiers.shift {
-                self.go_to_type_definition(&GoToTypeDefinition, cx)
+                self.go_to_type_definition(&GoToTypeDefinition, window, cx)
             } else {
-                self.go_to_definition(&GoToDefinition, cx)
+                self.go_to_definition(&GoToDefinition, window, cx)
             }
         } else {
             Task::ready(Ok(Navigated::No))
@@ -1226,7 +1230,7 @@ mod tests {
                 fn do_work() { test(); }
             "})[0]
             .clone();
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let snapshot = editor.buffer().read(cx).snapshot(cx);
             let anchor_range = snapshot.anchor_before(selection_range.start)
                 ..snapshot.anchor_after(selection_range.end);
@@ -1319,7 +1323,7 @@ mod tests {
             .next()
             .await;
         cx.background_executor.run_until_parked();
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let expected_layers = vec![hint_label.to_string()];
             assert_eq!(expected_layers, cached_hint_labels(editor));
             assert_eq!(expected_layers, visible_hint_labels(editor, cx));
@@ -1336,7 +1340,7 @@ mod tests {
             .first()
             .cloned()
             .unwrap();
-        let midpoint = cx.update_editor(|editor, cx| {
+        let midpoint = cx.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             let previous_valid = inlay_range.start.to_display_point(&snapshot);
             let next_valid = inlay_range.end.to_display_point(&snapshot);
@@ -1351,7 +1355,7 @@ mod tests {
         let hover_point = cx.pixel_position_for(midpoint);
         cx.simulate_mouse_move(hover_point, None, Modifiers::secondary_key());
         cx.background_executor.run_until_parked();
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             let actual_highlights = snapshot
                 .inlay_highlights::<HoveredLinkState>()
@@ -1370,7 +1374,7 @@ mod tests {
 
         cx.simulate_mouse_move(hover_point, None, Modifiers::none());
         // Assert no link highlights
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx|{
                 let snapshot = editor.snapshot(cx);
                 let actual_ranges = snapshot
                     .text_highlight_ranges::<HoveredLinkState>()
@@ -1579,7 +1583,7 @@ mod tests {
         "});
         cx.simulate_mouse_move(screen_coord, None, Modifiers::secondary_key());
         // No highlight
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert!(editor
                 .snapshot(cx)
                 .text_highlight_ranges::<HoveredLinkState>()
@@ -1708,7 +1712,7 @@ mod tests {
         cx.simulate_mouse_move(screen_coord, None, Modifiers::secondary_key());
 
         // No highlight
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             assert!(editor
                 .snapshot(cx)
                 .text_highlight_ranges::<HoveredLinkState>()

@@ -1024,15 +1024,15 @@ impl Workspace {
 
                 ThemeSettings::reload_current_theme(cx);
             }),
-            cx.observe(&left_dock, |this, _, cx| {
+            cx.observe_in_window(&left_dock, window, |this, _, window, cx| {
                 this.serialize_workspace(window, cx);
                 cx.notify();
             }),
-            cx.observe(&bottom_dock, |this, _, cx| {
+            cx.observe_in_window(&bottom_dock, window, |this, _, window, cx| {
                 this.serialize_workspace(window, cx);
                 cx.notify();
             }),
-            cx.observe(&right_dock, |this, _, cx| {
+            cx.observe_in_window(&right_dock, window, |this, _, window, cx| {
                 this.serialize_workspace(window, cx);
                 cx.notify();
             }),
@@ -3376,14 +3376,8 @@ impl Workspace {
         self.active_pane().clone()
     }
 
-    pub fn adjacent_pane(
-        &mut self,
-        pane: View<Pane>,
-        direction: SplitDirection,
-        window: &mut Window,
-        cx: &mut ViewContext<Self>,
-    ) -> View<Pane> {
-        self.find_pane_in_direction(direction, cx)
+    pub fn adjacent_pane(&mut self, window: &mut Window, cx: &mut ViewContext<Self>) -> View<Pane> {
+        self.find_pane_in_direction(SplitDirection::Right, cx)
             .or_else(|| self.find_pane_in_direction(SplitDirection::Left, cx))
             .unwrap_or_else(|| {
                 self.split_pane(self.active_pane.clone(), SplitDirection::Right, window, cx)

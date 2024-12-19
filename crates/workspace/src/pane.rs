@@ -2132,7 +2132,7 @@ impl Pane {
             .on_drop(
                 cx.listener(move |this, selection: &DraggedSelection, window, cx| {
                     this.drag_split_direction = None;
-                    this.handle_dragged_selection_drop(selection, Some(ix), cx)
+                    this.handle_dragged_selection_drop(selection, Some(ix), window, cx)
                 }),
             )
             .on_drop(cx.listener(move |this, paths, window, cx| {
@@ -2500,6 +2500,7 @@ impl Pane {
                                     this.handle_project_entry_drop(
                                         &selection.active_selection.entry_id,
                                         Some(tab_count),
+                                        window,
                                         cx,
                                     )
                                 },
@@ -2664,6 +2665,7 @@ impl Pane {
         &mut self,
         dragged_selection: &DraggedSelection,
         dragged_onto: Option<usize>,
+        window: &mut Window,
         cx: &mut ViewContext<'_, Self>,
     ) {
         if let Some(custom_drop_handle) = self.custom_drop_handle.clone() {
@@ -2674,6 +2676,7 @@ impl Pane {
         self.handle_project_entry_drop(
             &dragged_selection.active_selection.entry_id,
             dragged_onto,
+            window,
             cx,
         );
     }
@@ -2682,6 +2685,7 @@ impl Pane {
         &mut self,
         project_entry_id: &ProjectEntryId,
         target: Option<usize>,
+        window: &mut Window,
         cx: &mut ViewContext<'_, Self>,
     ) {
         if let Some(custom_drop_handle) = self.custom_drop_handle.clone() {
@@ -2692,6 +2696,7 @@ impl Pane {
         let mut to_pane = cx.view().clone();
         let split_direction = self.drag_split_direction;
         let project_entry_id = *project_entry_id;
+        let window_handle = window.handle();
         self.workspace
             .update(cx, |_, cx| {
                 cx.defer(move |workspace, cx| {
@@ -2706,27 +2711,31 @@ impl Pane {
                                 load_path_task.await.notify_async_err(&mut cx)
                             {
                                 let (to_pane, new_item_handle) = workspace
-                                    .update(&mut cx, |workspace, cx| {
-                                        if let Some(split_direction) = split_direction {
-                                            to_pane = workspace.split_pane(
-                                                to_pane,
-                                                split_direction,
-                                                window,
-                                                cx,
-                                            );
-                                        }
-                                        let new_item_handle = to_pane.update(cx, |pane, cx| {
-                                            pane.open_item(
-                                                project_entry_id,
-                                                true,
-                                                false,
-                                                target,
-                                                cx,
-                                                build_item,
-                                            )
-                                        });
-                                        (to_pane, new_item_handle)
-                                    })
+                                    .update_in_window(
+                                        window_handle,
+                                        &mut cx,
+                                        |workspace, window, cx| {
+                                            if let Some(split_direction) = split_direction {
+                                                to_pane = workspace.split_pane(
+                                                    to_pane,
+                                                    split_direction,
+                                                    window,
+                                                    cx,
+                                                );
+                                            }
+                                            let new_item_handle = to_pane.update(cx, |pane, cx| {
+                                                pane.open_item(
+                                                    project_entry_id,
+                                                    true,
+                                                    false,
+                                                    target,
+                                                    cx,
+                                                    build_item,
+                                                )
+                                            });
+                                            (to_pane, new_item_handle)
+                                        },
+                                    )
                                     .log_err()?;
                                 to_pane
                                     .update(&mut cx, |this, cx| {
@@ -3077,7 +3086,7 @@ impl Render for Pane {
                             }))
                             .on_drop(cx.listener(
                                 move |this, selection: &DraggedSelection, window, cx| {
-                                    this.handle_dragged_selection_drop(selection, None, cx)
+                                    this.handle_dragged_selection_drop(selection, None, window, cx)
                                 },
                             ))
                             .on_drop(cx.listener(move |this, paths, window, cx| {

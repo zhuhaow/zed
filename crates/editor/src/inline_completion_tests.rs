@@ -19,7 +19,7 @@ async fn test_inline_completion_insert(cx: &mut gpui::TestAppContext) {
     cx.set_state("let absolute_zero_celsius = ˇ;");
 
     propose_edits(&provider, vec![(28..28, "-273.15")], &mut cx);
-    cx.update_editor(|editor, cx| editor.update_visible_inline_completion(cx));
+    cx.update_editor(|editor, window, cx| editor.update_visible_inline_completion(cx));
 
     assert_editor_active_edit_completion(&mut cx, |_, edits| {
         assert_eq!(edits.len(), 1);
@@ -41,7 +41,7 @@ async fn test_inline_completion_modification(cx: &mut gpui::TestAppContext) {
     cx.set_state("let pi = ˇ\"foo\";");
 
     propose_edits(&provider, vec![(9..14, "3.14159")], &mut cx);
-    cx.update_editor(|editor, cx| editor.update_visible_inline_completion(cx));
+    cx.update_editor(|editor, window, cx| editor.update_visible_inline_completion(cx));
 
     assert_editor_active_edit_completion(&mut cx, |_, edits| {
         assert_eq!(edits.len(), 1);
@@ -76,7 +76,7 @@ async fn test_inline_completion_jump_button(cx: &mut gpui::TestAppContext) {
         &mut cx,
     );
 
-    cx.update_editor(|editor, cx| editor.update_visible_inline_completion(cx));
+    cx.update_editor(|editor, window, cx| editor.update_visible_inline_completion(cx));
     assert_editor_active_move_completion(&mut cx, |snapshot, move_target| {
         assert_eq!(move_target.to_point(&snapshot), Point::new(4, 3));
     });
@@ -106,7 +106,7 @@ async fn test_inline_completion_jump_button(cx: &mut gpui::TestAppContext) {
         &mut cx,
     );
 
-    cx.update_editor(|editor, cx| editor.update_visible_inline_completion(cx));
+    cx.update_editor(|editor, window, cx| editor.update_visible_inline_completion(cx));
     assert_editor_active_move_completion(&mut cx, |snapshot, move_target| {
         assert_eq!(move_target.to_point(&snapshot), Point::new(1, 3));
     });
@@ -147,7 +147,7 @@ async fn test_inline_completion_invalidation_range(cx: &mut gpui::TestAppContext
         &mut cx,
     );
 
-    cx.update_editor(|editor, cx| editor.update_visible_inline_completion(cx));
+    cx.update_editor(|editor, window, cx| editor.update_visible_inline_completion(cx));
     assert_editor_active_move_completion(&mut cx, |snapshot, move_target| {
         assert_eq!(move_target.to_point(&snapshot), edit_location);
     });
@@ -195,7 +195,7 @@ async fn test_inline_completion_invalidation_range(cx: &mut gpui::TestAppContext
         &mut cx,
     );
 
-    cx.update_editor(|editor, cx| editor.update_visible_inline_completion(cx));
+    cx.update_editor(|editor, window, cx| editor.update_visible_inline_completion(cx));
     assert_editor_active_move_completion(&mut cx, |snapshot, move_target| {
         assert_eq!(move_target.to_point(&snapshot), edit_location);
     });
@@ -264,7 +264,7 @@ fn assert_editor_active_move_completion(
 }
 
 fn accept_completion(cx: &mut EditorTestContext) {
-    cx.update_editor(|editor, cx| {
+    cx.update_editor(|editor, window, cx| {
         editor.accept_inline_completion(&crate::AcceptInlineCompletion, cx)
     })
 }
@@ -293,7 +293,7 @@ fn assign_editor_completion_provider(
     provider: Model<FakeInlineCompletionProvider>,
     cx: &mut EditorTestContext,
 ) {
-    cx.update_editor(|editor, cx| {
+    cx.update_editor(|editor, window, cx| {
         editor.set_inline_completion_provider(Some(provider), cx);
     })
 }

@@ -23,6 +23,7 @@ use std::{
         Arc,
     },
 };
+use ui::prelude::Window;
 use util::{
     assert_set_eq,
     test::{generate_marked_text, marked_text_ranges},
@@ -56,7 +57,7 @@ impl EditorTestContext {
             })
             .await
             .unwrap();
-        let editor = cx.add_window(|cx| {
+        let editor = cx.add_window(|window, cx| {
             let editor =
                 build_editor_with_project(project, MultiBuffer::build_from_buffer(buffer, cx), cx);
             editor.focus(cx);
@@ -114,7 +115,7 @@ impl EditorTestContext {
             multibuffer
         });
 
-        let editor = cx.add_window(|cx| {
+        let editor = cx.add_window(|window, cx| {
             let editor = build_editor(buffer, cx);
             editor.focus(cx);
             editor
@@ -148,9 +149,12 @@ impl EditorTestContext {
     #[track_caller]
     pub fn update_editor<F, T>(&mut self, update: F) -> T
     where
-        F: FnOnce(&mut Editor, &mut ViewContext<Editor>) -> T,
+        F: FnOnce(&mut Editor, &mut Window, &mut ViewContext<Editor>) -> T,
     {
-        self.editor.update(&mut self.cx, update)
+        self.editor
+            .update_in_window(self.window, &mut self.cx, |editor, window, cx| {
+                update(editor, window, cx)
+            })
     }
 
     pub fn multibuffer<F, T>(&mut self, read: F) -> T
@@ -164,7 +168,7 @@ impl EditorTestContext {
     where
         F: FnOnce(&mut MultiBuffer, &mut ModelContext<MultiBuffer>) -> T,
     {
-        self.update_editor(|editor, cx| editor.buffer().update(cx, update))
+        self.update_editor(|editor, window, cx| editor.buffer().update(cx, update))
     }
 
     pub fn buffer_text(&mut self) -> String {
@@ -172,7 +176,7 @@ impl EditorTestContext {
     }
 
     pub fn display_text(&mut self) -> String {
-        self.update_editor(|editor, cx| editor.display_text(cx))
+        self.update_editor(|editor, window, cx| editor.display_text(cx))
     }
 
     pub fn buffer<F, T>(&mut self, read: F) -> T
@@ -250,7 +254,7 @@ impl EditorTestContext {
     }
 
     pub fn pixel_position_for(&mut self, display_point: DisplayPoint) -> Point<Pixels> {
-        self.update_editor(|editor, cx| {
+        self.update_editor(|editor, window, cx| {
             let newest_point = editor.selections.newest_display(cx).head();
             let pixel_position = editor.pixel_position_of_newest_cursor.unwrap();
             let line_height = editor
@@ -278,8 +282,9 @@ impl EditorTestContext {
 
     pub fn set_diff_base(&mut self, diff_base: &str) {
         self.cx.run_until_parked();
-        let fs = self
-            .update_editor(|editor, cx| editor.project.as_ref().unwrap().read(cx).fs().as_fake());
+        let fs = self.update_editor(|editor, window, cx| {
+            editor.project.as_ref().unwrap().read(cx).fs().as_fake()
+        });
         let path = self.update_buffer(|buffer, _| buffer.file().unwrap().path().clone());
         fs.set_index_for_repo(
             &Self::root_path().join(".git"),
@@ -431,7 +436,7 @@ impl EditorTestContext {
     #[track_caller]
     pub fn assert_editor_background_highlights<Tag: 'static>(&mut self, marked_text: &str) {
         let expected_ranges = self.ranges(marked_text);
-        let actual_ranges: Vec<Range<usize>> = self.update_editor(|editor, cx| {
+        let actual_ranges: Vec<Range<usize>> = self.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             editor
                 .background_highlights
@@ -448,7 +453,7 @@ impl EditorTestContext {
     #[track_caller]
     pub fn assert_editor_text_highlights<Tag: ?Sized + 'static>(&mut self, marked_text: &str) {
         let expected_ranges = self.ranges(marked_text);
-        let snapshot = self.update_editor(|editor, cx| editor.snapshot(cx));
+        let snapshot = self.update_editor(|editor, window, cx| editor.snapshot(cx));
         let actual_ranges: Vec<Range<usize>> = snapshot
             .text_highlight_ranges::<Tag>()
             .map(|ranges| ranges.as_ref().clone().1)

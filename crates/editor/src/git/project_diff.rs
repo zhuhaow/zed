@@ -1143,7 +1143,8 @@ mod tests {
         .await;
 
         let project = Project::test(fs.clone(), [Path::new("/root")], cx).await;
-        let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
+        let workspace =
+            cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
         let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
 
         let file_a_editor = workspace

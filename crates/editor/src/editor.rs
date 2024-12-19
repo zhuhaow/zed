@@ -306,8 +306,8 @@ pub fn init(cx: &mut AppContext) {
     cx.observe_new_views(
         |workspace: &mut Workspace, _cx: &mut ViewContext<Workspace>| {
             workspace.register_action2(Editor::new_file);
-            workspace.register_action2(Editor::new_file_vertical);
-            workspace.register_action2(Editor::new_file_horizontal);
+            workspace.register_action(Editor::new_file_vertical);
+            workspace.register_action(Editor::new_file_horizontal);
         },
     )
     .detach();
@@ -1489,37 +1489,40 @@ impl Editor {
     fn new_file_vertical(
         workspace: &mut Workspace,
         _: &workspace::NewFileSplitVertical,
-
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
-        Self::new_file_in_direction(workspace, SplitDirection::vertical(cx), cx)
+        Self::new_file_in_direction(workspace, SplitDirection::vertical(cx), window, cx)
     }
 
     fn new_file_horizontal(
         workspace: &mut Workspace,
         _: &workspace::NewFileSplitHorizontal,
-
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
-        Self::new_file_in_direction(workspace, SplitDirection::horizontal(cx), cx)
+        Self::new_file_in_direction(workspace, SplitDirection::horizontal(cx), window, cx)
     }
 
     fn new_file_in_direction(
         workspace: &mut Workspace,
         direction: SplitDirection,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         let project = workspace.project().clone();
         let create = project.update(cx, |project, cx| project.create_buffer(cx));
+        let window_handle = window.handle();
 
         cx.spawn(|workspace, mut cx| async move {
             let buffer = create.await?;
-            workspace.update(&mut cx, move |workspace, cx| {
+            workspace.update_in_window(window_handle, &mut cx, move |workspace, window, cx| {
                 workspace.split_item(
                     direction,
                     Box::new(
                         cx.new_view(|cx| Editor::for_buffer(buffer, Some(project.clone()), cx)),
                     ),
+                    window,
                     cx,
                 )
             })?;
@@ -9296,15 +9299,18 @@ impl Editor {
     pub fn go_to_definition(
         &mut self,
         _: &GoToDefinition,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
-        let definition = self.go_to_definition_of_kind(GotoDefinitionKind::Symbol, false, cx);
+        let definition =
+            self.go_to_definition_of_kind(GotoDefinitionKind::Symbol, false, window, cx);
+        let window_handle = window.handle();
         cx.spawn(|editor, mut cx| async move {
             if definition.await? == Navigated::Yes {
                 return Ok(Navigated::Yes);
             }
-            match editor.update(&mut cx, |editor, cx| {
-                editor.find_all_references(&FindAllReferences, cx)
+            match editor.update_in_window(window_handle, &mut cx, |editor, window, cx| {
+                editor.find_all_references(&FindAllReferences, window, cx)
             })? {
                 Some(references) => references.await,
                 None => Ok(Navigated::No),
@@ -9315,63 +9321,71 @@ impl Editor {
     pub fn go_to_declaration(
         &mut self,
         _: &GoToDeclaration,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
-        self.go_to_definition_of_kind(GotoDefinitionKind::Declaration, false, cx)
+        self.go_to_definition_of_kind(GotoDefinitionKind::Declaration, false, window, cx)
     }
 
     pub fn go_to_declaration_split(
         &mut self,
         _: &GoToDeclaration,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
-        self.go_to_definition_of_kind(GotoDefinitionKind::Declaration, true, cx)
+        self.go_to_definition_of_kind(GotoDefinitionKind::Declaration, true, window, cx)
     }
 
     pub fn go_to_implementation(
         &mut self,
         _: &GoToImplementation,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
-        self.go_to_definition_of_kind(GotoDefinitionKind::Implementation, false, cx)
+        self.go_to_definition_of_kind(GotoDefinitionKind::Implementation, false, window, cx)
     }
 
     pub fn go_to_implementation_split(
         &mut self,
         _: &GoToImplementationSplit,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
-        self.go_to_definition_of_kind(GotoDefinitionKind::Implementation, true, cx)
+        self.go_to_definition_of_kind(GotoDefinitionKind::Implementation, true, window, cx)
     }
 
     pub fn go_to_type_definition(
         &mut self,
         _: &GoToTypeDefinition,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
-        self.go_to_definition_of_kind(GotoDefinitionKind::Type, false, cx)
+        self.go_to_definition_of_kind(GotoDefinitionKind::Type, false, window, cx)
     }
 
     pub fn go_to_definition_split(
         &mut self,
         _: &GoToDefinitionSplit,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
-        self.go_to_definition_of_kind(GotoDefinitionKind::Symbol, true, cx)
+        self.go_to_definition_of_kind(GotoDefinitionKind::Symbol, true, window, cx)
     }
 
     pub fn go_to_type_definition_split(
         &mut self,
         _: &GoToTypeDefinitionSplit,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
-        self.go_to_definition_of_kind(GotoDefinitionKind::Type, true, cx)
+        self.go_to_definition_of_kind(GotoDefinitionKind::Type, true, window, cx)
     }
 
     fn go_to_definition_of_kind(
         &mut self,
         kind: GotoDefinitionKind,
         split: bool,
+        window: &mut Window,
         cx: &mut ViewContext<Self>,
     ) -> Task<Result<Navigated>> {
         let Some(provider) = self.semantics_provider.clone() else {
@@ -9389,10 +9403,11 @@ impl Editor {
             return Task::ready(Ok(Navigated::No));
         };
 
+        let window_handle = window.handle();
         cx.spawn(|editor, mut cx| async move {
             let definitions = definitions.await?;
             let navigated = editor
-                .update(&mut cx, |editor, cx| {
+                .update_in_window(window_handle, &mut cx, |editor, window, cx| {
                     editor.navigate_to_hover_links(
                         Some(kind),
                         definitions
@@ -9403,6 +9418,7 @@ impl Editor {
                             .map(HoverLink::Text)
                             .collect::<Vec<_>>(),
                         split,
+                        window,
                         cx,
                     )
                 })?
@@ -9485,6 +9501,7 @@ impl Editor {
         kind: Option<GotoDefinitionKind>,
         mut definitions: Vec<HoverLink>,
         split: bool,
+        window: &mut Window,
         cx: &mut ViewContext<Editor>,
     ) -> Task<Result<Navigated>> {
         // If there is one definition, just open it directly
@@ -9526,6 +9543,8 @@ impl Editor {
                     }
                 }
             };
+
+            let window_handle = window.handle();
             cx.spawn(|editor, mut cx| async move {
                 let target = match target_task.await.context("target resolution task")? {
                     TargetTaskResult::AlreadyNavigated => return Ok(Navigated::Yes),
@@ -9533,7 +9552,7 @@ impl Editor {
                     TargetTaskResult::Location(Some(target)) => target,
                 };
 
-                editor.update(&mut cx, |editor, cx| {
+                editor.update_in_window(window_handle, &mut cx, |editor, window, cx| {
                     let Some(workspace) = editor.workspace() else {
                         return Navigated::No;
                     };
@@ -9550,10 +9569,12 @@ impl Editor {
                         });
                     } else {
                         cx.window_context().defer(move |cx| {
-                            let target_editor: View<Self> =
-                                workspace.update(cx, |workspace, cx| {
+                            let Ok(target_editor) = workspace.update_in_window(
+                                window_handle,
+                                cx,
+                                |workspace, window, cx| {
                                     let pane = if split {
-                                        workspace.adjacent_pane(cx)
+                                        workspace.adjacent_pane(window, cx)
                                     } else {
                                         workspace.active_pane().clone()
                                     };
@@ -9565,8 +9586,11 @@ impl Editor {
                                         true,
                                         cx,
                                     )
-                                });
-                            target_editor.update(cx, |target_editor, cx| {
+                                },
+                            ) else {
+                                return;
+                            };
+                            target_editor.update(cx, |target_editor: &mut Editor, cx| {
                                 // When selecting a definition in a different buffer, disable the nav history
                                 // to avoid creating a history entry at the previous cursor location.
                                 pane.update(cx, |pane, _| pane.disable_history());
@@ -9587,6 +9611,7 @@ impl Editor {
                 })
             })
         } else if !definitions.is_empty() {
+            let window_handle = window.handle();
             cx.spawn(|editor, mut cx| async move {
                 let (title, location_tasks, workspace) = editor
                     .update(&mut cx, |editor, cx| {
@@ -9638,8 +9663,10 @@ impl Editor {
                     return Ok(Navigated::No);
                 };
                 let opened = workspace
-                    .update(&mut cx, |workspace, cx| {
-                        Self::open_locations_in_multibuffer(workspace, locations, title, split, cx)
+                    .update_in_window(window_handle, &mut cx, |workspace, window, cx| {
+                        Self::open_locations_in_multibuffer(
+                            workspace, locations, title, split, window, cx,
+                        )
                     })
                     .ok();
 
@@ -9702,6 +9729,7 @@ impl Editor {
     pub fn find_all_references(
         &mut self,
         _: &FindAllReferences,
+        window: &Window,
         cx: &mut ViewContext<Self>,
     ) -> Option<Task<Result<Navigated>>> {
         let selection = self.selections.newest::<usize>(cx);
@@ -9737,6 +9765,7 @@ impl Editor {
         let workspace = self.workspace()?;
         let project = workspace.read(cx).project().clone();
         let references = project.update(cx, |project, cx| project.references(&buffer, head, cx));
+        let window_handle = window.handle();
         Some(cx.spawn(|editor, mut cx| async move {
             let _cleanup = defer({
                 let mut cx = cx.clone();
@@ -9760,7 +9789,7 @@ impl Editor {
                 return anyhow::Ok(Navigated::No);
             }
 
-            workspace.update(&mut cx, |workspace, cx| {
+            workspace.update_in_window(window_handle, &mut cx, |workspace, window, cx| {
                 let title = locations
                     .first()
                     .as_ref()
@@ -9774,7 +9803,7 @@ impl Editor {
                         )
                     })
                     .unwrap();
-                Self::open_locations_in_multibuffer(workspace, locations, title, false, cx);
+                Self::open_locations_in_multibuffer(workspace, locations, title, false, window, cx);
                 Navigated::Yes
             })
         }))
@@ -9786,6 +9815,7 @@ impl Editor {
         mut locations: Vec<Location>,
         title: String,
         split: bool,
+        window: &mut Window,
         cx: &mut ViewContext<Workspace>,
     ) {
         // If there are multiple definitions, open them in a multibuffer
@@ -9845,7 +9875,7 @@ impl Editor {
         let item_id = item.item_id();
 
         if split {
-            workspace.split_item(SplitDirection::Right, item.clone(), cx);
+            workspace.split_item(SplitDirection::Right, item.clone(), window, cx);
         } else {
             let destination_index = workspace.active_pane().update(cx, |pane, cx| {
                 if PreviewTabsSettings::get_global(cx).enable_preview_from_code_navigation {
@@ -12393,18 +12423,29 @@ impl Editor {
         });
     }
 
-    pub fn open_excerpts_in_split(&mut self, _: &OpenExcerptsSplit, cx: &mut ViewContext<Self>) {
-        self.open_excerpts_common(None, true, cx)
+    pub fn open_excerpts_in_split(
+        &mut self,
+        _: &OpenExcerptsSplit,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
+        self.open_excerpts_common(None, true, window, cx)
     }
 
-    pub fn open_excerpts(&mut self, _: &OpenExcerpts, cx: &mut ViewContext<Self>) {
-        self.open_excerpts_common(None, false, cx)
+    pub fn open_excerpts(
+        &mut self,
+        _: &OpenExcerpts,
+        window: &mut Window,
+        cx: &mut ViewContext<Self>,
+    ) {
+        self.open_excerpts_common(None, false, window, cx)
     }
 
     fn open_excerpts_common(
         &mut self,
         jump_data: Option<JumpData>,
         split: bool,
+        window: &Window,
         cx: &mut ViewContext<Self>,
     ) {
         let Some(workspace) = self.workspace() else {
@@ -12476,63 +12517,68 @@ impl Editor {
         // We defer the pane interaction because we ourselves are a workspace item
         // and activating a new item causes the pane to call a method on us reentrantly,
         // which panics if we're on the stack.
+        let window_handle = window.handle();
         cx.window_context().defer(move |cx| {
-            workspace.update(cx, |workspace, cx| {
-                let pane = if split {
-                    workspace.adjacent_pane(cx)
-                } else {
-                    workspace.active_pane().clone()
-                };
+            workspace
+                .update_in_window(window_handle, cx, |workspace, window, cx| {
+                    let pane = if split {
+                        workspace.adjacent_pane(window, cx)
+                    } else {
+                        workspace.active_pane().clone()
+                    };
 
-                for (buffer, (ranges, scroll_offset)) in new_selections_by_buffer {
-                    let editor = buffer
-                        .read(cx)
-                        .file()
-                        .is_none()
-                        .then(|| {
-                            // Handle file-less buffers separately: those are not really the project items, so won't have a paroject path or entity id,
-                            // so `workspace.open_project_item` will never find them, always opening a new editor.
-                            // Instead, we try to activate the existing editor in the pane first.
-                            let (editor, pane_item_index) =
-                                pane.read(cx).items().enumerate().find_map(|(i, item)| {
-                                    let editor = item.downcast::<Editor>()?;
-                                    let singleton_buffer =
-                                        editor.read(cx).buffer().read(cx).as_singleton()?;
-                                    if singleton_buffer == buffer {
-                                        Some((editor, i))
-                                    } else {
-                                        None
-                                    }
-                                })?;
-                            pane.update(cx, |pane, cx| {
-                                pane.activate_item(pane_item_index, true, true, cx)
+                    for (buffer, (ranges, scroll_offset)) in new_selections_by_buffer {
+                        let editor = buffer
+                            .read(cx)
+                            .file()
+                            .is_none()
+                            .then(|| {
+                                // Handle file-less buffers separately: those are not really the project items, so won't have a paroject path or entity id,
+                                // so `workspace.open_project_item` will never find them, always opening a new editor.
+                                // Instead, we try to activate the existing editor in the pane first.
+                                let (editor, pane_item_index) =
+                                    pane.read(cx).items().enumerate().find_map(|(i, item)| {
+                                        let editor = item.downcast::<Editor>()?;
+                                        let singleton_buffer =
+                                            editor.read(cx).buffer().read(cx).as_singleton()?;
+                                        if singleton_buffer == buffer {
+                                            Some((editor, i))
+                                        } else {
+                                            None
+                                        }
+                                    })?;
+                                pane.update(cx, |pane, cx| {
+                                    pane.activate_item(pane_item_index, true, true, cx)
+                                });
+                                Some(editor)
+                            })
+                            .flatten()
+                            .unwrap_or_else(|| {
+                                workspace.open_project_item::<Self>(
+                                    pane.clone(),
+                                    buffer,
+                                    true,
+                                    true,
+                                    cx,
+                                )
                             });
-                            Some(editor)
-                        })
-                        .flatten()
-                        .unwrap_or_else(|| {
-                            workspace.open_project_item::<Self>(
-                                pane.clone(),
-                                buffer,
-                                true,
-                                true,
-                                cx,
-                            )
-                        });
 
-                    editor.update(cx, |editor, cx| {
-                        let autoscroll = match scroll_offset {
-                            Some(scroll_offset) => Autoscroll::top_relative(scroll_offset as usize),
-                            None => Autoscroll::newest(),
-                        };
-                        let nav_history = editor.nav_history.take();
-                        editor.change_selections(Some(autoscroll), cx, |s| {
-                            s.select_ranges(ranges);
+                        editor.update(cx, |editor, cx| {
+                            let autoscroll = match scroll_offset {
+                                Some(scroll_offset) => {
+                                    Autoscroll::top_relative(scroll_offset as usize)
+                                }
+                                None => Autoscroll::newest(),
+                            };
+                            let nav_history = editor.nav_history.take();
+                            editor.change_selections(Some(autoscroll), cx, |s| {
+                                s.select_ranges(ranges);
+                            });
+                            editor.nav_history = nav_history;
                         });
-                        editor.nav_history = nav_history;
-                    });
-                }
-            })
+                    }
+                })
+                .ok();
         });
     }
 

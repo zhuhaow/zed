@@ -243,7 +243,7 @@ mod tests {
             }
         "});
         cx.editor(|editor, _app| assert!(editor.mouse_context_menu.is_none()));
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             deploy_context_menu(editor, Some(Default::default()), point, cx)
         });
 

@@ -13,7 +13,7 @@ const COPILOT_SIGN_UP_URL: &str = "https://github.com/features/copilot";
 
 struct CopilotStartingToast;
 
-pub fn initiate_sign_in(cx: &mut WindowContext) {
+pub fn initiate_sign_in(window: &Window, cx: &mut WindowContext) {
     let Some(copilot) = Copilot::global(cx) else {
         return;
     };
@@ -40,11 +40,12 @@ pub fn initiate_sign_in(cx: &mut WindowContext) {
                 return;
             };
 
+            let window_handle = window.handle();
             cx.spawn(|mut cx| async move {
                 task.await;
                 if let Some(copilot) = cx.update(|cx| Copilot::global(cx)).ok().flatten() {
                     workspace
-                        .update(&mut cx, |workspace, window, cx| {
+                        .update_in_window(window_handle, &mut cx, |workspace, window, cx| {
                             match copilot.read(cx).status() {
                                 Status::Authorized => workspace.show_toast(
                                     Toast::new(

@@ -943,7 +943,7 @@ mod tests {
                 three
                 fn test() { printˇln!(); }
             "});
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             let anchor = snapshot
                 .buffer_snapshot
@@ -995,7 +995,7 @@ mod tests {
         assert_eq!(counter.load(atomic::Ordering::Acquire), 1);
 
         //apply a completion and check it was successfully applied
-        let _apply_additional_edits = cx.update_editor(|editor, cx| {
+        let _apply_additional_edits = cx.update_editor(|editor, window, cx| {
             editor.context_menu_next(&Default::default(), cx);
             editor
                 .confirm_completion(&ConfirmCompletion::default(), cx)
@@ -1041,7 +1041,7 @@ mod tests {
         let mut request = cx
             .lsp
             .handle_request::<lsp::request::HoverRequest, _, _>(|_, _| async move { Ok(None) });
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             let anchor = snapshot
                 .buffer_snapshot
@@ -1079,7 +1079,7 @@ mod tests {
             fn test() { printˇln!(); }
         "});
 
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             let anchor = snapshot
                 .buffer_snapshot
@@ -1131,7 +1131,7 @@ mod tests {
         let mut request = cx
             .lsp
             .handle_request::<lsp::request::HoverRequest, _, _>(|_, _| async move { Ok(None) });
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             let anchor = snapshot
                 .buffer_snapshot
@@ -1163,7 +1163,7 @@ mod tests {
         cx.set_state(indoc! {"
             fˇn test() { println!(); }
         "});
-        cx.update_editor(|editor, cx| hover(editor, &Hover, cx));
+        cx.update_editor(|editor, window, cx| hover(editor, &Hover, cx));
         let symbol_range = cx.lsp_range(indoc! {"
             «fn» test() { println!(); }
         "});
@@ -1230,7 +1230,7 @@ mod tests {
         cx.set_state(indoc! {"
             fˇn test() { println!(); }
         "});
-        cx.update_editor(|editor, cx| hover(editor, &Hover, cx));
+        cx.update_editor(|editor, window, cx| hover(editor, &Hover, cx));
         let symbol_range = cx.lsp_range(indoc! {"
             «fn» test() { println!(); }
         "});
@@ -1291,7 +1291,7 @@ mod tests {
         cx.set_state(indoc! {"
             fˇn test() { println!(); }
         "});
-        cx.update_editor(|editor, cx| hover(editor, &Hover, cx));
+        cx.update_editor(|editor, window, cx| hover(editor, &Hover, cx));
         let symbol_range = cx.lsp_range(indoc! {"
             «fn» test() { println!(); }
         "});
@@ -1378,7 +1378,7 @@ mod tests {
         });
 
         // Hover pops diagnostic immediately
-        cx.update_editor(|editor, cx| hover(editor, &Hover, cx));
+        cx.update_editor(|editor, window, cx| hover(editor, &Hover, cx));
         cx.background_executor.run_until_parked();
 
         cx.editor(|Editor { hover_state, .. }, _| {
@@ -1453,10 +1453,10 @@ mod tests {
                 }))
             }
         });
-        cx.update_editor(|editor, cx| hover(editor, &Default::default(), cx));
+        cx.update_editor(|editor, window, cx| hover(editor, &Default::default(), cx));
         cx.run_until_parked();
 
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let popover = editor.hover_state.info_popovers.first().unwrap();
             let content = popover.get_rendered_text(cx);
 
@@ -1568,7 +1568,7 @@ mod tests {
             .next()
             .await;
         cx.background_executor.run_until_parked();
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let expected_layers = vec![entire_hint_label.to_string()];
             assert_eq!(expected_layers, cached_hint_labels(editor));
             assert_eq!(expected_layers, visible_hint_labels(editor, cx));
@@ -1589,7 +1589,7 @@ mod tests {
             .first()
             .cloned()
             .unwrap();
-        let new_type_hint_part_hover_position = cx.update_editor(|editor, cx| {
+        let new_type_hint_part_hover_position = cx.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             let previous_valid = inlay_range.start.to_display_point(&snapshot);
             let next_valid = inlay_range.end.to_display_point(&snapshot);
@@ -1608,7 +1608,7 @@ mod tests {
                 column_overshoot_after_line_end: 0,
             }
         });
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             update_inlay_link_and_hover_points(
                 &editor.snapshot(cx),
                 new_type_hint_part_hover_position,
@@ -1678,7 +1678,7 @@ mod tests {
             .await;
         cx.background_executor.run_until_parked();
 
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             update_inlay_link_and_hover_points(
                 &editor.snapshot(cx),
                 new_type_hint_part_hover_position,
@@ -1691,7 +1691,7 @@ mod tests {
         cx.background_executor
             .advance_clock(Duration::from_millis(get_hover_popover_delay(&cx) + 100));
         cx.background_executor.run_until_parked();
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let hover_state = &editor.hover_state;
             assert!(
                 hover_state.diagnostic_popover.is_none() && hover_state.info_popovers.len() == 1
@@ -1713,7 +1713,7 @@ mod tests {
             );
         });
 
-        let struct_hint_part_hover_position = cx.update_editor(|editor, cx| {
+        let struct_hint_part_hover_position = cx.update_editor(|editor, window, cx| {
             let snapshot = editor.snapshot(cx);
             let previous_valid = inlay_range.start.to_display_point(&snapshot);
             let next_valid = inlay_range.end.to_display_point(&snapshot);
@@ -1732,7 +1732,7 @@ mod tests {
                 column_overshoot_after_line_end: 0,
             }
         });
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             update_inlay_link_and_hover_points(
                 &editor.snapshot(cx),
                 struct_hint_part_hover_position,
@@ -1745,7 +1745,7 @@ mod tests {
         cx.background_executor
             .advance_clock(Duration::from_millis(get_hover_popover_delay(&cx) + 100));
         cx.background_executor.run_until_parked();
-        cx.update_editor(|editor, cx| {
+        cx.update_editor(|editor, window, cx| {
             let hover_state = &editor.hover_state;
             assert!(
                 hover_state.diagnostic_popover.is_none() && hover_state.info_popovers.len() == 1

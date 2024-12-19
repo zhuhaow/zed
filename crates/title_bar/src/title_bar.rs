@@ -374,7 +374,7 @@ impl TitleBar {
                     cx.listener(move |this, _, window, cx| {
                         this.workspace
                             .update(cx, |workspace, cx| {
-                                workspace.follow(host_peer_id, cx);
+                                workspace.follow(host_peer_id, window, cx);
                             })
                             .log_err();
                     })

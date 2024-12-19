@@ -171,7 +171,7 @@ impl TitleBar {
                                                 if is_following {
                                                     workspace.unfollow(peer_id, cx);
                                                 } else {
-                                                    workspace.follow(peer_id, cx);
+                                                    workspace.follow(peer_id, window, cx);
                                                 }
                                             })
                                             .ok();

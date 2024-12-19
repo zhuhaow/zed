@@ -8,7 +8,7 @@ use project::lsp_ext_command::ExpandMacro;
 use text::ToPointUtf16;
 
 use crate::{
-    element::register_action, lsp_ext::find_specific_language_server_in_selection, Editor,
+    element::register_action2, lsp_ext::find_specific_language_server_in_selection, Editor,
     ExpandMacroRecursively, OpenDocs,
 };
 
@@ -25,8 +25,8 @@ pub fn apply_related_actions(editor: &View<Editor>, cx: &mut WindowContext) {
         })
         .is_some()
     {
-        register_action(editor, cx, expand_macro_recursively);
-        register_action(editor, cx, open_docs);
+        register_action2(editor, cx, expand_macro_recursively);
+        register_action2(editor, cx, open_docs);
     }
 }
 

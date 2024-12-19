@@ -124,7 +124,7 @@ impl EditorLspTestContext {
             )
             .await;
 
-        let window = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
+        let window = cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
 
         let workspace = window.root_view(cx);
 
@@ -264,7 +264,7 @@ impl EditorLspTestContext {
     }
 
     pub fn to_lsp_range(&mut self, range: Range<usize>) -> lsp::Range {
-        let snapshot = self.update_editor(|editor, cx| editor.snapshot(cx));
+        let snapshot = self.update_editor(|editor, window, cx| editor.snapshot(cx));
         let start_point = range.start.to_point(&snapshot.buffer_snapshot);
         let end_point = range.end.to_point(&snapshot.buffer_snapshot);
 
@@ -290,7 +290,7 @@ impl EditorLspTestContext {
     }
 
     pub fn to_lsp(&mut self, offset: usize) -> lsp::Position {
-        let snapshot = self.update_editor(|editor, cx| editor.snapshot(cx));
+        let snapshot = self.update_editor(|editor, window, cx| editor.snapshot(cx));
         let point = offset.to_point(&snapshot.buffer_snapshot);
 
         self.editor(|editor, cx| {
