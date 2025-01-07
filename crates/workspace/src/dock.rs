@@ -332,9 +332,6 @@ impl Dock {
             self.is_open = open;
             if let Some(active_panel) = self.panel_entries.get(self.active_panel_index) {
                 active_panel.panel.set_active(open, cx);
-                if !open {
-                    self.active_panel_index = None;
-                }
             }
 
             cx.notify();
