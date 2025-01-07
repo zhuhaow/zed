@@ -301,6 +301,7 @@ fn show_software_emulation_warning_if_needed(
 }
 
 fn initialize_panels(prompt_builder: Arc<PromptBuilder>, cx: &mut ViewContext<Workspace>) {
+    let release_channel = ReleaseChannel::global(cx);
     let assistant2_feature_flag = cx.wait_for_flag::<feature_flags::Assistant2FeatureFlag>();
     let git_ui_feature_flag = cx.wait_for_flag::<feature_flags::GitUiFeatureFlag>();
 
@@ -346,7 +347,7 @@ fn initialize_panels(prompt_builder: Arc<PromptBuilder>, cx: &mut ViewContext<Wo
             workspace.add_panel(channels_panel, cx);
             workspace.add_panel(chat_panel, cx);
             workspace.add_panel(notification_panel, cx);
-            workspace.add_panel(assistant_panel, cx)
+            workspace.add_panel(assistant_panel, cx);
         })?;
 
         let git_ui_enabled = {
@@ -370,7 +371,7 @@ fn initialize_panels(prompt_builder: Arc<PromptBuilder>, cx: &mut ViewContext<Wo
             }
         })?;
 
-        let is_assistant2_enabled = if cfg!(test) {
+        let is_assistant2_enabled = if cfg!(test) || release_channel != ReleaseChannel::Dev {
             false
         } else {
             let mut assistant2_feature_flag = assistant2_feature_flag.fuse();
@@ -397,9 +398,7 @@ fn initialize_panels(prompt_builder: Arc<PromptBuilder>, cx: &mut ViewContext<Wo
             } else {
                 workspace.register_action(assistant::AssistantPanel::inline_assist);
             }
-        })?;
-
-        anyhow::Ok(())
+        })
     })
     .detach();
 }
@@ -714,7 +713,7 @@ fn initialize_pane(workspace: &Workspace, pane: &View<Pane>, cx: &mut ViewContex
     });
 }
 
-fn about(_: &mut Workspace, _: &zed_actions::About, cx: &mut ViewContext<Workspace>) {
+fn about(_: &mut Workspace, _: &zed_actions::About, cx: &mut gpui::ViewContext<Workspace>) {
     let release_channel = ReleaseChannel::global(cx).display_name();
     let version = env!("CARGO_PKG_VERSION");
     let message = format!("{release_channel} {version}");

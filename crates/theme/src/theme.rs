@@ -71,7 +71,7 @@ impl From<WindowAppearance> for Appearance {
     }
 }
 
-/// Which themes should be loaded. This is used primarily for testing.
+/// Which themes should be loaded. This is used primarlily for testing.
 pub enum LoadThemes {
     /// Only load the base theme.
     ///

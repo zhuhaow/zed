@@ -143,7 +143,7 @@ fn populate_pane_items(
     pane: &mut Pane,
     items: Vec<View<TerminalView>>,
     active_item: Option<u64>,
-    cx: &mut ViewContext<Pane>,
+    cx: &mut ViewContext<'_, Pane>,
 ) {
     let mut item_index = pane.items_len();
     for item in items {

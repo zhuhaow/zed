@@ -100,7 +100,7 @@ impl TerminalPanel {
         terminal_panel
     }
 
-    pub fn set_assistant_enabled(&mut self, enabled: bool, cx: &mut ViewContext<Self>) {
+    pub fn asssistant_enabled(&mut self, enabled: bool, cx: &mut ViewContext<Self>) {
         self.assistant_enabled = enabled;
         if enabled {
             let focus_handle = self
@@ -824,7 +824,7 @@ impl TerminalPanel {
         task_pane: View<Pane>,
         terminal_item_index: usize,
         terminal_to_replace: View<TerminalView>,
-        cx: &mut ViewContext<Self>,
+        cx: &mut ViewContext<'_, Self>,
     ) -> Task<Option<()>> {
         let reveal = spawn_task.reveal;
         let reveal_target = spawn_task.reveal_target;
@@ -1122,7 +1122,7 @@ async fn wait_for_terminals_tasks(
     let _: Vec<()> = join_all(pending_tasks).await;
 }
 
-fn add_paths_to_terminal(pane: &mut Pane, paths: &[PathBuf], cx: &mut ViewContext<Pane>) {
+fn add_paths_to_terminal(pane: &mut Pane, paths: &[PathBuf], cx: &mut ViewContext<'_, Pane>) {
     if let Some(terminal_view) = pane
         .active_item()
         .and_then(|item| item.downcast::<TerminalView>())
@@ -1392,10 +1392,6 @@ impl Panel for TerminalPanel {
 
     fn pane(&self) -> Option<View<Pane>> {
         Some(self.active_pane.clone())
-    }
-
-    fn activation_priority(&self) -> u32 {
-        1
     }
 }
 

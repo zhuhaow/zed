@@ -1,4 +1,4 @@
-use crate::{lsp_command::LspCommand, lsp_store::LspStore, make_text_document_identifier};
+use crate::{lsp_command::LspCommand, lsp_store::LspStore};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use gpui::{AppContext, AsyncAppContext, Model};
@@ -53,11 +53,13 @@ impl LspCommand for ExpandMacro {
         _: &Buffer,
         _: &Arc<LanguageServer>,
         _: &AppContext,
-    ) -> Result<ExpandMacroParams> {
-        Ok(ExpandMacroParams {
-            text_document: make_text_document_identifier(path)?,
+    ) -> ExpandMacroParams {
+        ExpandMacroParams {
+            text_document: lsp::TextDocumentIdentifier {
+                uri: lsp::Url::from_file_path(path).unwrap(),
+            },
             position: point_to_lsp(self.position),
-        })
+        }
     }
 
     async fn response_from_lsp(
@@ -177,13 +179,13 @@ impl LspCommand for OpenDocs {
         _: &Buffer,
         _: &Arc<LanguageServer>,
         _: &AppContext,
-    ) -> Result<OpenDocsParams> {
-        Ok(OpenDocsParams {
+    ) -> OpenDocsParams {
+        OpenDocsParams {
             text_document: lsp::TextDocumentIdentifier {
                 uri: lsp::Url::from_file_path(path).unwrap(),
             },
             position: point_to_lsp(self.position),
-        })
+        }
     }
 
     async fn response_from_lsp(
@@ -290,10 +292,10 @@ impl LspCommand for SwitchSourceHeader {
         _: &Buffer,
         _: &Arc<LanguageServer>,
         _: &AppContext,
-    ) -> Result<SwitchSourceHeaderParams> {
-        Ok(SwitchSourceHeaderParams(make_text_document_identifier(
-            path,
-        )?))
+    ) -> SwitchSourceHeaderParams {
+        SwitchSourceHeaderParams(lsp::TextDocumentIdentifier {
+            uri: lsp::Url::from_file_path(path).unwrap(),
+        })
     }
 
     async fn response_from_lsp(

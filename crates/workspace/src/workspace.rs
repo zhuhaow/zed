@@ -995,7 +995,7 @@ impl Workspace {
                     this.update(&mut cx, |this, cx| {
                         if let Some(display) = cx.display() {
                             if let Ok(display_uuid) = display.uuid() {
-                                let window_bounds = cx.inner_window_bounds();
+                                let window_bounds = cx.window_bounds();
                                 if let Some(database_id) = workspace_id {
                                     cx.background_executor()
                                         .spawn(DB.set_window_open_status(
@@ -1127,14 +1127,22 @@ impl Workspace {
                 .as_ref()
                 .map(|ws| &ws.location)
                 .and_then(|loc| match loc {
-                    SerializedWorkspaceLocation::Local(_, order) => {
-                        Some((loc.sorted_paths(), order.order()))
+                    SerializedWorkspaceLocation::Local(paths, order) => {
+                        Some((paths.paths(), order.order()))
                     }
                     _ => None,
                 });
 
             if let Some((paths, order)) = workspace_location {
-                paths_to_open = paths.iter().cloned().collect();
+                // todo: should probably move this logic to a method on the SerializedWorkspaceLocation
+                // it's only valid for Local and would be more clear there and be able to be tested
+                // and reused elsewhere
+                paths_to_open = order
+                    .iter()
+                    .zip(paths.iter())
+                    .sorted_by_key(|(i, _)| *i)
+                    .map(|(_, path)| path.clone())
+                    .collect();
 
                 if order.iter().enumerate().any(|(i, &j)| i != j) {
                     project_handle
@@ -1698,11 +1706,11 @@ impl Workspace {
         cx.defer(|cx| {
             cx.windows().iter().find(|window| {
                 window
-                    .update(cx, |_, cx| {
-                        if cx.is_window_active() {
+                    .update(cx, |_, window| {
+                        if window.is_window_active() {
                             //This can only get called when the window's project connection has been lost
                             //so we don't need to prompt the user for anything and instead just close the window
-                            cx.remove_window();
+                            window.remove_window();
                             true
                         } else {
                             false
@@ -2288,10 +2296,6 @@ impl Workspace {
             let other_is_zoomed = self.zoomed.is_some() && self.zoomed_position != Some(dock_side);
             let was_visible = dock.is_open() && !other_is_zoomed;
             dock.set_open(!was_visible, cx);
-
-            if dock.active_panel().is_none() && dock.panels_len() > 0 {
-                dock.activate_panel(0, cx);
-            }
 
             if let Some(active_panel) = dock.active_panel() {
                 if was_visible {
@@ -4557,7 +4561,7 @@ impl Workspace {
         div
     }
 
-    pub fn has_active_modal(&self, cx: &WindowContext) -> bool {
+    pub fn has_active_modal(&self, cx: &WindowContext<'_>) -> bool {
         self.modal_layer.read(cx).has_active_modal()
     }
 
@@ -5014,7 +5018,7 @@ impl Render for Workspace {
 fn resize_bottom_dock(
     new_size: Pixels,
     workspace: &mut Workspace,
-    cx: &mut ViewContext<Workspace>,
+    cx: &mut ViewContext<'_, Workspace>,
 ) {
     let size = new_size.min(workspace.bounds.bottom() - RESIZE_HANDLE_SIZE);
     workspace.bottom_dock.update(cx, |bottom_dock, cx| {
@@ -5022,14 +5026,22 @@ fn resize_bottom_dock(
     });
 }
 
-fn resize_right_dock(new_size: Pixels, workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) {
+fn resize_right_dock(
+    new_size: Pixels,
+    workspace: &mut Workspace,
+    cx: &mut ViewContext<'_, Workspace>,
+) {
     let size = new_size.max(workspace.bounds.left() - RESIZE_HANDLE_SIZE);
     workspace.right_dock.update(cx, |right_dock, cx| {
         right_dock.resize_active_panel(Some(size), cx);
     });
 }
 
-fn resize_left_dock(new_size: Pixels, workspace: &mut Workspace, cx: &mut ViewContext<Workspace>) {
+fn resize_left_dock(
+    new_size: Pixels,
+    workspace: &mut Workspace,
+    cx: &mut ViewContext<'_, Workspace>,
+) {
     let size = new_size.min(workspace.bounds.right() - RESIZE_HANDLE_SIZE);
 
     workspace.left_dock.update(cx, |left_dock, cx| {
@@ -5553,22 +5565,15 @@ pub fn open_paths(
         }
 
         if let Some(existing) = existing {
-            let open_task = existing
-                .update(&mut cx, |workspace, cx| {
-                    cx.activate_window();
-                    workspace.open_paths(abs_paths, open_visible, None, cx)
-                })?
-                .await;
-
-            _ = existing.update(&mut cx, |workspace, cx| {
-                for item in open_task.iter().flatten() {
-                    if let Err(e) = item {
-                        workspace.show_error(&e, cx);
-                    }
-                }
-            });
-
-            Ok((existing, open_task))
+            Ok((
+                existing,
+                existing
+                    .update(&mut cx, |workspace, cx| {
+                        cx.activate_window();
+                        workspace.open_paths(abs_paths, open_visible, None, cx)
+                    })?
+                    .await,
+            ))
         } else {
             cx.update(move |cx| {
                 Workspace::new_local(
@@ -6144,7 +6149,7 @@ fn resize_edge(
     }
 }
 
-fn join_pane_into_active(active_pane: &View<Pane>, pane: &View<Pane>, cx: &mut WindowContext) {
+fn join_pane_into_active(active_pane: &View<Pane>, pane: &View<Pane>, cx: &mut WindowContext<'_>) {
     if pane == active_pane {
         return;
     } else if pane.read(cx).items_len() == 0 {
@@ -6158,7 +6163,7 @@ fn join_pane_into_active(active_pane: &View<Pane>, pane: &View<Pane>, cx: &mut W
     }
 }
 
-fn move_all_items(from_pane: &View<Pane>, to_pane: &View<Pane>, cx: &mut WindowContext) {
+fn move_all_items(from_pane: &View<Pane>, to_pane: &View<Pane>, cx: &mut WindowContext<'_>) {
     let destination_is_different = from_pane != to_pane;
     let mut moved_items = 0;
     for (item_ix, item_handle) in from_pane
@@ -6190,7 +6195,7 @@ pub fn move_item(
     destination: &View<Pane>,
     item_id_to_move: EntityId,
     destination_index: usize,
-    cx: &mut WindowContext,
+    cx: &mut WindowContext<'_>,
 ) {
     let Some((item_ix, item_handle)) = source
         .read(cx)
@@ -6222,7 +6227,7 @@ pub fn move_active_item(
     destination: &View<Pane>,
     focus_destination: bool,
     close_if_empty: bool,
-    cx: &mut WindowContext,
+    cx: &mut WindowContext<'_>,
 ) {
     if source == destination {
         return;
@@ -7270,10 +7275,14 @@ mod tests {
         let (panel_1, panel_2) = workspace.update(cx, |workspace, cx| {
             let panel_1 = cx.new_view(|cx| TestPanel::new(DockPosition::Left, cx));
             workspace.add_panel(panel_1.clone(), cx);
-            workspace.toggle_dock(DockPosition::Left, cx);
+            workspace
+                .left_dock()
+                .update(cx, |left_dock, cx| left_dock.set_open(true, cx));
             let panel_2 = cx.new_view(|cx| TestPanel::new(DockPosition::Right, cx));
             workspace.add_panel(panel_2.clone(), cx);
-            workspace.toggle_dock(DockPosition::Right, cx);
+            workspace
+                .right_dock()
+                .update(cx, |right_dock, cx| right_dock.set_open(true, cx));
 
             let left_dock = workspace.left_dock();
             assert_eq!(

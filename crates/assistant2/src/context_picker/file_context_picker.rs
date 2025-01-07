@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+use std::ops::RangeInclusive;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -5,13 +7,14 @@ use std::sync::Arc;
 use fuzzy::PathMatch;
 use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, View, WeakModel, WeakView};
 use picker::{Picker, PickerDelegate};
-use project::{PathMatchCandidateSet, ProjectPath, WorktreeId};
-use ui::{prelude::*, ListItem, Tooltip};
+use project::{PathMatchCandidateSet, WorktreeId};
+use ui::{prelude::*, ListItem};
 use util::ResultExt as _;
 use workspace::Workspace;
 
-use crate::context_picker::{ConfirmBehavior, ContextPicker};
-use crate::context_store::{ContextStore, IncludedFile};
+use crate::context::ContextKind;
+use crate::context_picker::ContextPicker;
+use crate::context_store::ContextStore;
 
 pub struct FileContextPicker {
     picker: View<Picker<FileContextPickerDelegate>>,
@@ -22,15 +25,9 @@ impl FileContextPicker {
         context_picker: WeakView<ContextPicker>,
         workspace: WeakView<Workspace>,
         context_store: WeakModel<ContextStore>,
-        confirm_behavior: ConfirmBehavior,
         cx: &mut ViewContext<Self>,
     ) -> Self {
-        let delegate = FileContextPickerDelegate::new(
-            context_picker,
-            workspace,
-            context_store,
-            confirm_behavior,
-        );
+        let delegate = FileContextPickerDelegate::new(context_picker, workspace, context_store);
         let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
 
         Self { picker }
@@ -53,7 +50,6 @@ pub struct FileContextPickerDelegate {
     context_picker: WeakView<ContextPicker>,
     workspace: WeakView<Workspace>,
     context_store: WeakModel<ContextStore>,
-    confirm_behavior: ConfirmBehavior,
     matches: Vec<PathMatch>,
     selected_index: usize,
 }
@@ -63,13 +59,11 @@ impl FileContextPickerDelegate {
         context_picker: WeakView<ContextPicker>,
         workspace: WeakView<Workspace>,
         context_store: WeakModel<ContextStore>,
-        confirm_behavior: ConfirmBehavior,
     ) -> Self {
         Self {
             context_picker,
             workspace,
             context_store,
-            confirm_behavior,
             matches: Vec::new(),
             selected_index: 0,
         }
@@ -189,9 +183,7 @@ impl PickerDelegate for FileContextPickerDelegate {
     }
 
     fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
-        let Some(mat) = self.matches.get(self.selected_index) else {
-            return;
-        };
+        let mat = &self.matches[self.selected_index];
 
         let workspace = self.workspace.clone();
         let Some(project) = workspace
@@ -201,40 +193,13 @@ impl PickerDelegate for FileContextPickerDelegate {
             return;
         };
         let path = mat.path.clone();
-
-        if self
-            .context_store
-            .update(cx, |context_store, _cx| {
-                match context_store.included_file(&path) {
-                    Some(IncludedFile::Direct(context_id)) => {
-                        context_store.remove_context(&context_id);
-                        true
-                    }
-                    Some(IncludedFile::InDirectory(_)) => true,
-                    None => false,
-                }
-            })
-            .unwrap_or(true)
-        {
-            return;
-        }
-
         let worktree_id = WorktreeId::from_usize(mat.worktree_id);
-        let confirm_behavior = self.confirm_behavior;
         cx.spawn(|this, mut cx| async move {
             let Some(open_buffer_task) = project
                 .update(&mut cx, |project, cx| {
-                    let project_path = ProjectPath {
-                        worktree_id,
-                        path: path.clone(),
-                    };
-
-                    let task = project.open_buffer(project_path, cx);
-
-                    Some(task)
+                    project.open_buffer((worktree_id, path.clone()), cx)
                 })
                 .ok()
-                .flatten()
             else {
                 return anyhow::Ok(());
             };
@@ -242,18 +207,22 @@ impl PickerDelegate for FileContextPickerDelegate {
             let buffer = open_buffer_task.await?;
 
             this.update(&mut cx, |this, cx| {
-                this.delegate
-                    .context_store
-                    .update(cx, |context_store, cx| {
-                        context_store.insert_file(buffer.read(cx));
-                    })?;
+                this.delegate.context_store.update(cx, |context_store, cx| {
+                    let mut text = String::new();
+                    text.push_str(&codeblock_fence_for_path(Some(&path), None));
+                    text.push_str(&buffer.read(cx).text());
+                    if !text.ends_with('\n') {
+                        text.push('\n');
+                    }
 
-                match confirm_behavior {
-                    ConfirmBehavior::KeepOpen => {}
-                    ConfirmBehavior::Close => this.delegate.dismissed(cx),
-                }
+                    text.push_str("```\n");
 
-                anyhow::Ok(())
+                    context_store.insert_context(
+                        ContextKind::File,
+                        path.to_string_lossy().to_string(),
+                        text,
+                    );
+                })
             })??;
 
             anyhow::Ok(())
@@ -274,7 +243,7 @@ impl PickerDelegate for FileContextPickerDelegate {
         &self,
         ix: usize,
         selected: bool,
-        cx: &mut ViewContext<Picker<Self>>,
+        _cx: &mut ViewContext<Picker<Self>>,
     ) -> Option<Self::ListItem> {
         let path_match = &self.matches[ix];
 
@@ -302,36 +271,39 @@ impl PickerDelegate for FileContextPickerDelegate {
             (file_name, Some(directory))
         };
 
-        let added = self
-            .context_store
-            .upgrade()
-            .and_then(|context_store| context_store.read(cx).included_file(&path_match.path));
-
         Some(
-            ListItem::new(ix)
-                .inset(true)
-                .toggle_state(selected)
-                .child(
-                    h_flex()
-                        .gap_2()
-                        .child(Label::new(file_name))
-                        .children(directory.map(|directory| {
-                            Label::new(directory)
-                                .size(LabelSize::Small)
-                                .color(Color::Muted)
-                        })),
-                )
-                .when_some(added, |el, added| match added {
-                    IncludedFile::Direct(_) => {
-                        el.end_slot(Label::new("Added").size(LabelSize::XSmall))
-                    }
-                    IncludedFile::InDirectory(dir_name) => {
-                        let dir_name = dir_name.to_string_lossy().into_owned();
-
-                        el.end_slot(Label::new("Included").size(LabelSize::XSmall))
-                            .tooltip(move |cx| Tooltip::text(format!("in {dir_name}"), cx))
-                    }
-                }),
+            ListItem::new(ix).inset(true).toggle_state(selected).child(
+                h_flex()
+                    .gap_2()
+                    .child(Label::new(file_name))
+                    .children(directory.map(|directory| {
+                        Label::new(directory)
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                    })),
+            ),
         )
     }
+}
+
+fn codeblock_fence_for_path(path: Option<&Path>, row_range: Option<RangeInclusive<u32>>) -> String {
+    let mut text = String::new();
+    write!(text, "```").unwrap();
+
+    if let Some(path) = path {
+        if let Some(extension) = path.extension().and_then(|ext| ext.to_str()) {
+            write!(text, "{} ", extension).unwrap();
+        }
+
+        write!(text, "{}", path.display()).unwrap();
+    } else {
+        write!(text, "untitled").unwrap();
+    }
+
+    if let Some(row_range) = row_range {
+        write!(text, ":{}-{}", row_range.start() + 1, row_range.end() + 1).unwrap();
+    }
+
+    text.push('\n');
+    text
 }

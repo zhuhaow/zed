@@ -14,7 +14,7 @@ path = "src/livekit_client.rs"
 doctest = false
 
 [[example]]
-name = "test_app_macos"
+name = "test_app"
 
 [features]
 no-webrtc = []

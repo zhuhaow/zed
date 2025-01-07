@@ -257,8 +257,7 @@ impl EditorLspTestContext {
         Self::new(language, Default::default(), cx).await
     }
 
-    /// Constructs lsp range using a marked string with '[', ']' range delimiters
-    #[track_caller]
+    // Constructs lsp range using a marked string with '[', ']' range delimiters
     pub fn lsp_range(&mut self, marked_text: &str) -> lsp::Range {
         let ranges = self.ranges(marked_text);
         self.to_lsp_range(ranges[0].clone())

@@ -1,10 +1,11 @@
 use client::telemetry;
-use gpui::{Task, WindowContext};
+use gpui::Task;
 use human_bytes::human_bytes;
 use release_channel::{AppCommitSha, AppVersion, ReleaseChannel};
 use serde::Serialize;
 use std::{env, fmt::Display};
 use sysinfo::{MemoryRefreshKind, RefreshKind, System};
+use ui::WindowContext;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct SystemSpecs {

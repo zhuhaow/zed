@@ -194,7 +194,6 @@
   "throw"
   "try"
   "typeof"
-  "using"
   "var"
   "void"
   "while"

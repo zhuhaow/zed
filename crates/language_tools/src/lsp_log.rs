@@ -703,11 +703,15 @@ impl LspLogView {
         });
         let editor_subscription = cx.subscribe(
             &editor,
-            |_, _, event: &EditorEvent, cx: &mut ViewContext<LspLogView>| cx.emit(event.clone()),
+            |_, _, event: &EditorEvent, cx: &mut ViewContext<'_, LspLogView>| {
+                cx.emit(event.clone())
+            },
         );
         let search_subscription = cx.subscribe(
             &editor,
-            |_, _, event: &SearchEvent, cx: &mut ViewContext<LspLogView>| cx.emit(event.clone()),
+            |_, _, event: &SearchEvent, cx: &mut ViewContext<'_, LspLogView>| {
+                cx.emit(event.clone())
+            },
         );
         (editor, vec![editor_subscription, search_subscription])
     }
@@ -726,11 +730,15 @@ impl LspLogView {
         });
         let editor_subscription = cx.subscribe(
             &editor,
-            |_, _, event: &EditorEvent, cx: &mut ViewContext<LspLogView>| cx.emit(event.clone()),
+            |_, _, event: &EditorEvent, cx: &mut ViewContext<'_, LspLogView>| {
+                cx.emit(event.clone())
+            },
         );
         let search_subscription = cx.subscribe(
             &editor,
-            |_, _, event: &SearchEvent, cx: &mut ViewContext<LspLogView>| cx.emit(event.clone()),
+            |_, _, event: &SearchEvent, cx: &mut ViewContext<'_, LspLogView>| {
+                cx.emit(event.clone())
+            },
         );
         (editor, vec![editor_subscription, search_subscription])
     }

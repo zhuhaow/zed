@@ -249,7 +249,7 @@
 
 ; Literals
 
-(character) @string
+(character) @character
 
 ([
   (string)

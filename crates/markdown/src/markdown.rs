@@ -6,8 +6,8 @@ use gpui::{
     actions, point, quad, AnyElement, AppContext, Bounds, ClipboardItem, CursorStyle,
     DispatchPhase, Edges, FocusHandle, FocusableView, FontStyle, FontWeight, GlobalElementId,
     Hitbox, Hsla, KeyContext, Length, MouseDownEvent, MouseEvent, MouseMoveEvent, MouseUpEvent,
-    Point, Render, Stateful, StrikethroughStyle, StyleRefinement, StyledText, Task, TextLayout,
-    TextRun, TextStyle, TextStyleRefinement, View,
+    Point, Render, StrikethroughStyle, StyleRefinement, StyledText, Task, TextLayout, TextRun,
+    TextStyle, TextStyleRefinement, View,
 };
 use language::{Language, LanguageRegistry, Rope};
 use parser::{parse_links_only, parse_markdown, MarkdownEvent, MarkdownTag, MarkdownTagEnd};
@@ -614,11 +614,11 @@ impl Element for MarkdownElement {
                             };
                             builder.push_div(
                                 div()
-                                    .mb_1()
                                     .h_flex()
+                                    .mb_2()
+                                    .line_height(rems(1.3))
                                     .items_start()
                                     .gap_1()
-                                    .line_height(rems(1.3))
                                     .child(bullet),
                                 range,
                                 markdown_end,
@@ -785,52 +785,8 @@ impl IntoElement for MarkdownElement {
     }
 }
 
-enum AnyDiv {
-    Div(Div),
-    Stateful(Stateful<Div>),
-}
-
-impl AnyDiv {
-    fn into_any_element(self) -> AnyElement {
-        match self {
-            Self::Div(div) => div.into_any_element(),
-            Self::Stateful(div) => div.into_any_element(),
-        }
-    }
-}
-
-impl From<Div> for AnyDiv {
-    fn from(value: Div) -> Self {
-        Self::Div(value)
-    }
-}
-
-impl From<Stateful<Div>> for AnyDiv {
-    fn from(value: Stateful<Div>) -> Self {
-        Self::Stateful(value)
-    }
-}
-
-impl Styled for AnyDiv {
-    fn style(&mut self) -> &mut StyleRefinement {
-        match self {
-            Self::Div(div) => div.style(),
-            Self::Stateful(div) => div.style(),
-        }
-    }
-}
-
-impl ParentElement for AnyDiv {
-    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
-        match self {
-            Self::Div(div) => div.extend(elements),
-            Self::Stateful(div) => div.extend(elements),
-        }
-    }
-}
-
 struct MarkdownElementBuilder {
-    div_stack: Vec<AnyDiv>,
+    div_stack: Vec<Div>,
     rendered_lines: Vec<RenderedLine>,
     pending_line: PendingLine,
     rendered_links: Vec<RenderedLink>,
@@ -856,7 +812,7 @@ struct ListStackEntry {
 impl MarkdownElementBuilder {
     fn new(base_text_style: TextStyle, syntax_theme: Arc<SyntaxTheme>) -> Self {
         Self {
-            div_stack: vec![div().debug_selector(|| "inner".into()).into()],
+            div_stack: vec![div().debug_selector(|| "inner".into())],
             rendered_lines: Vec::new(),
             pending_line: PendingLine::default(),
             rendered_links: Vec::new(),
@@ -885,12 +841,11 @@ impl MarkdownElementBuilder {
         self.text_style_stack.pop();
     }
 
-    fn push_div(&mut self, div: impl Into<AnyDiv>, range: &Range<usize>, markdown_end: usize) {
-        let mut div = div.into();
+    fn push_div(&mut self, mut div: Div, range: &Range<usize>, markdown_end: usize) {
         self.flush_text();
 
         if range.start == 0 {
-            // Remove the top margin on the first element.
+            //first element, remove top margin
             div.style().refine(&StyleRefinement {
                 margin: gpui::EdgesRefinement {
                     top: Some(Length::Definite(px(0.).into())),
@@ -901,7 +856,6 @@ impl MarkdownElementBuilder {
                 ..Default::default()
             });
         }
-
         if range.end == markdown_end {
             div.style().refine(&StyleRefinement {
                 margin: gpui::EdgesRefinement {
@@ -913,13 +867,12 @@ impl MarkdownElementBuilder {
                 ..Default::default()
             });
         }
-
         self.div_stack.push(div);
     }
 
     fn pop_div(&mut self) {
         self.flush_text();
-        let div = self.div_stack.pop().unwrap().into_any_element();
+        let div = self.div_stack.pop().unwrap().into_any();
         self.div_stack.last_mut().unwrap().extend(iter::once(div));
     }
 
@@ -1020,7 +973,7 @@ impl MarkdownElementBuilder {
         debug_assert_eq!(self.div_stack.len(), 1);
         self.flush_text();
         RenderedMarkdown {
-            element: self.div_stack.pop().unwrap().into_any_element(),
+            element: self.div_stack.pop().unwrap().into_any(),
             text: RenderedText {
                 lines: self.rendered_lines.into(),
                 links: self.rendered_links.into(),

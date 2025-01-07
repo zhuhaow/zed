@@ -44,13 +44,10 @@ const REMOVED_COLOR: Hsla = Hsla {
 // TODO: Add updated status colors to theme
 pub fn git_status_icon(status: GitFileStatus) -> impl IntoElement {
     match status {
-        GitFileStatus::Added | GitFileStatus::Untracked => {
-            Icon::new(IconName::SquarePlus).color(Color::Custom(ADDED_COLOR))
-        }
+        GitFileStatus::Added => Icon::new(IconName::SquarePlus).color(Color::Custom(ADDED_COLOR)),
         GitFileStatus::Modified => {
             Icon::new(IconName::SquareDot).color(Color::Custom(MODIFIED_COLOR))
         }
         GitFileStatus::Conflict => Icon::new(IconName::Warning).color(Color::Custom(REMOVED_COLOR)),
-        GitFileStatus::Deleted => Icon::new(IconName::Warning).color(Color::Custom(REMOVED_COLOR)),
     }
 }

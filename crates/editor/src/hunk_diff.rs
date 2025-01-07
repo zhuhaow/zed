@@ -365,7 +365,7 @@ impl Editor {
         &mut self,
         diff_base_buffer: Option<Model<Buffer>>,
         hunk: &HoveredHunk,
-        cx: &mut ViewContext<Editor>,
+        cx: &mut ViewContext<'_, Editor>,
     ) -> Option<()> {
         let buffer = self.buffer.clone();
         let multi_buffer_snapshot = buffer.read(cx).snapshot(cx);
@@ -454,21 +454,18 @@ impl Editor {
     fn apply_diff_hunks_in_range(
         &mut self,
         range: Range<Anchor>,
-        cx: &mut ViewContext<Editor>,
+        cx: &mut ViewContext<'_, Editor>,
     ) -> Option<()> {
-        let multi_buffer = self.buffer.read(cx);
-        let multi_buffer_snapshot = multi_buffer.snapshot(cx);
-        let (excerpt, range) = multi_buffer_snapshot
-            .range_to_buffer_ranges(range)
+        let (buffer, range, _) = self
+            .buffer
+            .read(cx)
+            .range_to_buffer_ranges(range, cx)
             .into_iter()
             .next()?;
 
-        multi_buffer
-            .buffer(excerpt.buffer_id())
-            .unwrap()
-            .update(cx, |branch_buffer, cx| {
-                branch_buffer.merge_into_base(vec![range], cx);
-            });
+        buffer.update(cx, |branch_buffer, cx| {
+            branch_buffer.merge_into_base(vec![range], cx);
+        });
 
         if let Some(project) = self.project.clone() {
             self.save(true, project, cx).detach_and_log_err(cx);
@@ -533,7 +530,7 @@ impl Editor {
     fn hunk_header_block(
         &self,
         hunk: &HoveredHunk,
-        cx: &mut ViewContext<Editor>,
+        cx: &mut ViewContext<'_, Editor>,
     ) -> BlockProperties<Anchor> {
         let is_branch_buffer = self
             .buffer
@@ -804,7 +801,7 @@ impl Editor {
         hunk: &HoveredHunk,
         diff_base_buffer: Model<Buffer>,
         deleted_text_height: u32,
-        cx: &mut ViewContext<Editor>,
+        cx: &mut ViewContext<'_, Editor>,
     ) -> BlockProperties<Anchor> {
         let gutter_color = match hunk.status {
             DiffHunkStatus::Added => unreachable!(),
@@ -867,7 +864,7 @@ impl Editor {
         }
     }
 
-    pub(super) fn clear_expanded_diff_hunks(&mut self, cx: &mut ViewContext<Editor>) -> bool {
+    pub(super) fn clear_expanded_diff_hunks(&mut self, cx: &mut ViewContext<'_, Editor>) -> bool {
         if self.diff_map.expand_all {
             return false;
         }
@@ -890,7 +887,7 @@ impl Editor {
     pub(super) fn sync_expanded_diff_hunks(
         diff_map: &mut DiffMap,
         buffer_id: BufferId,
-        cx: &mut ViewContext<Self>,
+        cx: &mut ViewContext<'_, Self>,
     ) {
         let diff_base_state = diff_map.diff_bases.get_mut(&buffer_id);
         let mut diff_base_buffer = None;
@@ -1137,7 +1134,7 @@ fn editor_with_deleted_text(
     diff_base_buffer: Model<Buffer>,
     deleted_color: Hsla,
     hunk: &HoveredHunk,
-    cx: &mut ViewContext<Editor>,
+    cx: &mut ViewContext<'_, Editor>,
 ) -> (u32, View<Editor>) {
     let parent_editor = cx.view().downgrade();
     let editor = cx.new_view(|cx| {
@@ -1158,11 +1155,6 @@ fn editor_with_deleted_text(
         editor.set_soft_wrap_mode(language::language_settings::SoftWrap::None, cx);
         editor.set_show_wrap_guides(false, cx);
         editor.set_show_gutter(false, cx);
-        editor.set_show_line_numbers(false, cx);
-        editor.set_show_scrollbars(false, cx);
-        editor.set_show_runnables(false, cx);
-        editor.set_show_git_diff_gutter(false, cx);
-        editor.set_show_code_actions(false, cx);
         editor.scroll_manager.set_forbid_vertical_scroll(true);
         editor.set_read_only(true);
         editor.set_show_inline_completions(Some(false), cx);
@@ -1174,7 +1166,7 @@ fn editor_with_deleted_text(
             false,
             cx,
         );
-        editor.set_current_line_highlight(Some(CurrentLineHighlight::None));
+        editor.set_current_line_highlight(Some(CurrentLineHighlight::None)); //
         editor
             ._subscriptions
             .extend([cx.on_blur(&editor.focus_handle, |editor, cx| {

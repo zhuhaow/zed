@@ -1057,10 +1057,11 @@ pub mod test {
     use gpui::{
         AnyElement, AppContext, Context as _, EntityId, EventEmitter, FocusableView,
         InteractiveElement, IntoElement, Model, Render, SharedString, Task, View, ViewContext,
-        VisualContext, WeakView, WindowContext,
+        VisualContext, WeakView,
     };
     use project::{Project, ProjectEntryId, ProjectPath, WorktreeId};
     use std::{any::Any, cell::Cell, path::Path};
+    use ui::WindowContext;
 
     pub struct TestProjectItem {
         pub entry_id: Option<ProjectEntryId>,
@@ -1239,7 +1240,11 @@ pub mod test {
             None
         }
 
-        fn tab_content(&self, params: TabContentParams, _cx: &WindowContext) -> AnyElement {
+        fn tab_content(
+            &self,
+            params: TabContentParams,
+            _cx: &ui::prelude::WindowContext,
+        ) -> AnyElement {
             self.tab_detail.set(params.detail);
             gpui::div().into_any_element()
         }
@@ -1371,7 +1376,7 @@ pub mod test {
         fn cleanup(
             _workspace_id: WorkspaceId,
             _alive_items: Vec<ItemId>,
-            _cx: &mut WindowContext,
+            _cx: &mut ui::WindowContext,
         ) -> Task<anyhow::Result<()>> {
             Task::ready(Ok(()))
         }

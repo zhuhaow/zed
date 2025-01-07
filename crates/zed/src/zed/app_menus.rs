@@ -38,11 +38,8 @@ pub fn app_menus() -> Vec<Menu> {
                 MenuItem::action("Extensions", zed_actions::Extensions),
                 MenuItem::action("Install CLI", install_cli::Install),
                 MenuItem::separator(),
-                #[cfg(target_os = "macos")]
                 MenuItem::action("Hide Zed", super::Hide),
-                #[cfg(target_os = "macos")]
                 MenuItem::action("Hide Others", super::HideOthers),
-                #[cfg(target_os = "macos")]
                 MenuItem::action("Show All", super::ShowAll),
                 MenuItem::action("Quit", Quit),
             ],
@@ -156,10 +153,7 @@ pub fn app_menus() -> Vec<Menu> {
                 MenuItem::separator(),
                 MenuItem::action("Go to File...", workspace::ToggleFileFinder::default()),
                 // MenuItem::action("Go to Symbol in Project", project_symbols::Toggle),
-                MenuItem::action(
-                    "Go to Symbol in Editor...",
-                    zed_actions::outline::ToggleOutline,
-                ),
+                MenuItem::action("Go to Symbol in Editor...", editor::actions::ToggleOutline),
                 MenuItem::action("Go to Line/Column...", editor::actions::ToggleGoToLine),
                 MenuItem::separator(),
                 MenuItem::action("Go to Definition", editor::actions::GoToDefinition),

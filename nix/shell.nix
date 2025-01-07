@@ -5,20 +5,16 @@ let
   inherit (pkgs) lib;
 in
 pkgs.mkShell rec {
-  packages =
-    [
-      pkgs.clang
-      pkgs.curl
-      pkgs.cmake
-      pkgs.perl
-      pkgs.pkg-config
-      pkgs.protobuf
-      pkgs.rustPlatform.bindgenHook
-      pkgs.rust-analyzer
-    ]
-    ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-      pkgs.mold
-    ];
+  packages = [
+    pkgs.clang
+    pkgs.curl
+    pkgs.cmake
+    pkgs.perl
+    pkgs.pkg-config
+    pkgs.protobuf
+    pkgs.rustPlatform.bindgenHook
+    pkgs.rust-analyzer
+  ];
 
   buildInputs =
     [
@@ -35,9 +31,6 @@ pkgs.mkShell rec {
     ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
       pkgs.alsa-lib
       pkgs.libxkbcommon
-      pkgs.wayland
-      pkgs.xorg.libxcb
-      pkgs.vulkan-loader
     ]
     ++ lib.optional pkgs.stdenv.hostPlatform.isDarwin pkgs.apple-sdk_15;
 

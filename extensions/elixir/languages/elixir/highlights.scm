@@ -67,8 +67,6 @@
   quoted_start: _ @string.special
   quoted_end: _ @string.special) @string.special
 
-(identifier) @variable
-
 (
   (identifier) @comment.unused
   (#match? @comment.unused "^_")

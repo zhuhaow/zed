@@ -5,7 +5,8 @@ use gpui::{AppContext, DismissEvent, FocusHandle, FocusableView, Task, View, Wea
 use picker::{Picker, PickerDelegate};
 use ui::{prelude::*, ListItem};
 
-use crate::context_picker::{ConfirmBehavior, ContextPicker};
+use crate::context::ContextKind;
+use crate::context_picker::ContextPicker;
 use crate::context_store;
 use crate::thread::ThreadId;
 use crate::thread_store::ThreadStore;
@@ -19,15 +20,10 @@ impl ThreadContextPicker {
         thread_store: WeakModel<ThreadStore>,
         context_picker: WeakView<ContextPicker>,
         context_store: WeakModel<context_store::ContextStore>,
-        confirm_behavior: ConfirmBehavior,
         cx: &mut ViewContext<Self>,
     ) -> Self {
-        let delegate = ThreadContextPickerDelegate::new(
-            thread_store,
-            context_picker,
-            context_store,
-            confirm_behavior,
-        );
+        let delegate =
+            ThreadContextPickerDelegate::new(thread_store, context_picker, context_store);
         let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
 
         ThreadContextPicker { picker }
@@ -56,7 +52,6 @@ pub struct ThreadContextPickerDelegate {
     thread_store: WeakModel<ThreadStore>,
     context_picker: WeakView<ContextPicker>,
     context_store: WeakModel<context_store::ContextStore>,
-    confirm_behavior: ConfirmBehavior,
     matches: Vec<ThreadContextEntry>,
     selected_index: usize,
 }
@@ -66,13 +61,11 @@ impl ThreadContextPickerDelegate {
         thread_store: WeakModel<ThreadStore>,
         context_picker: WeakView<ContextPicker>,
         context_store: WeakModel<context_store::ContextStore>,
-        confirm_behavior: ConfirmBehavior,
     ) -> Self {
         ThreadContextPickerDelegate {
             thread_store,
             context_picker,
             context_store,
-            confirm_behavior,
             matches: Vec::new(),
             selected_index: 0,
         }
@@ -153,9 +146,7 @@ impl PickerDelegate for ThreadContextPickerDelegate {
     }
 
     fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
-        let Some(entry) = self.matches.get(self.selected_index) else {
-            return;
-        };
+        let entry = &self.matches[self.selected_index];
 
         let Some(thread_store) = self.thread_store.upgrade() else {
             return;
@@ -168,18 +159,27 @@ impl PickerDelegate for ThreadContextPickerDelegate {
 
         self.context_store
             .update(cx, |context_store, cx| {
-                if let Some(context_id) = context_store.included_thread(&entry.id) {
-                    context_store.remove_context(&context_id);
-                } else {
-                    context_store.insert_thread(thread.read(cx));
-                }
+                let text = thread.update(cx, |thread, _cx| {
+                    let mut text = String::new();
+
+                    for message in thread.messages() {
+                        text.push_str(match message.role {
+                            language_model::Role::User => "User:",
+                            language_model::Role::Assistant => "Assistant:",
+                            language_model::Role::System => "System:",
+                        });
+                        text.push('\n');
+
+                        text.push_str(&message.text);
+                        text.push('\n');
+                    }
+
+                    text
+                });
+
+                context_store.insert_context(ContextKind::Thread, entry.summary.clone(), text);
             })
             .ok();
-
-        match self.confirm_behavior {
-            ConfirmBehavior::KeepOpen => {}
-            ConfirmBehavior::Close => self.dismissed(cx),
-        }
     }
 
     fn dismissed(&mut self, cx: &mut ViewContext<Picker<Self>>) {
@@ -195,22 +195,15 @@ impl PickerDelegate for ThreadContextPickerDelegate {
         &self,
         ix: usize,
         selected: bool,
-        cx: &mut ViewContext<Picker<Self>>,
+        _cx: &mut ViewContext<Picker<Self>>,
     ) -> Option<Self::ListItem> {
         let thread = &self.matches[ix];
-
-        let added = self.context_store.upgrade().map_or(false, |ctx_store| {
-            ctx_store.read(cx).included_thread(&thread.id).is_some()
-        });
 
         Some(
             ListItem::new(ix)
                 .inset(true)
                 .toggle_state(selected)
-                .child(Label::new(thread.summary.clone()))
-                .when(added, |el| {
-                    el.end_slot(Label::new("Added").size(LabelSize::XSmall))
-                }),
+                .child(thread.summary.clone()),
         )
     }
 }

@@ -47,10 +47,6 @@ impl LinuxClient for HeadlessClient {
         f(&mut self.0.borrow_mut().common)
     }
 
-    fn keyboard_layout(&self) -> String {
-        "unknown".to_string()
-    }
-
     fn displays(&self) -> Vec<Rc<dyn PlatformDisplay>> {
         vec![]
     }

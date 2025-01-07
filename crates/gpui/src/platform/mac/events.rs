@@ -322,7 +322,7 @@ unsafe fn parse_keystroke(native_event: id) -> Keystroke {
             let mut chars_with_shift = chars_for_modified_key(native_event.keyCode(), SHIFT_MOD);
             let always_use_cmd_layout = always_use_command_layout();
 
-            // Handle Dvorak+QWERTY / Russian / Armenian
+            // Handle Dvorak+QWERTY / Russian / Armeniam
             if command || always_use_cmd_layout {
                 let chars_with_cmd = chars_for_modified_key(native_event.keyCode(), CMD_MOD);
                 let chars_with_both =

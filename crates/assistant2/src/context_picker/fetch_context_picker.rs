@@ -11,7 +11,8 @@ use picker::{Picker, PickerDelegate};
 use ui::{prelude::*, ListItem, ViewContext};
 use workspace::Workspace;
 
-use crate::context_picker::{ConfirmBehavior, ContextPicker};
+use crate::context::ContextKind;
+use crate::context_picker::ContextPicker;
 use crate::context_store::ContextStore;
 
 pub struct FetchContextPicker {
@@ -23,15 +24,9 @@ impl FetchContextPicker {
         context_picker: WeakView<ContextPicker>,
         workspace: WeakView<Workspace>,
         context_store: WeakModel<ContextStore>,
-        confirm_behavior: ConfirmBehavior,
         cx: &mut ViewContext<Self>,
     ) -> Self {
-        let delegate = FetchContextPickerDelegate::new(
-            context_picker,
-            workspace,
-            context_store,
-            confirm_behavior,
-        );
+        let delegate = FetchContextPickerDelegate::new(context_picker, workspace, context_store);
         let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
 
         Self { picker }
@@ -61,7 +56,6 @@ pub struct FetchContextPickerDelegate {
     context_picker: WeakView<ContextPicker>,
     workspace: WeakView<Workspace>,
     context_store: WeakModel<ContextStore>,
-    confirm_behavior: ConfirmBehavior,
     url: String,
 }
 
@@ -70,13 +64,11 @@ impl FetchContextPickerDelegate {
         context_picker: WeakView<ContextPicker>,
         workspace: WeakView<Workspace>,
         context_store: WeakModel<ContextStore>,
-        confirm_behavior: ConfirmBehavior,
     ) -> Self {
         FetchContextPickerDelegate {
             context_picker,
             workspace,
             context_store,
-            confirm_behavior,
             url: String::new(),
         }
     }
@@ -175,7 +167,7 @@ impl PickerDelegate for FetchContextPickerDelegate {
 
     fn set_selected_index(&mut self, _ix: usize, _cx: &mut ViewContext<Picker<Self>>) {}
 
-    fn placeholder_text(&self, _cx: &mut WindowContext) -> Arc<str> {
+    fn placeholder_text(&self, _cx: &mut ui::WindowContext) -> Arc<str> {
         "Enter a URL…".into()
     }
 
@@ -192,7 +184,6 @@ impl PickerDelegate for FetchContextPickerDelegate {
 
         let http_client = workspace.read(cx).client().http_client().clone();
         let url = self.url.clone();
-        let confirm_behavior = self.confirm_behavior;
         cx.spawn(|this, mut cx| async move {
             let text = Self::build_message(http_client, &url).await?;
 
@@ -200,17 +191,8 @@ impl PickerDelegate for FetchContextPickerDelegate {
                 this.delegate
                     .context_store
                     .update(cx, |context_store, _cx| {
-                        if context_store.included_url(&url).is_none() {
-                            context_store.insert_fetched_url(url, text);
-                        }
-                    })?;
-
-                match confirm_behavior {
-                    ConfirmBehavior::KeepOpen => {}
-                    ConfirmBehavior::Close => this.delegate.dismissed(cx),
-                }
-
-                anyhow::Ok(())
+                        context_store.insert_context(ContextKind::FetchedUrl, url, text);
+                    })
             })??;
 
             anyhow::Ok(())
@@ -231,22 +213,13 @@ impl PickerDelegate for FetchContextPickerDelegate {
         &self,
         ix: usize,
         selected: bool,
-        cx: &mut ViewContext<Picker<Self>>,
+        _cx: &mut ViewContext<Picker<Self>>,
     ) -> Option<Self::ListItem> {
-        let added = self.context_store.upgrade().map_or(false, |context_store| {
-            context_store.read(cx).included_url(&self.url).is_some()
-        });
-
         Some(
             ListItem::new(ix)
                 .inset(true)
                 .toggle_state(selected)
-                .child(Label::new(self.url.clone()))
-                .when(added, |child| {
-                    child
-                        .disabled(true)
-                        .end_slot(Label::new("Added").size(LabelSize::XSmall))
-                }),
+                .child(Label::new(self.url.clone())),
         )
     }
 }

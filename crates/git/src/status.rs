@@ -1,6 +1,10 @@
 use crate::repository::{GitFileStatus, RepoPath};
 use anyhow::{anyhow, Result};
-use std::{path::Path, process::Stdio, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    process::Stdio,
+    sync::Arc,
+};
 
 #[derive(Clone)]
 pub struct GitStatus {
@@ -11,7 +15,7 @@ impl GitStatus {
     pub(crate) fn new(
         git_binary: &Path,
         working_directory: &Path,
-        path_prefixes: &[RepoPath],
+        path_prefixes: &[PathBuf],
     ) -> Result<Self> {
         let child = util::command::new_std_command(git_binary)
             .current_dir(working_directory)
@@ -23,7 +27,7 @@ impl GitStatus {
                 "-z",
             ])
             .args(path_prefixes.iter().map(|path_prefix| {
-                if path_prefix.0.as_ref() == Path::new("") {
+                if *path_prefix == Path::new("") {
                     Path::new(".")
                 } else {
                     path_prefix
@@ -51,12 +55,10 @@ impl GitStatus {
                     let (status, path) = entry.split_at(3);
                     let status = status.trim();
                     Some((
-                        RepoPath(Path::new(path).into()),
+                        RepoPath(PathBuf::from(path)),
                         match status {
-                            "A" => GitFileStatus::Added,
+                            "A" | "??" => GitFileStatus::Added,
                             "M" => GitFileStatus::Modified,
-                            "D" => GitFileStatus::Deleted,
-                            "??" => GitFileStatus::Untracked,
                             _ => return None,
                         },
                     ))
@@ -73,7 +75,7 @@ impl GitStatus {
 
     pub fn get(&self, path: &Path) -> Option<GitFileStatus> {
         self.entries
-            .binary_search_by(|(repo_path, _)| repo_path.0.as_ref().cmp(path))
+            .binary_search_by(|(repo_path, _)| repo_path.0.as_path().cmp(path))
             .ok()
             .map(|index| self.entries[index].1)
     }
