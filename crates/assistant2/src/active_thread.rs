@@ -3,9 +3,9 @@ use std::sync::Arc;
 use assistant_tool::ToolWorkingSet;
 use collections::HashMap;
 use gpui::{
-    list, AbsoluteLength, AnyElement, AppContext, DefiniteLength, EdgesRefinement, Empty, Length,
-    ListAlignment, ListOffset, ListState, Model, StyleRefinement, Subscription,
-    TextStyleRefinement, UnderlineStyle, View, WeakView,
+    list, AbsoluteLength, AnyElement, AppContext, DefiniteLength, EdgesRefinement, Empty,
+    FocusHandle, Length, ListAlignment, ListOffset, ListState, Model, StyleRefinement,
+    Subscription, TextStyleRefinement, UnderlineStyle, View, WeakView,
 };
 use language::LanguageRegistry;
 use language_model::Role;
@@ -28,6 +28,7 @@ pub struct ActiveThread {
     rendered_messages_by_id: HashMap<MessageId, View<Markdown>>,
     last_error: Option<ThreadError>,
     _subscriptions: Vec<Subscription>,
+    focus_handle: FocusHandle,
 }
 
 impl ActiveThread {
@@ -38,6 +39,8 @@ impl ActiveThread {
         tools: Arc<ToolWorkingSet>,
         cx: &mut ViewContext<Self>,
     ) -> Self {
+        let focus_handle = cx.focus_handle();
+
         let subscriptions = vec![
             cx.observe(&thread, |_, _, cx| cx.notify()),
             cx.subscribe(&thread, Self::handle_thread_event),
@@ -59,6 +62,7 @@ impl ActiveThread {
             }),
             last_error: None,
             _subscriptions: subscriptions,
+            focus_handle,
         };
 
         for message in thread.read(cx).messages().cloned().collect::<Vec<_>>() {
@@ -255,13 +259,17 @@ impl ActiveThread {
             .child(div().p_2p5().text_ui(cx).child(markdown.clone()))
             .when_some(context, |parent, context| {
                 if !context.is_empty() {
-                    parent.child(
-                        h_flex().flex_wrap().gap_1().px_1p5().pb_1p5().children(
-                            context
-                                .into_iter()
-                                .map(|context| ContextPill::new_added(context, false, false, None)),
-                        ),
-                    )
+                    parent.child(h_flex().flex_wrap().gap_1().px_1p5().pb_1p5().children(
+                        context.into_iter().map(|context| {
+                            ContextPill::new_added(
+                                context,
+                                false,
+                                false,
+                                None,
+                                self.focus_handle.clone(),
+                            )
+                        }),
+                    ))
                 } else {
                     parent
                 }

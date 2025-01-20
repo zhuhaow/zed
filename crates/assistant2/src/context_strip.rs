@@ -444,6 +444,7 @@ impl Render for ContextStrip {
                             cx.notify();
                         }))
                     }),
+                    focus_handle.clone(),
                 )
                 .on_click(Rc::new(cx.listener(move |this, _, cx| {
                     this.focused_index = Some(i);
@@ -457,6 +458,7 @@ impl Render for ContextStrip {
                         suggested.icon_path(),
                         suggested.kind(),
                         self.is_suggested_focused(&context),
+                        focus_handle.clone(),
                     )
                     .on_click(Rc::new(cx.listener(move |this, _event, cx| {
                         this.add_suggested_context(&suggested, cx);

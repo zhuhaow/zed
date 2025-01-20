@@ -1,9 +1,10 @@
 use std::rc::Rc;
 
-use gpui::ClickEvent;
+use gpui::{ClickEvent, FocusHandle};
 use ui::{prelude::*, IconButtonShape, Tooltip};
 
 use crate::context::{ContextKind, ContextSnapshot};
+use crate::{AcceptSuggestedContext, RemoveFocusedContext};
 
 #[derive(IntoElement)]
 pub enum ContextPill {
@@ -13,6 +14,7 @@ pub enum ContextPill {
         focused: bool,
         on_click: Option<Rc<dyn Fn(&ClickEvent, &mut WindowContext)>>,
         on_remove: Option<Rc<dyn Fn(&ClickEvent, &mut WindowContext)>>,
+        focus_handle: FocusHandle,
     },
     Suggested {
         name: SharedString,
@@ -20,6 +22,7 @@ pub enum ContextPill {
         kind: ContextKind,
         focused: bool,
         on_click: Option<Rc<dyn Fn(&ClickEvent, &mut WindowContext)>>,
+        focus_handle: FocusHandle,
     },
 }
 
@@ -29,6 +32,7 @@ impl ContextPill {
         dupe_name: bool,
         focused: bool,
         on_remove: Option<Rc<dyn Fn(&ClickEvent, &mut WindowContext)>>,
+        focus_handle: FocusHandle,
     ) -> Self {
         Self::Added {
             context,
@@ -36,6 +40,7 @@ impl ContextPill {
             on_remove,
             focused,
             on_click: None,
+            focus_handle,
         }
     }
 
@@ -44,6 +49,7 @@ impl ContextPill {
         icon_path: Option<SharedString>,
         kind: ContextKind,
         focused: bool,
+        focus_handle: FocusHandle,
     ) -> Self {
         Self::Suggested {
             name,
@@ -51,6 +57,7 @@ impl ContextPill {
             kind,
             focused,
             on_click: None,
+            focus_handle,
         }
     }
 
@@ -107,16 +114,17 @@ impl RenderOnce for ContextPill {
             .gap_1()
             .child(self.icon().size(IconSize::XSmall).color(Color::Muted));
 
-        match &self {
+        match self {
             ContextPill::Added {
                 context,
                 dupe_name,
-                on_remove,
                 focused,
+                on_remove,
+                focus_handle,
                 on_click,
             } => base_pill
                 .bg(color.element_background)
-                .border_color(if *focused {
+                .border_color(if focused {
                     color.border_focused
                 } else {
                     color.border.opacity(0.5)
@@ -128,7 +136,7 @@ impl RenderOnce for ContextPill {
                         .gap_1()
                         .child(Label::new(context.name.clone()).size(LabelSize::Small))
                         .when_some(context.parent.as_ref(), |element, parent_name| {
-                            if *dupe_name {
+                            if dupe_name {
                                 element.child(
                                     Label::new(parent_name.clone())
                                         .size(LabelSize::XSmall)
@@ -142,42 +150,42 @@ impl RenderOnce for ContextPill {
                             element.tooltip(move |cx| Tooltip::text(tooltip.clone(), cx))
                         }),
                 )
-                .when_some(on_remove.as_ref(), |element, on_remove| {
+                .when_some(on_remove, |element, on_remove| {
                     element.child(
                         IconButton::new(("remove", context.id.0), IconName::Close)
                             .shape(IconButtonShape::Square)
                             .icon_size(IconSize::XSmall)
-                            .tooltip(|cx| Tooltip::text("Remove Context", cx))
-                            .on_click({
-                                let on_remove = on_remove.clone();
-                                move |event, cx| on_remove(event, cx)
-                            }),
+                            .tooltip(move |cx| {
+                                Tooltip::for_action_in(
+                                    "Remove Context",
+                                    &RemoveFocusedContext,
+                                    &focus_handle,
+                                    cx,
+                                )
+                            })
+                            .on_click(move |event, cx| on_remove(event, cx)),
                     )
                 })
-                .when_some(on_click.as_ref(), |element, on_click| {
-                    let on_click = on_click.clone();
+                .when_some(on_click, |element, on_click| {
                     element.on_click(move |event, cx| on_click(event, cx))
                 }),
             ContextPill::Suggested {
                 name,
-                icon_path: _,
                 kind,
                 focused,
+                focus_handle,
                 on_click,
+                ..
             } => base_pill
                 .cursor_pointer()
                 .pr_1()
-                .border_color(if *focused {
+                .border_color(if focused {
                     color.border_focused
                 } else {
                     color.border_variant.opacity(0.5)
                 })
                 .hover(|style| style.bg(color.element_hover.opacity(0.5)))
-                .child(
-                    Label::new(name.clone())
-                        .size(LabelSize::Small)
-                        .color(Color::Muted),
-                )
+                .child(Label::new(name).size(LabelSize::Small).color(Color::Muted))
                 .child(
                     div().px_0p5().child(
                         Label::new(match kind {
@@ -195,9 +203,15 @@ impl RenderOnce for ContextPill {
                         .size(IconSize::XSmall)
                         .into_any_element(),
                 )
-                .tooltip(|cx| Tooltip::with_meta("Suggested Context", None, "Click to add it", cx))
-                .when_some(on_click.as_ref(), |element, on_click| {
-                    let on_click = on_click.clone();
+                .tooltip(move |cx| {
+                    Tooltip::for_action_in(
+                        "Add Suggested Context",
+                        &AcceptSuggestedContext,
+                        &focus_handle,
+                        cx,
+                    )
+                })
+                .when_some(on_click, |element, on_click| {
                     element.on_click(move |event, cx| on_click(event, cx))
                 }),
         }
