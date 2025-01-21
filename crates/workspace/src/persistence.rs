@@ -543,6 +543,7 @@ impl WorkspaceDb {
 
                 match workspace.location {
                     SerializedWorkspaceLocation::Local(local_paths, local_paths_order) => {
+                        println!("save workspace. local_paths: {:?}", local_paths);
                         conn.exec_bound(sql!(
                             DELETE FROM toolchains WHERE workspace_id = ?1;
                             DELETE FROM workspaces WHERE local_paths = ? AND workspace_id != ?
@@ -787,7 +788,9 @@ impl WorkspaceDb {
         let mut delete_tasks = Vec::new();
         let ssh_projects = self.ssh_projects()?;
 
+        println!("recent workspaces on disk");
         for (id, location, order, ssh_project_id) in self.recent_workspaces()? {
+            println!("id: {}, location: {:?}", id.0, location);
             if let Some(ssh_project_id) = ssh_project_id.map(SshProjectId) {
                 if let Some(ssh_project) = ssh_projects.iter().find(|rp| rp.id == ssh_project_id) {
                     result.push((id, SerializedWorkspaceLocation::Ssh(ssh_project.clone())));
@@ -797,8 +800,13 @@ impl WorkspaceDb {
                 continue;
             }
 
+            println!("we are here! local_paths; {:?}", location);
+            for path in location.paths().iter() {
+                println!("path: {}", path.display());
+            }
+
             if location.paths().iter().all(|path| path.exists())
-                && location.paths().iter().any(|path| path.is_dir())
+            // && location.paths().iter().any(|path| path.is_dir())
             {
                 result.push((id, SerializedWorkspaceLocation::Local(location, order)));
             } else {
@@ -829,15 +837,17 @@ impl WorkspaceDb {
         last_session_window_stack: Option<Vec<WindowId>>,
     ) -> Result<Vec<SerializedWorkspaceLocation>> {
         let mut workspaces = Vec::new();
+        println!("last_session_workspace_locations: {:?}", last_session_id);
 
         for (location, order, window_id, ssh_project_id) in
             self.session_workspaces(last_session_id.to_owned())?
         {
+            println!("location: {:?}", location);
             if let Some(ssh_project_id) = ssh_project_id {
                 let location = SerializedWorkspaceLocation::Ssh(self.ssh_project(ssh_project_id)?);
                 workspaces.push((location, window_id.map(WindowId::from)));
             } else if location.paths().iter().all(|path| path.exists())
-                && location.paths().iter().any(|path| path.is_dir())
+            // && location.paths().iter().any(|path| path.is_dir())
             {
                 let location = SerializedWorkspaceLocation::Local(location, order);
                 workspaces.push((location, window_id.map(WindowId::from)));
@@ -852,6 +862,7 @@ impl WorkspaceDb {
             });
         }
 
+        println!("workspaces.len(): {}", workspaces.len());
         Ok(workspaces
             .into_iter()
             .map(|(paths, _)| paths)

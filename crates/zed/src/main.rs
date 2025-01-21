@@ -900,11 +900,15 @@ pub(crate) async fn restorable_workspace_locations(
             if let Some(last_session_id) = last_session_id {
                 let ordered = last_session_window_stack.is_some();
 
+                println!("last session workspace location");
                 let mut locations = workspace::last_session_workspace_locations(
                     &last_session_id,
                     last_session_window_stack,
                 )
-                .filter(|locations| !locations.is_empty());
+                .filter(|locations| {
+                    println!("locations: {:?}", locations);
+                    !locations.is_empty()
+                });
 
                 // Since last_session_window_order returns the windows ordered front-to-back
                 // we need to open the window that was frontmost last.

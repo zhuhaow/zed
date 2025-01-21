@@ -4307,9 +4307,11 @@ impl Workspace {
             }
         }
 
+        println!("lol we are here");
         let location = if let Some(ssh_project) = &self.serialized_ssh_project {
             Some(SerializedWorkspaceLocation::Ssh(ssh_project.clone()))
         } else if let Some(local_paths) = self.local_paths(cx) {
+            println!("we have local paths; {:?}", local_paths);
             if !local_paths.is_empty() {
                 Some(SerializedWorkspaceLocation::from_local_paths(local_paths))
             } else {
@@ -4318,6 +4320,8 @@ impl Workspace {
         } else {
             None
         };
+
+        println!("location: {:?}", location);
 
         if let Some(location) = location {
             let center_group = build_serialized_pane_group(&self.center.root, cx);

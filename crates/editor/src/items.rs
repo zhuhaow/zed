@@ -1124,15 +1124,15 @@ impl SerializableItem for Editor {
         let mut serialize_dirty_buffers = self.serialize_dirty_buffers;
 
         let project = self.project.clone()?;
-        if project.read(cx).visible_worktrees(cx).next().is_none() {
-            // If we don't have a worktree, we don't serialize, because
-            // projects without worktrees aren't deserialized.
-            serialize_dirty_buffers = false;
-        }
+        // if project.read(cx).visible_worktrees(cx).next().is_none() {
+        //     // If we don't have a worktree, we don't serialize, because
+        //     // projects without worktrees aren't deserialized.
+        //     serialize_dirty_buffers = false;
+        // }
 
-        if closing && !serialize_dirty_buffers {
-            return None;
-        }
+        // if closing && !serialize_dirty_buffers {
+        //     return None;
+        // }
 
         let workspace_id = workspace.database_id()?;
 
