@@ -447,7 +447,6 @@ impl SyntaxSnapshot {
 
         let mut changed_regions = ChangeRegionSet::default();
         let mut queue = BinaryHeap::new();
-        let mut combined_injection_ranges = HashMap::default();
         queue.push(ParseStep {
             depth: 0,
             language: ParseStepLanguage::Loaded {
@@ -707,7 +706,7 @@ impl SyntaxSnapshot {
                                 text,
                             );
                         }
-                        update_injections(
+                        update_injection_parse_steps(
                             config,
                             text,
                             step.range.clone(),
@@ -718,7 +717,6 @@ impl SyntaxSnapshot {
                             registry,
                             step.depth + 1,
                             &changed_ranges,
-                            &mut combined_injection_ranges,
                             &mut queue,
                         );
                     }
@@ -1254,7 +1252,7 @@ fn parse_text(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn update_injections(
+fn update_injection_parse_steps(
     config: &InjectionConfig,
     text: &BufferSnapshot,
     outer_range: Range<Anchor>,
@@ -1262,15 +1260,16 @@ fn update_injections(
     language_registry: &Arc<LanguageRegistry>,
     depth: usize,
     changed_ranges: &[Range<usize>],
-    combined_injection_ranges: &mut HashMap<LanguageId, (Arc<Language>, Vec<tree_sitter::Range>)>,
     queue: &mut BinaryHeap<ParseStep>,
 ) {
     let mut query_cursor = QueryCursorHandle::new();
     let mut prev_match = None;
 
-    // Ensure that a `ParseStep` is created for every combined injection language, even
-    // if there currently no matches for that injection.
-    combined_injection_ranges.clear();
+    // Note: a `ParseStep` must be created for every combined injection language, even
+    // if there are currently no matches for that injection.
+    let mut combined_injection_ranges =
+        HashMap::<LanguageId, (Arc<Language>, Vec<tree_sitter::Range>)>::default();
+
     for pattern in &config.patterns {
         if let (Some(language_name), true) = (pattern.language.as_ref(), pattern.combined) {
             if let Some(language) = language_registry
