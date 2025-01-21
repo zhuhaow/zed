@@ -545,12 +545,13 @@ impl SyntaxSnapshot {
             }
 
             let content = match step.language {
+                ParseStepLanguage::Pending { name } => SyntaxLayerContent::Pending {
+                    language_name: name,
+                },
                 ParseStepLanguage::Loaded { language } => {
                     let Some(grammar) = language.grammar() else {
                         continue;
                     };
-                    let tree;
-                    let changed_ranges;
 
                     let mut included_ranges = step.included_ranges;
                     for range in &mut included_ranges {
@@ -564,7 +565,10 @@ impl SyntaxSnapshot {
                             .to_ts_point();
                     }
 
-                    if let Some((SyntaxLayerContent::Parsed { tree: old_tree, .. }, layer_start)) =
+                    let (tree, changed_ranges) = if let Some((
+                        SyntaxLayerContent::Parsed { tree: old_tree, .. },
+                        layer_start,
+                    )) =
                         old_layer.map(|layer| (&layer.content, layer.range.start))
                     {
                         log::trace!(
@@ -622,15 +626,16 @@ impl SyntaxSnapshot {
                             included_ranges,
                             Some(old_tree.clone()),
                         );
-                        match result {
-                            Ok(t) => tree = t,
+
+                        let tree = match result {
+                            Ok(inner) => inner,
                             Err(e) => {
                                 log::error!("error parsing text: {:?}", e);
                                 continue;
                             }
                         };
 
-                        changed_ranges = join_ranges(
+                        let changed_ranges = join_ranges(
                             invalidated_ranges
                                 .iter()
                                 .filter(|&range| {
@@ -641,6 +646,8 @@ impl SyntaxSnapshot {
                                 step_start_byte + r.start_byte..step_start_byte + r.end_byte
                             }),
                         );
+
+                        (tree, changed_ranges)
                     } else {
                         if matches!(step.mode, ParseMode::Combined { .. }) {
                             insert_newlines_between_ranges(
@@ -675,15 +682,16 @@ impl SyntaxSnapshot {
                             included_ranges,
                             None,
                         );
-                        match result {
-                            Ok(t) => tree = t,
+                        let tree = match result {
+                            Ok(inner) => inner,
                             Err(e) => {
                                 log::error!("error parsing text: {:?}", e);
                                 continue;
                             }
                         };
-                        changed_ranges = vec![step_start_byte..step_end_byte];
-                    }
+
+                        (tree, vec![step_start_byte..step_end_byte])
+                    };
 
                     if let (Some((config, registry)), false) = (
                         grammar.injection_config.as_ref().zip(registry.as_ref()),
@@ -699,7 +707,7 @@ impl SyntaxSnapshot {
                                 text,
                             );
                         }
-                        get_injections(
+                        update_injections(
                             config,
                             text,
                             step.range.clone(),
@@ -717,9 +725,6 @@ impl SyntaxSnapshot {
 
                     SyntaxLayerContent::Parsed { tree, language }
                 }
-                ParseStepLanguage::Pending { name } => SyntaxLayerContent::Pending {
-                    language_name: name,
-                },
             };
 
             layers.push(
@@ -1249,7 +1254,7 @@ fn parse_text(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn get_injections(
+fn update_injections(
     config: &InjectionConfig,
     text: &BufferSnapshot,
     outer_range: Range<Anchor>,
