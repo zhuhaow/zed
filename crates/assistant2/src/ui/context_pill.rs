@@ -129,8 +129,6 @@ impl RenderOnce for ContextPill {
                 } else {
                     color.border.opacity(0.5)
                 })
-                // .pr(if on_remove.is_some() { px(2.) } else { px(4.) })
-                // .pr_1()
                 .child(
                     h_flex()
                         .id("context-data")
