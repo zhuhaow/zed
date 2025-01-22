@@ -107,7 +107,7 @@ impl RenderOnce for ContextPill {
 
         let base_pill = h_flex()
             .id(self.id())
-            .pl_1()
+            .px_1()
             .pb(px(1.))
             .border_1()
             .rounded_md()
@@ -129,7 +129,8 @@ impl RenderOnce for ContextPill {
                 } else {
                     color.border.opacity(0.5)
                 })
-                .pr(if on_remove.is_some() { px(2.) } else { px(4.) })
+                // .pr(if on_remove.is_some() { px(2.) } else { px(4.) })
+                // .pr_1()
                 .child(
                     h_flex()
                         .id("context-data")
@@ -150,22 +151,42 @@ impl RenderOnce for ContextPill {
                             element.tooltip(move |cx| Tooltip::text(tooltip.clone(), cx))
                         }),
                 )
-                .when_some(on_remove, |element, on_remove| {
-                    element.child(
-                        IconButton::new(("remove", context.id.0), IconName::Close)
-                            .shape(IconButtonShape::Square)
-                            .icon_size(IconSize::XSmall)
-                            .tooltip(move |cx| {
-                                Tooltip::for_action_in(
-                                    "Remove Context",
-                                    &RemoveFocusedContext,
-                                    &focus_handle,
-                                    cx,
+                .child(
+                    div()
+                        .w_3p5()
+                        .when(focused, {
+                            let focus_handle = focus_handle.clone();
+                            move |element| {
+                                element.children(
+                                    ui::KeyBinding::for_action_in(
+                                        &RemoveFocusedContext,
+                                        &focus_handle,
+                                        cx,
+                                    )
+                                    .map(|binding| binding.into_element()),
+                                )
+                            }
+                        })
+                        .when(!focused, |element| {
+                            element.when_some(on_remove, |element, on_remove| {
+                                let focus_handle = focus_handle.clone();
+                                element.child(
+                                    IconButton::new(("remove", context.id.0), IconName::Close)
+                                        .shape(IconButtonShape::Square)
+                                        .icon_size(IconSize::XSmall)
+                                        .tooltip(move |cx| {
+                                            Tooltip::for_action_in(
+                                                "Remove Context",
+                                                &RemoveFocusedContext,
+                                                &focus_handle,
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(move |event, cx| on_remove(event, cx)),
                                 )
                             })
-                            .on_click(move |event, cx| on_remove(event, cx)),
-                    )
-                })
+                        }),
+                )
                 .when_some(on_click, |element, on_click| {
                     element.on_click(move |event, cx| on_click(event, cx))
                 }),
@@ -198,18 +219,29 @@ impl RenderOnce for ContextPill {
                         .color(Color::Muted),
                     ),
                 )
-                .child(
-                    Icon::new(IconName::Plus)
-                        .size(IconSize::XSmall)
-                        .into_any_element(),
-                )
-                .tooltip(move |cx| {
-                    Tooltip::for_action_in(
-                        "Add Suggested Context",
-                        &AcceptSuggestedContext,
-                        &focus_handle,
-                        cx,
-                    )
+                .when(focused, {
+                    let focus_handle = focus_handle.clone();
+                    move |element| {
+                        element.children(
+                            ui::KeyBinding::for_action_in(
+                                &AcceptSuggestedContext,
+                                &focus_handle,
+                                cx,
+                            )
+                            .map(|binding| binding.into_element()),
+                        )
+                    }
+                })
+                .tooltip({
+                    let focus_handle = focus_handle.clone();
+                    move |cx| {
+                        Tooltip::for_action_in(
+                            "Add Suggested Context",
+                            &AcceptSuggestedContext,
+                            &focus_handle,
+                            cx,
+                        )
+                    }
                 })
                 .when_some(on_click, |element, on_click| {
                     element.on_click(move |event, cx| on_click(event, cx))
