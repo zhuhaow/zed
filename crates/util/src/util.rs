@@ -1,7 +1,6 @@
 pub mod arc_cow;
 pub mod command;
 pub mod fs;
-pub mod markdown;
 pub mod paths;
 pub mod serde;
 #[cfg(any(test, feature = "test-support"))]

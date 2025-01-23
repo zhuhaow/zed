@@ -181,7 +181,7 @@ impl Button {
         self
     }
 
-    /// Display the keybinding that triggers the button action.
+    /// Binds a key combination to the button for keyboard shortcuts.
     pub fn key_binding(mut self, key_binding: impl Into<Option<KeyBinding>>) -> Self {
         self.key_binding = key_binding.into();
         self
@@ -527,7 +527,7 @@ impl ComponentPreview for Button {
                     ),
                     single_example(
                         "Tinted Icons",
-                        Button::new("tinted_icons", "Error")
+                        Button::new("icon_color", "Error")
                             .style(ButtonStyle::Tinted(TintColor::Error))
                             .color(Color::Error)
                             .icon_color(Color::Error)

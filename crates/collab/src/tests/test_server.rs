@@ -186,7 +186,6 @@ impl TestServer {
                 .db
                 .create_user(
                     &format!("{name}@example.com"),
-                    None,
                     false,
                     NewUserParams {
                         github_login: name.into(),
@@ -304,11 +303,9 @@ impl TestServer {
             collab_ui::init(&app_state, cx);
             file_finder::init(cx);
             menu::init();
-            cx.bind_keys(
-                settings::KeymapFile::load_asset_allow_partial_failure(os_keymap, cx).unwrap(),
-            );
+            settings::KeymapFile::load_asset(os_keymap, cx).unwrap();
             language_model::LanguageModelRegistry::test(cx);
-            assistant_context_editor::init(client.clone(), cx);
+            assistant::context_store::init(&client.clone().into());
         });
 
         client

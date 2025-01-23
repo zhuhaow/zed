@@ -1,9 +1,9 @@
 [package]
 name = "livekit_client_macos"
 version = "0.1.0"
-edition.workspace = true
+edition = "2021"
 description = "Bindings to LiveKit Swift client SDK"
-publish.workspace = true
+publish = false
 license = "GPL-3.0-or-later"
 
 [lints]

@@ -60,7 +60,6 @@ const DEFAULT_NUM_COLUMNS: usize = 128;
 pub fn text_style(cx: &mut WindowContext) -> TextStyle {
     let settings = ThemeSettings::get_global(cx).clone();
 
-    let font_size = settings.buffer_font_size().into();
     let font_family = settings.buffer_font.family;
     let font_features = settings.buffer_font.features;
     let font_weight = settings.buffer_font.weight;
@@ -73,7 +72,7 @@ pub fn text_style(cx: &mut WindowContext) -> TextStyle {
         font_features,
         font_weight,
         font_fallbacks,
-        font_size,
+        font_size: theme::get_buffer_font_size(cx).into(),
         font_style: FontStyle::Normal,
         line_height: cx.line_height().into(),
         background_color: Some(theme.colors().terminal_ansi_background),
@@ -187,10 +186,10 @@ impl TerminalOutput {
         for byte in text.as_bytes() {
             if *byte == b'\n' {
                 // Dirty (?) hack to move the cursor down
-                self.parser.advance(&mut self.handler, &[b'\r']);
-                self.parser.advance(&mut self.handler, &[b'\n']);
+                self.parser.advance(&mut self.handler, b'\r');
+                self.parser.advance(&mut self.handler, b'\n');
             } else {
-                self.parser.advance(&mut self.handler, &[*byte]);
+                self.parser.advance(&mut self.handler, *byte);
             }
         }
 

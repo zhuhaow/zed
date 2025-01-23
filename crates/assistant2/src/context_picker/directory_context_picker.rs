@@ -8,7 +8,7 @@ use picker::{Picker, PickerDelegate};
 use project::{PathMatchCandidateSet, ProjectPath, WorktreeId};
 use ui::{prelude::*, ListItem};
 use util::ResultExt as _;
-use workspace::{notifications::NotifyResultExt, Workspace};
+use workspace::Workspace;
 
 use crate::context_picker::{ConfirmBehavior, ContextPicker};
 use crate::context_store::ContextStore;
@@ -193,15 +193,28 @@ impl PickerDelegate for DirectoryContextPickerDelegate {
             return;
         };
 
+        let workspace = self.workspace.clone();
         let confirm_behavior = self.confirm_behavior;
         cx.spawn(|this, mut cx| async move {
-            match task.await.notify_async_err(&mut cx) {
-                None => anyhow::Ok(()),
-                Some(()) => this.update(&mut cx, |this, cx| match confirm_behavior {
-                    ConfirmBehavior::KeepOpen => {}
-                    ConfirmBehavior::Close => this.delegate.dismissed(cx),
-                }),
+            match task.await {
+                Ok(()) => {
+                    this.update(&mut cx, |this, cx| match confirm_behavior {
+                        ConfirmBehavior::KeepOpen => {}
+                        ConfirmBehavior::Close => this.delegate.dismissed(cx),
+                    })?;
+                }
+                Err(err) => {
+                    let Some(workspace) = workspace.upgrade() else {
+                        return anyhow::Ok(());
+                    };
+
+                    workspace.update(&mut cx, |workspace, cx| {
+                        workspace.show_error(&err, cx);
+                    })?;
+                }
             }
+
+            anyhow::Ok(())
         })
         .detach_and_log_err(cx);
     }

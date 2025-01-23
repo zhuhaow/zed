@@ -1,9 +1,9 @@
 use crate::{
-    AssistantPanel, AssistantPanelEvent, CycleNextInlineAssist, CyclePreviousInlineAssist,
+    assistant_settings::AssistantSettings, humanize_token_count, prompts::PromptBuilder,
+    AssistantPanel, AssistantPanelEvent, CharOperation, CycleNextInlineAssist,
+    CyclePreviousInlineAssist, LineDiff, LineOperation, RequestType, StreamingDiff,
 };
 use anyhow::{anyhow, Context as _, Result};
-use assistant_context_editor::{humanize_token_count, RequestType};
-use assistant_settings::AssistantSettings;
 use client::{telemetry::Telemetry, ErrorExt};
 use collections::{hash_map, HashMap, HashSet, VecDeque};
 use editor::{
@@ -40,7 +40,6 @@ use language_models::report_assistant_event;
 use multi_buffer::MultiBufferRow;
 use parking_lot::Mutex;
 use project::{CodeAction, ProjectTransaction};
-use prompt_library::PromptBuilder;
 use rope::Rope;
 use settings::{update_settings_file, Settings, SettingsStore};
 use smol::future::FutureExt;
@@ -55,7 +54,6 @@ use std::{
     task::{self, Poll},
     time::{Duration, Instant},
 };
-use streaming_diff::{CharOperation, LineDiff, LineOperation, StreamingDiff};
 use telemetry_events::{AssistantEvent, AssistantKind, AssistantPhase};
 use terminal_view::terminal_panel::TerminalPanel;
 use text::{OffsetRangeExt, ToPoint as _};
@@ -1728,7 +1726,7 @@ impl PromptEditor {
     }
 
     fn placeholder_text(codegen: &Codegen, cx: &WindowContext) -> String {
-        let context_keybinding = text_for_action(&zed_actions::assistant::ToggleFocus, cx)
+        let context_keybinding = text_for_action(&crate::ToggleFocus, cx)
             .map(|keybinding| format!(" • {keybinding} for context"))
             .unwrap_or_default();
 

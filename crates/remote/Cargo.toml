@@ -1,9 +1,9 @@
 [package]
 name = "remote"
 description = "Client-side subsystem for remote editing"
-edition.workspace = true
+edition = "2021"
 version = "0.1.0"
-publish.workspace = true
+publish = false
 license = "GPL-3.0-or-later"
 
 [lints]

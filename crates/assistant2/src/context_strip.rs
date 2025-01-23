@@ -10,7 +10,7 @@ use gpui::{
 use itertools::Itertools;
 use language::Buffer;
 use ui::{prelude::*, KeyBinding, PopoverMenu, PopoverMenuHandle, Tooltip};
-use workspace::{notifications::NotifyResultExt, Workspace};
+use workspace::Workspace;
 
 use crate::context::ContextKind;
 use crate::context_picker::{ConfirmBehavior, ContextPicker};
@@ -39,7 +39,6 @@ impl ContextStrip {
     pub fn new(
         context_store: Model<ContextStore>,
         workspace: WeakView<Workspace>,
-        editor: WeakView<Editor>,
         thread_store: Option<WeakModel<ThreadStore>>,
         context_picker_menu_handle: PopoverMenuHandle<ContextPicker>,
         suggest_context_kind: SuggestContextKind,
@@ -50,7 +49,6 @@ impl ContextStrip {
                 workspace.clone(),
                 thread_store.clone(),
                 context_store.downgrade(),
-                editor.clone(),
                 ConfirmBehavior::KeepOpen,
                 cx,
             )
@@ -118,10 +116,6 @@ impl ContextStrip {
     }
 
     fn suggested_thread(&self, cx: &ViewContext<Self>) -> Option<SuggestedContext> {
-        if !self.context_picker.read(cx).allow_threads() {
-            return None;
-        }
-
         let workspace = self.workspace.upgrade()?;
         let active_thread = workspace
             .read(cx)
@@ -317,13 +311,23 @@ impl ContextStrip {
             context_store.accept_suggested_context(&suggested, cx)
         });
 
+        let workspace = self.workspace.clone();
+
         cx.spawn(|this, mut cx| async move {
-            match task.await.notify_async_err(&mut cx) {
-                None => {}
-                Some(()) => {
+            match task.await {
+                Ok(()) => {
                     if let Some(this) = this.upgrade() {
                         this.update(&mut cx, |_, cx| cx.notify())?;
                     }
+                }
+                Err(err) => {
+                    let Some(workspace) = workspace.upgrade() else {
+                        return anyhow::Ok(());
+                    };
+
+                    workspace.update(&mut cx, |workspace, cx| {
+                        workspace.show_error(&err, cx);
+                    })?;
                 }
             }
             anyhow::Ok(())
@@ -436,7 +440,7 @@ impl Render for ContextStrip {
                 }
             })
             .children(context.iter().enumerate().map(|(i, context)| {
-                ContextPill::added(
+                ContextPill::new_added(
                     context.clone(),
                     dupe_names.contains(&context.name),
                     self.focused_index == Some(i),
@@ -458,7 +462,7 @@ impl Render for ContextStrip {
             }))
             .when_some(suggested_context, |el, suggested| {
                 el.child(
-                    ContextPill::suggested(
+                    ContextPill::new_suggested(
                         suggested.name().clone(),
                         suggested.icon_path(),
                         suggested.kind(),

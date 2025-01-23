@@ -21,7 +21,7 @@ use chrono::{DateTime, Duration, Utc};
 use collections::HashMap;
 use db::TokenUsage;
 use db::{usage_measure::UsageMeasure, ActiveUserCount, LlmDatabase};
-use futures::{FutureExt, Stream, StreamExt as _};
+use futures::{Stream, StreamExt as _};
 use reqwest_client::ReqwestClient;
 use rpc::{
     proto::Plan, LanguageModelProvider, PerformCompletionParams, EXPIRED_LLM_TOKEN_HEADER_NAME,
@@ -447,8 +447,6 @@ async fn predict_edits(
         ));
     }
 
-    let sample_input_output = claims.is_staff && rand::random::<f32>() < 0.1;
-
     let api_url = state
         .config
         .prediction_api_url
@@ -477,11 +475,7 @@ async fn predict_edits(
         .replace("<excerpt>", &params.input_excerpt);
 
     let request_start = std::time::Instant::now();
-    let timeout = state
-        .executor
-        .sleep(std::time::Duration::from_secs(2))
-        .fuse();
-    let response = fireworks::complete(
+    let mut response = fireworks::complete(
         &state.http_client,
         api_url,
         api_key,
@@ -491,97 +485,46 @@ async fn predict_edits(
             max_tokens: 2048,
             temperature: 0.,
             prediction: Some(fireworks::Prediction::Content {
-                content: params.input_excerpt.clone(),
+                content: params.input_excerpt,
             }),
             rewrite_speculation: Some(true),
         },
     )
-    .fuse();
-    futures::pin_mut!(timeout);
-    futures::pin_mut!(response);
+    .await?;
+    let duration = request_start.elapsed();
 
-    futures::select! {
-        _ = timeout => {
-            state.executor.spawn_detached({
-                let kinesis_client = state.kinesis_client.clone();
-                let kinesis_stream = state.config.kinesis_stream.clone();
-                let model = model.clone();
-                async move {
-                    SnowflakeRow::new(
-                        "Fireworks Completion Timeout",
-                        claims.metrics_id,
-                        claims.is_staff,
-                        claims.system_id.clone(),
-                        json!({
-                            "model": model.to_string(),
-                            "prompt": prompt,
-                        }),
-                    )
-                    .write(&kinesis_client, &kinesis_stream)
-                    .await
-                    .log_err();
-                }
-            });
-            Err(anyhow!("request timed out"))?
-        },
-        response = response => {
-            let duration = request_start.elapsed();
+    let choice = response
+        .completion
+        .choices
+        .pop()
+        .context("no output from completion response")?;
 
-            let mut response = response?;
-            let choice = response
-                .completion
-                .choices
-                .pop()
-                .context("no output from completion response")?;
+    state.executor.spawn_detached({
+        let kinesis_client = state.kinesis_client.clone();
+        let kinesis_stream = state.config.kinesis_stream.clone();
+        let model = model.clone();
+        async move {
+            SnowflakeRow::new(
+                "Fireworks Completion Requested",
+                claims.metrics_id,
+                claims.is_staff,
+                claims.system_id.clone(),
+                json!({
+                    "model": model.to_string(),
+                    "headers": response.headers,
+                    "usage": response.completion.usage,
+                    "duration": duration.as_secs_f64(),
+                }),
+            )
+            .write(&kinesis_client, &kinesis_stream)
+            .await
+            .log_err();
+        }
+    });
 
-            state.executor.spawn_detached({
-                let kinesis_client = state.kinesis_client.clone();
-                let kinesis_stream = state.config.kinesis_stream.clone();
-                let model = model.clone();
-                let output = choice.text.clone();
-
-                async move {
-                    let properties = if sample_input_output {
-                        json!({
-                            "model": model.to_string(),
-                            "headers": response.headers,
-                            "usage": response.completion.usage,
-                            "duration": duration.as_secs_f64(),
-                            "prompt": prompt,
-                            "input_excerpt": params.input_excerpt,
-                            "input_events": params.input_events,
-                            "outline": params.outline,
-                            "output": output,
-                            "is_sampled": true,
-                        })
-                    } else {
-                        json!({
-                            "model": model.to_string(),
-                            "headers": response.headers,
-                            "usage": response.completion.usage,
-                            "duration": duration.as_secs_f64(),
-                            "is_sampled": false,
-                        })
-                    };
-
-                    SnowflakeRow::new(
-                        "Fireworks Completion Requested",
-                        claims.metrics_id,
-                        claims.is_staff,
-                        claims.system_id.clone(),
-                        properties,
-                    )
-                    .write(&kinesis_client, &kinesis_stream)
-                    .await
-                    .log_err();
-                }
-            });
-
-            Ok(Json(PredictEditsResponse {
-                output_excerpt: choice.text,
-            }))
-        },
-    }
+    Ok(Json(PredictEditsResponse {
+        output_excerpt: choice.text,
+    }))
 }
 
 /// The maximum monthly spending an individual user can reach on the free tier

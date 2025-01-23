@@ -1252,11 +1252,7 @@ impl RemoteServerProjects {
                 cx.notify();
             }));
 
-        let Some(scroll_handle) = scroll_state
-            .scroll_handle()
-            .as_any()
-            .downcast_ref::<ScrollHandle>()
-        else {
+        let ui::ScrollableHandle::NonUniform(scroll_handle) = scroll_state.scroll_handle() else {
             unreachable!()
         };
 

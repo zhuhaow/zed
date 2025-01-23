@@ -1637,6 +1637,12 @@ async fn test_mutual_editor_inlay_hint_cache_update(
             extract_hint_labels(editor),
             "Host should get its first hints when opens an editor"
         );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(
+            inlay_cache.version(),
+            1,
+            "Host editor update the cache version after every cache/view change",
+        );
     });
     let (workspace_b, cx_b) = client_b.build_workspace(&project_b, cx_b);
     let editor_b = workspace_b
@@ -1655,6 +1661,12 @@ async fn test_mutual_editor_inlay_hint_cache_update(
             extract_hint_labels(editor),
             "Client should get its first hints when opens an editor"
         );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(
+            inlay_cache.version(),
+            1,
+            "Guest editor update the cache version after every cache/view change"
+        );
     });
 
     let after_client_edit = edits_made.fetch_add(1, atomic::Ordering::Release) + 1;
@@ -1670,12 +1682,16 @@ async fn test_mutual_editor_inlay_hint_cache_update(
             vec![after_client_edit.to_string()],
             extract_hint_labels(editor),
         );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(inlay_cache.version(), 2);
     });
     editor_b.update(cx_b, |editor, _| {
         assert_eq!(
             vec![after_client_edit.to_string()],
             extract_hint_labels(editor),
         );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(inlay_cache.version(), 2);
     });
 
     let after_host_edit = edits_made.fetch_add(1, atomic::Ordering::Release) + 1;
@@ -1691,12 +1707,16 @@ async fn test_mutual_editor_inlay_hint_cache_update(
             vec![after_host_edit.to_string()],
             extract_hint_labels(editor),
         );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(inlay_cache.version(), 3);
     });
     editor_b.update(cx_b, |editor, _| {
         assert_eq!(
             vec![after_host_edit.to_string()],
             extract_hint_labels(editor),
         );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(inlay_cache.version(), 3);
     });
 
     let after_special_edit_for_refresh = edits_made.fetch_add(1, atomic::Ordering::Release) + 1;
@@ -1712,12 +1732,24 @@ async fn test_mutual_editor_inlay_hint_cache_update(
             extract_hint_labels(editor),
             "Host should react to /refresh LSP request"
         );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(
+            inlay_cache.version(),
+            4,
+            "Host should accepted all edits and bump its cache version every time"
+        );
     });
     editor_b.update(cx_b, |editor, _| {
         assert_eq!(
             vec![after_special_edit_for_refresh.to_string()],
             extract_hint_labels(editor),
             "Guest should get a /refresh LSP request propagated by host"
+        );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(
+            inlay_cache.version(),
+            4,
+            "Guest should accepted all edits and bump its cache version every time"
         );
     });
 }
@@ -1874,6 +1906,12 @@ async fn test_inlay_hint_refresh_is_forwarded(
             extract_hint_labels(editor).is_empty(),
             "Host should get no hints due to them turned off"
         );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(
+            inlay_cache.version(),
+            0,
+            "Turned off hints should not generate version updates"
+        );
     });
 
     executor.run_until_parked();
@@ -1882,6 +1920,12 @@ async fn test_inlay_hint_refresh_is_forwarded(
             vec!["initial hint".to_string()],
             extract_hint_labels(editor),
             "Client should get its first hints when opens an editor"
+        );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(
+            inlay_cache.version(),
+            1,
+            "Should update cache version after first hints"
         );
     });
 
@@ -1894,7 +1938,13 @@ async fn test_inlay_hint_refresh_is_forwarded(
     editor_a.update(cx_a, |editor, _| {
         assert!(
             extract_hint_labels(editor).is_empty(),
-            "Host should get no hints due to them turned off, even after the /refresh"
+            "Host should get nop hints due to them turned off, even after the /refresh"
+        );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(
+            inlay_cache.version(),
+            0,
+            "Turned off hints should not generate version updates, again"
         );
     });
 
@@ -1904,6 +1954,12 @@ async fn test_inlay_hint_refresh_is_forwarded(
             vec!["other hint".to_string()],
             extract_hint_labels(editor),
             "Guest should get a /refresh LSP request propagated by host despite host hints are off"
+        );
+        let inlay_cache = editor.inlay_hint_cache();
+        assert_eq!(
+            inlay_cache.version(),
+            2,
+            "Guest should accepted all edits and bump its cache version every time"
         );
     });
 }

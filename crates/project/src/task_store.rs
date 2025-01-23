@@ -20,7 +20,7 @@ use crate::{
     ProjectEnvironment,
 };
 
-#[allow(clippy::large_enum_variant)] // platform-dependent warning
+#[expect(clippy::large_enum_variant)]
 pub enum TaskStore {
     Functional(StoreState),
     Noop,

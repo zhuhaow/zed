@@ -4,9 +4,7 @@ mod mac_watcher;
 #[cfg(not(target_os = "macos"))]
 pub mod fs_watcher;
 
-use anyhow::{anyhow, Context, Result};
-#[cfg(any(test, feature = "test-support"))]
-use git::status::FileStatus;
+use anyhow::{anyhow, Result};
 use git::GitHostingProviderRegistry;
 
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
@@ -43,7 +41,7 @@ use util::ResultExt;
 #[cfg(any(test, feature = "test-support"))]
 use collections::{btree_map, BTreeMap};
 #[cfg(any(test, feature = "test-support"))]
-use git::repository::FakeGitRepositoryState;
+use git::repository::{FakeGitRepositoryState, GitFileStatus};
 #[cfg(any(test, feature = "test-support"))]
 use parking_lot::Mutex;
 #[cfg(any(test, feature = "test-support"))]
@@ -589,19 +587,11 @@ impl Fs for RealFs {
             }
         };
 
-        let path_buf = path.to_path_buf();
-        let path_exists = smol::unblock(move || {
-            path_buf
-                .try_exists()
-                .with_context(|| format!("checking existence for path {path_buf:?}"))
-        })
-        .await?;
         let is_symlink = symlink_metadata.file_type().is_symlink();
-        let metadata = match (is_symlink, path_exists) {
-            (true, true) => smol::fs::metadata(path)
-                .await
-                .with_context(|| "accessing symlink for path {path}")?,
-            _ => symlink_metadata,
+        let metadata = if is_symlink {
+            smol::fs::metadata(path).await?
+        } else {
+            symlink_metadata
         };
 
         #[cfg(unix)]
@@ -1295,11 +1285,11 @@ impl FakeFs {
     pub fn set_status_for_repo_via_working_copy_change(
         &self,
         dot_git: &Path,
-        statuses: &[(&Path, FileStatus)],
+        statuses: &[(&Path, GitFileStatus)],
     ) {
         self.with_git_state(dot_git, false, |state| {
-            state.statuses.clear();
-            state.statuses.extend(
+            state.worktree_statuses.clear();
+            state.worktree_statuses.extend(
                 statuses
                     .iter()
                     .map(|(path, content)| ((**path).into(), *content)),
@@ -1315,11 +1305,11 @@ impl FakeFs {
     pub fn set_status_for_repo_via_git_operation(
         &self,
         dot_git: &Path,
-        statuses: &[(&Path, FileStatus)],
+        statuses: &[(&Path, GitFileStatus)],
     ) {
         self.with_git_state(dot_git, true, |state| {
-            state.statuses.clear();
-            state.statuses.extend(
+            state.worktree_statuses.clear();
+            state.worktree_statuses.extend(
                 statuses
                     .iter()
                     .map(|(path, content)| ((**path).into(), *content)),

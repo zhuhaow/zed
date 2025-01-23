@@ -10488,7 +10488,6 @@ async fn test_move_to_enclosing_bracket(cx: &mut gpui::TestAppContext) {
     let mut cx = EditorLspTestContext::new_typescript(Default::default(), cx).await;
     let mut assert = |before, after| {
         let _state_context = cx.set_state(before);
-        cx.run_until_parked();
         cx.update_editor(|editor, cx| {
             editor.move_to_enclosing_bracket(&MoveToEnclosingBracket, cx)
         });
@@ -10742,6 +10741,7 @@ async fn test_language_server_restart_due_to_settings_change(cx: &mut gpui::Test
         0,
         "Should not restart LSP server on an unrelated LSP settings change"
     );
+
     update_test_project_settings(cx, |project_settings| {
         project_settings.lsp.insert(
             language_server_name.into(),

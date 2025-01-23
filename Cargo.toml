@@ -2,15 +2,11 @@
 resolver = "2"
 members = [
     "crates/activity_indicator",
-    "crates/zed_predict_tos",
     "crates/anthropic",
     "crates/assets",
     "crates/assistant",
     "crates/assistant2",
-    "crates/assistant_context_editor",
-    "crates/assistant_settings",
     "crates/assistant_slash_command",
-    "crates/assistant_slash_commands",
     "crates/assistant_tool",
     "crates/assistant_tools",
     "crates/audio",
@@ -92,7 +88,6 @@ members = [
     "crates/project",
     "crates/project_panel",
     "crates/project_symbols",
-    "crates/prompt_library",
     "crates/proto",
     "crates/recent_projects",
     "crates/refineable",
@@ -118,7 +113,6 @@ members = [
     "crates/sqlez_macros",
     "crates/story",
     "crates/storybook",
-    "crates/streaming_diff",
     "crates/sum_tree",
     "crates/supermaven",
     "crates/supermaven_api",
@@ -188,10 +182,6 @@ members = [
 ]
 default-members = ["crates/zed"]
 
-[workspace.package]
-publish = false
-edition = "2021"
-
 [workspace.dependencies]
 
 #
@@ -200,15 +190,11 @@ edition = "2021"
 
 activity_indicator = { path = "crates/activity_indicator" }
 ai = { path = "crates/ai" }
-zed_predict_tos = { path = "crates/zed_predict_tos" }
 anthropic = { path = "crates/anthropic" }
 assets = { path = "crates/assets" }
 assistant = { path = "crates/assistant" }
 assistant2 = { path = "crates/assistant2" }
-assistant_context_editor = { path = "crates/assistant_context_editor" }
-assistant_settings = { path = "crates/assistant_settings" }
 assistant_slash_command = { path = "crates/assistant_slash_command" }
-assistant_slash_commands = { path = "crates/assistant_slash_commands" }
 assistant_tool = { path = "crates/assistant_tool" }
 assistant_tools = { path = "crates/assistant_tools" }
 audio = { path = "crates/audio" }
@@ -291,7 +277,6 @@ prettier = { path = "crates/prettier" }
 project = { path = "crates/project" }
 project_panel = { path = "crates/project_panel" }
 project_symbols = { path = "crates/project_symbols" }
-prompt_library = { path = "crates/prompt_library" }
 proto = { path = "crates/proto" }
 recent_projects = { path = "crates/recent_projects" }
 refineable = { path = "crates/refineable" }
@@ -316,7 +301,6 @@ sqlez = { path = "crates/sqlez" }
 sqlez_macros = { path = "crates/sqlez_macros" }
 story = { path = "crates/story" }
 storybook = { path = "crates/storybook" }
-streaming_diff = { path = "crates/streaming_diff" }
 sum_tree = { path = "crates/sum_tree" }
 supermaven = { path = "crates/supermaven" }
 supermaven_api = { path = "crates/supermaven_api" }
@@ -354,8 +338,7 @@ zeta = { path = "crates/zeta" }
 #
 
 aho-corasick = "1.1"
-# TODO(#18342): Update to version 0.25 from crates.io when it is released.
-alacritty_terminal = { git = "https://github.com/alacritty/alacritty.git", rev = "5e78d20c709cb1ab8d44ca7a8702cc26d779227c" }
+alacritty_terminal = "0.24"
 any_vec = "0.14"
 anyhow = "1.0.86"
 arrayvec = { version = "0.7.4", features = ["serde"] }
@@ -372,7 +355,7 @@ async-tungstenite = "0.28"
 async-watch = "0.3.1"
 async_zip = { version = "0.0.17", features = ["deflate", "deflate64"] }
 base64 = "0.22"
-bitflags = "2.8.0"
+bitflags = "2.6.0"
 blade-graphics = { git = "https://github.com/kvark/blade", rev = "091a8401033847bb9b6ace3fcf70448d069621c5" }
 blade-macros = { git = "https://github.com/kvark/blade", rev = "091a8401033847bb9b6ace3fcf70448d069621c5" }
 blade-util = { git = "https://github.com/kvark/blade", rev = "091a8401033847bb9b6ace3fcf70448d069621c5" }
@@ -384,7 +367,7 @@ chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.4", features = ["derive"] }
 cocoa = "0.26"
 cocoa-foundation = "0.2.0"
-convert_case = "0.7.0"
+convert_case = "0.6.0"
 core-foundation = "0.9.3"
 core-foundation-sys = "0.8.6"
 ctor = "0.2.6"
@@ -400,8 +383,7 @@ fork = "0.2.0"
 futures = "0.3"
 futures-batch = "0.6.1"
 futures-lite = "1.13"
-# TODO: get back to regular versions when https://github.com/rust-lang/git2-rs/pull/1120 is released
-git2 = { git = "https://github.com/rust-lang/git2-rs", rev = "a3b90cb3756c1bb63e2317bf9cfa57838178de5c", default-features = false }
+git2 = { version = "0.19", default-features = false }
 globset = "0.4"
 handlebars = "4.3"
 heed = { version = "0.21.0", features = ["read-txn-no-tls"] }
@@ -421,13 +403,12 @@ libc = "0.2"
 libsqlite3-sys = { version = "0.30.1", features = ["bundled"] }
 linkify = "0.10.0"
 livekit = { git = "https://github.com/zed-industries/livekit-rust-sdks", rev="060964da10574cd9bf06463a53bf6e0769c5c45e", features = ["dispatcher", "services-dispatcher", "rustls-tls-native-roots"], default-features = false }
-log = { version = "0.4.25", features = ["kv_unstable_serde", "serde"] }
+log = { version = "0.4.16", features = ["kv_unstable_serde", "serde"] }
 markup5ever_rcdom = "0.3.0"
 nanoid = "0.4"
 nbformat = { version = "0.10.0" }
 nix = "0.29"
 num-format = "0.4.4"
-once_cell = "1.20"
 ordered-float = "2.1.1"
 palette = { version = "0.7.5", default-features = false, features = ["std"] }
 parking_lot = "0.12.1"
@@ -491,7 +472,6 @@ strum = { version = "0.26.0", features = ["derive"] }
 subtle = "2.5.0"
 sys-locale = "0.3.1"
 sysinfo = "0.31.0"
-take-until = "0.2.0"
 tempfile = "3.9.0"
 thiserror = "1.0.29"
 tiktoken-rs = "0.6.0"
@@ -510,7 +490,7 @@ tree-sitter = { version = "0.23", features = ["wasm"] }
 tree-sitter-bash = "0.23"
 tree-sitter-c = "0.23"
 tree-sitter-cpp = "0.23"
-tree-sitter-css = "0.23.2"
+tree-sitter-css = "0.23"
 tree-sitter-elixir = "0.3"
 tree-sitter-embedded-template = "0.23.0"
 tree-sitter-go = "0.23"
@@ -547,7 +527,7 @@ wasmtime-wasi = "24"
 which = "6.0.0"
 wit-component = "0.201"
 zstd = "0.11"
-metal = "0.31"
+metal = "0.30"
 
 [workspace.dependencies.async-stripe]
 git = "https://github.com/zed-industries/async-stripe"

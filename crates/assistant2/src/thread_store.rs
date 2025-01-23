@@ -52,14 +52,6 @@ impl ThreadStore {
         })
     }
 
-    /// Returns the number of non-empty threads.
-    pub fn non_empty_len(&self, cx: &AppContext) -> usize {
-        self.threads
-            .iter()
-            .filter(|thread| !thread.read(cx).is_empty())
-            .count()
-    }
-
     pub fn threads(&self, cx: &ModelContext<Self>) -> Vec<Model<Thread>> {
         let mut threads = self
             .threads

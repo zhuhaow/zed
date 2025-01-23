@@ -22,9 +22,6 @@ pub trait InlineCompletionProvider: 'static + Sized {
     fn display_name() -> &'static str;
     fn show_completions_in_menu() -> bool;
     fn show_completions_in_normal_mode() -> bool;
-    fn show_tab_accept_marker() -> bool {
-        false
-    }
     fn is_enabled(
         &self,
         buffer: &Model<Buffer>,
@@ -39,9 +36,6 @@ pub trait InlineCompletionProvider: 'static + Sized {
         debounce: bool,
         cx: &mut ModelContext<Self>,
     );
-    fn needs_terms_acceptance(&self, _cx: &AppContext) -> bool {
-        false
-    }
     fn cycle(
         &mut self,
         buffer: Model<Buffer>,
@@ -70,8 +64,6 @@ pub trait InlineCompletionProviderHandle {
     ) -> bool;
     fn show_completions_in_menu(&self) -> bool;
     fn show_completions_in_normal_mode(&self) -> bool;
-    fn show_tab_accept_marker(&self) -> bool;
-    fn needs_terms_acceptance(&self, cx: &AppContext) -> bool;
     fn is_refreshing(&self, cx: &AppContext) -> bool;
     fn refresh(
         &self,
@@ -117,10 +109,6 @@ where
         T::show_completions_in_normal_mode()
     }
 
-    fn show_tab_accept_marker(&self) -> bool {
-        T::show_tab_accept_marker()
-    }
-
     fn is_enabled(
         &self,
         buffer: &Model<Buffer>,
@@ -128,10 +116,6 @@ where
         cx: &AppContext,
     ) -> bool {
         self.read(cx).is_enabled(buffer, cursor_position, cx)
-    }
-
-    fn needs_terms_acceptance(&self, cx: &AppContext) -> bool {
-        self.read(cx).needs_terms_acceptance(cx)
     }
 
     fn is_refreshing(&self, cx: &AppContext) -> bool {

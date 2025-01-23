@@ -96,7 +96,6 @@ pub enum Operator {
     Outdent,
     AutoIndent,
     Rewrap,
-    ShellCommand,
     Lowercase,
     Uppercase,
     OppositeCase,
@@ -496,7 +495,6 @@ impl Operator {
             Operator::Jump { line: false } => "`",
             Operator::Indent => ">",
             Operator::AutoIndent => "eq",
-            Operator::ShellCommand => "sh",
             Operator::Rewrap => "gq",
             Operator::Outdent => "<",
             Operator::Uppercase => "gU",
@@ -518,7 +516,6 @@ impl Operator {
                 prefix: Some(prefix),
             } => format!("^V{prefix}"),
             Operator::AutoIndent => "=".to_string(),
-            Operator::ShellCommand => "=".to_string(),
             _ => self.id().to_string(),
         }
     }
@@ -547,7 +544,6 @@ impl Operator {
             | Operator::Indent
             | Operator::Outdent
             | Operator::AutoIndent
-            | Operator::ShellCommand
             | Operator::Lowercase
             | Operator::Uppercase
             | Operator::Object { .. }

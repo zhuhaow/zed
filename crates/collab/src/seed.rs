@@ -16,7 +16,6 @@ struct GithubUser {
     id: i32,
     login: String,
     email: Option<String>,
-    name: Option<String>,
     created_at: DateTime<Utc>,
 }
 
@@ -76,7 +75,6 @@ pub async fn seed(config: &Config, db: &Database, force: bool) -> anyhow::Result
         let user = db
             .create_user(
                 &user.email.unwrap_or(format!("{admin_login}@example.com")),
-                user.name.as_deref(),
                 true,
                 NewUserParams {
                     github_login: user.login,
@@ -131,7 +129,6 @@ pub async fn seed(config: &Config, db: &Database, force: bool) -> anyhow::Result
                 &github_user.login,
                 github_user.id,
                 github_user.email.as_deref(),
-                github_user.name.as_deref(),
                 github_user.created_at,
                 None,
             )
@@ -155,20 +152,14 @@ fn load_admins(path: impl AsRef<Path>) -> anyhow::Result<SeedConfig> {
 }
 
 async fn fetch_github<T: DeserializeOwned>(client: &reqwest::Client, url: &str) -> T {
-    let mut request_builder = client.get(url);
-    if let Ok(github_token) = std::env::var("GITHUB_TOKEN") {
-        request_builder =
-            request_builder.header("Authorization", format!("Bearer {}", github_token));
-    }
-    let response = request_builder
+    let response = client
+        .get(url)
         .header("user-agent", "zed")
         .send()
         .await
         .unwrap_or_else(|error| panic!("failed to fetch '{url}': {error}"));
-    let response_text = response.text().await.unwrap_or_else(|error| {
-        panic!("failed to fetch '{url}': {error}");
-    });
-    serde_json::from_str(&response_text).unwrap_or_else(|error| {
-        panic!("failed to deserialize github user from '{url}'. Error: '{error}', text: '{response_text}'");
-    })
+    response
+        .json()
+        .await
+        .unwrap_or_else(|error| panic!("failed to deserialize github user from '{url}': {error}"))
 }

@@ -1066,9 +1066,7 @@ impl OutlinePanel {
                                 }
                             }
                         } else {
-                            if multi_buffer_snapshot.as_singleton().is_none() {
-                                offset.y = -(active_editor.read(cx).file_header_size() as f32);
-                            }
+                            offset.y = -(active_editor.read(cx).file_header_size() as f32);
                             if show_excerpt_controls {
                                 offset.y -= expand_excerpt_control_height;
                             }
@@ -1984,7 +1982,7 @@ impl OutlinePanel {
         let is_expanded = !self
             .collapsed_entries
             .contains(&CollapsedEntry::Excerpt(excerpt.buffer_id, excerpt.id));
-        let color = entry_label_color(is_active);
+        let color = entry_git_aware_label_color(None, false, is_active);
         let icon = if has_outlines {
             FileIcons::get_chevron_icon(is_expanded, cx)
                 .map(|icon_path| Icon::from_path(icon_path).color(color).into_any_element())
@@ -2088,7 +2086,7 @@ impl OutlinePanel {
             }) => {
                 let name = self.entry_name(worktree_id, entry, cx);
                 let color =
-                    entry_git_aware_label_color(entry.git_summary, entry.is_ignored, is_active);
+                    entry_git_aware_label_color(entry.git_status, entry.is_ignored, is_active);
                 let icon = if settings.file_icons {
                     FileIcons::get_icon(&entry.path, cx)
                         .map(|icon_path| Icon::from_path(icon_path).color(color).into_any_element())
@@ -2116,7 +2114,7 @@ impl OutlinePanel {
                     directory.entry.id,
                 ));
                 let color = entry_git_aware_label_color(
-                    directory.entry.git_summary,
+                    directory.entry.git_status,
                     directory.entry.is_ignored,
                     is_active,
                 );
@@ -2212,8 +2210,7 @@ impl OutlinePanel {
             let git_status = folded_dir
                 .entries
                 .first()
-                .map(|entry| entry.git_summary)
-                .unwrap_or_default();
+                .and_then(|entry| entry.git_status);
             let color = entry_git_aware_label_color(git_status, is_ignored, is_active);
             let icon = if settings.folder_icons {
                 FileIcons::get_folder_icon(is_expanded, cx)
@@ -2559,10 +2556,7 @@ impl OutlinePanel {
                             match entry_id.and_then(|id| worktree.entry_for_id(id)).cloned() {
                                 Some(entry) => {
                                     let entry = GitEntry {
-                                        git_summary: worktree
-                                            .status_for_file(&entry.path)
-                                            .map(|status| status.summary())
-                                            .unwrap_or_default(),
+                                        git_status: worktree.status_for_file(&entry.path),
                                         entry,
                                     };
                                     let mut traversal = worktree

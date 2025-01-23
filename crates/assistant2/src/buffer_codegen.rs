@@ -1,6 +1,10 @@
 use crate::context::attach_context_to_message;
 use crate::context_store::ContextStore;
 use crate::inline_prompt_editor::CodegenStatus;
+use crate::{
+    prompts::PromptBuilder,
+    streaming_diff::{CharOperation, LineDiff, LineOperation, StreamingDiff},
+};
 use anyhow::{Context as _, Result};
 use client::telemetry::Telemetry;
 use collections::HashSet;
@@ -15,7 +19,6 @@ use language_model::{
 use language_models::report_assistant_event;
 use multi_buffer::MultiBufferRow;
 use parking_lot::Mutex;
-use prompt_library::PromptBuilder;
 use rope::Rope;
 use smol::future::FutureExt;
 use std::{
@@ -28,7 +31,6 @@ use std::{
     task::{self, Poll},
     time::Instant,
 };
-use streaming_diff::{CharOperation, LineDiff, LineOperation, StreamingDiff};
 use telemetry_events::{AssistantEvent, AssistantKind, AssistantPhase};
 
 pub struct BufferCodegen {

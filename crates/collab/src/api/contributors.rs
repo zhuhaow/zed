@@ -115,7 +115,6 @@ async fn add_contributor(
             &params.github_login,
             params.github_user_id,
             params.github_email.as_deref(),
-            params.github_name.as_deref(),
             params.github_user_created_at,
             initial_channel_id,
         )

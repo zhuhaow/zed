@@ -1764,10 +1764,7 @@ List of `integer` column numbers
     "toolbar": {
       "breadcrumbs": true
     },
-    "working_directory": "current_project_directory",
-    "scrollbar": {
-      "show": null
-    }
+    "working_directory": "current_project_directory"
   }
 }
 ```

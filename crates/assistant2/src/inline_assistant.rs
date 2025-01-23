@@ -1,11 +1,13 @@
-use std::cmp;
-use std::mem;
-use std::ops::Range;
-use std::rc::Rc;
-use std::sync::Arc;
-
+use crate::buffer_codegen::{BufferCodegen, CodegenAlternative, CodegenEvent};
+use crate::context_store::ContextStore;
+use crate::inline_prompt_editor::{CodegenStatus, InlineAssistId, PromptEditor, PromptEditorEvent};
+use crate::thread_store::ThreadStore;
+use crate::AssistantPanel;
+use crate::{
+    assistant_settings::AssistantSettings, prompts::PromptBuilder,
+    terminal_inline_assistant::TerminalInlineAssistant,
+};
 use anyhow::{Context as _, Result};
-use assistant_settings::AssistantSettings;
 use client::telemetry::Telemetry;
 use collections::{hash_map, HashMap, HashSet, VecDeque};
 use editor::{
@@ -19,6 +21,8 @@ use editor::{
 };
 use feature_flags::{Assistant2FeatureFlag, FeatureFlagViewExt as _};
 use fs::Fs;
+use util::ResultExt;
+
 use gpui::{
     point, AppContext, FocusableView, Global, HighlightStyle, Model, Subscription, Task,
     UpdateGlobal, View, ViewContext, WeakModel, WeakView, WindowContext,
@@ -29,23 +33,15 @@ use language_models::report_assistant_event;
 use multi_buffer::MultiBufferRow;
 use parking_lot::Mutex;
 use project::{CodeAction, ProjectTransaction};
-use prompt_library::PromptBuilder;
 use settings::{Settings, SettingsStore};
+use std::{cmp, mem, ops::Range, rc::Rc, sync::Arc};
 use telemetry_events::{AssistantEvent, AssistantKind, AssistantPhase};
 use terminal_view::{terminal_panel::TerminalPanel, TerminalView};
 use text::{OffsetRangeExt, ToPoint as _};
 use ui::prelude::*;
 use util::RangeExt;
-use util::ResultExt;
 use workspace::{dock::Panel, ShowConfiguration};
 use workspace::{notifications::NotificationId, ItemHandle, Toast, Workspace};
-
-use crate::buffer_codegen::{BufferCodegen, CodegenAlternative, CodegenEvent};
-use crate::context_store::ContextStore;
-use crate::inline_prompt_editor::{CodegenStatus, InlineAssistId, PromptEditor, PromptEditorEvent};
-use crate::terminal_inline_assistant::TerminalInlineAssistant;
-use crate::thread_store::ThreadStore;
-use crate::AssistantPanel;
 
 pub fn init(
     fs: Arc<dyn Fs>,
@@ -204,7 +200,7 @@ impl InlineAssistant {
 
     pub fn inline_assist(
         workspace: &mut Workspace,
-        _action: &zed_actions::assistant::InlineAssist,
+        _action: &zed_actions::InlineAssist,
         cx: &mut ViewContext<Workspace>,
     ) {
         let settings = AssistantSettings::get_global(cx);

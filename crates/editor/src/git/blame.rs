@@ -538,7 +538,7 @@ async fn parse_markdown(text: &str, language_registry: &Arc<LanguageRegistry>) -
 
     markdown::parse_markdown_block(
         text,
-        Some(language_registry),
+        language_registry,
         None,
         &mut parsed_message.text,
         &mut parsed_message.highlights,

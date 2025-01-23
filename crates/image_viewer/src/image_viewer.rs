@@ -2,17 +2,18 @@ use std::path::PathBuf;
 
 use anyhow::Context as _;
 use editor::items::entry_git_aware_label_color;
-use file_icons::FileIcons;
 use gpui::{
     canvas, div, fill, img, opaque_grey, point, size, AnyElement, AppContext, Bounds, EventEmitter,
     FocusHandle, FocusableView, InteractiveElement, IntoElement, Model, ObjectFit, ParentElement,
     Render, Styled, Task, View, ViewContext, VisualContext, WeakView, WindowContext,
 };
 use persistence::IMAGE_VIEWER;
-use project::{image_store::ImageItemEvent, ImageItem, Project, ProjectPath};
-use settings::Settings;
 use theme::Theme;
 use ui::prelude::*;
+
+use file_icons::FileIcons;
+use project::{image_store::ImageItemEvent, ImageItem, Project, ProjectPath};
+use settings::Settings;
 use util::paths::PathExt;
 use workspace::{
     item::{BreadcrumbText, Item, ProjectItem, SerializableItem, TabContentParams},
@@ -100,9 +101,7 @@ impl Item for ImageView {
             let git_status = self
                 .project
                 .read(cx)
-                .project_path_git_status(&project_path, cx)
-                .map(|status| status.summary())
-                .unwrap_or_default();
+                .project_path_git_status(&project_path, cx);
 
             self.project
                 .read(cx)

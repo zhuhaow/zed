@@ -732,7 +732,10 @@ impl Database {
                             if db_status.is_deleted {
                                 removed_statuses.push(db_status.repo_path);
                             } else {
-                                updated_statuses.push(db_status_to_proto(db_status)?);
+                                updated_statuses.push(proto::StatusEntry {
+                                    repo_path: db_status.repo_path,
+                                    status: db_status.status as i32,
+                                });
                             }
                         }
 

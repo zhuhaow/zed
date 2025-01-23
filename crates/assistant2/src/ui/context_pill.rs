@@ -24,7 +24,7 @@ pub enum ContextPill {
 }
 
 impl ContextPill {
-    pub fn added(
+    pub fn new_added(
         context: ContextSnapshot,
         dupe_name: bool,
         focused: bool,
@@ -39,7 +39,7 @@ impl ContextPill {
         }
     }
 
-    pub fn suggested(
+    pub fn new_suggested(
         name: SharedString,
         icon_path: Option<SharedString>,
         kind: ContextKind,
