@@ -11,23 +11,25 @@ use git::repository::RepoPath;
 use git::status::FileStatus;
 use git::{CommitAllChanges, CommitChanges, RevertAll, StageAll, ToggleStaged, UnstageAll};
 use gpui::*;
+use gpui::{DismissEvent, Pixels, Point, Subscription};
 use menu::{SelectFirst, SelectLast, SelectNext, SelectPrev};
 use project::git::RepositoryHandle;
-use project::{Fs, Project, ProjectPath};
+use project::{Fs, Project, ProjectEntryId, ProjectPath};
 use serde::{Deserialize, Serialize};
 use settings::Settings as _;
 use std::{collections::HashSet, ops::Range, path::PathBuf, sync::Arc, time::Duration, usize};
 use theme::ThemeSettings;
 use ui::{
-    prelude::*, Checkbox, Divider, DividerColor, ElevationIndex, Scrollbar, ScrollbarState, Tooltip,
+    prelude::*, Checkbox, ContextMenu, Divider, DividerColor, ElevationIndex, IconButtonShape,
+    PopoverMenu, Scrollbar, ScrollbarState, Tooltip,
 };
 use util::{ResultExt, TryFutureExt};
 use workspace::notifications::{DetachAndPromptErr, NotificationId};
-use workspace::Toast;
 use workspace::{
     dock::{DockPosition, Panel, PanelEvent},
     Workspace,
 };
+use workspace::{SelectedEntry, Toast};
 
 actions!(
     git_panel,
@@ -96,6 +98,7 @@ pub struct GitPanel {
     all_staged: Option<bool>,
     width: Option<Pixels>,
     err_sender: mpsc::Sender<anyhow::Error>,
+    context_menu: Option<(Entity<ContextMenu>, Point<Pixels>, Subscription)>,
 }
 
 fn commit_message_editor(
@@ -205,6 +208,7 @@ impl GitPanel {
                 project,
                 err_sender,
                 workspace,
+                context_menu: None,
             };
             git_panel.schedule_update(window, cx);
             git_panel.show_scrollbar = git_panel.should_show_scrollbar(cx);
@@ -489,6 +493,38 @@ impl GitPanel {
         {
             self.open_entry(entry, cx);
         }
+    }
+
+    fn deploy_context_menu(
+        &mut self,
+        position: Point<Pixels>,
+        entry_index: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let entry = &self.visible_entries[entry_index];
+        let is_staged = entry.is_staged.unwrap_or(false);
+
+        let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
+            menu.context(self.focus_handle.clone())
+                .action(
+                    if is_staged { "Unstage" } else { "Stage" },
+                    Box::new(ToggleStaged),
+                )
+                .separator()
+                .action("Open", Box::new(OpenSelected))
+            // Add more actions as needed
+        });
+
+        window.focus(&context_menu.focus_handle(cx));
+        let subscription = cx.subscribe(&context_menu, |this, _, _: &DismissEvent, cx| {
+            this.context_menu.take();
+            cx.notify();
+        });
+        self.context_menu = Some((context_menu, position, subscription));
+        self.selected_entry = Some(entry_index);
+
+        cx.notify();
     }
 
     fn toggle_staged_for_entry(
@@ -824,12 +860,41 @@ impl GitPanel {
             .child(Divider::horizontal_dashed().color(DividerColor::Border))
     }
 
+    fn render_overflow_dropdown(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let focus_handle = self.focus_handle(cx).clone();
+
+        let all_staged = self.all_staged.unwrap_or(false).clone();
+
+        PopoverMenu::new("overflow-dropdown")
+            .trigger(
+                IconButton::new("overflow-dropdown-icon", IconName::Ellipsis)
+                    .shape(IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .style(ButtonStyle::Subtle)
+                    .icon_color(Color::Muted)
+                    .tooltip(Tooltip::text("View additional actions and settings")),
+            )
+            .anchor(Corner::TopRight)
+            .menu(move |window, cx| {
+                let menu = ContextMenu::build(window, cx, |menu, _, _| {
+                    if all_staged {
+                        menu.context(focus_handle.clone())
+                            .action("Unstage All", Box::new(UnstageAll))
+                    } else {
+                        menu.context(focus_handle.clone())
+                            .action("Stage All", Box::new(StageAll))
+                    }
+                });
+                Some(menu)
+            })
+    }
+
     pub fn render_panel_header(
         &self,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        let focus_handle = self.focus_handle(cx).clone();
+        let _focus_handle = self.focus_handle(cx).clone();
         let entry_count = self
             .active_repository
             .as_ref()
@@ -892,72 +957,7 @@ impl GitPanel {
                     ),
             )
             .child(div().flex_grow())
-            .child(
-                h_flex()
-                    .gap_2()
-                    // TODO: Re-add once revert all is added
-                    // .child(
-                    //     IconButton::new("discard-changes", IconName::Undo)
-                    //         .tooltip({
-                    //             let focus_handle = focus_handle.clone();
-                    //             move |cx| {
-                    //                 Tooltip::for_action_in(
-                    //                     "Discard all changes",
-                    //                     &RevertAll,
-                    //                     &focus_handle,
-                    //                     cx,
-                    //                 )
-                    //             }
-                    //         })
-                    //         .icon_size(IconSize::Small)
-                    //         .disabled(true),
-                    // )
-                    .child(if self.all_staged.unwrap_or(false) {
-                        self.panel_button("unstage-all", "Unstage All")
-                            .tooltip({
-                                let focus_handle = focus_handle.clone();
-                                move |window, cx| {
-                                    Tooltip::for_action_in(
-                                        "Unstage all changes",
-                                        &UnstageAll,
-                                        &focus_handle,
-                                        window,
-                                        cx,
-                                    )
-                                }
-                            })
-                            .key_binding(ui::KeyBinding::for_action_in(
-                                &UnstageAll,
-                                &focus_handle,
-                                window,
-                            ))
-                            .on_click(cx.listener(move |this, _, window, cx| {
-                                this.unstage_all(&UnstageAll, window, cx)
-                            }))
-                    } else {
-                        self.panel_button("stage-all", "Stage All")
-                            .tooltip({
-                                let focus_handle = focus_handle.clone();
-                                move |window, cx| {
-                                    Tooltip::for_action_in(
-                                        "Stage all changes",
-                                        &StageAll,
-                                        &focus_handle,
-                                        window,
-                                        cx,
-                                    )
-                                }
-                            })
-                            .key_binding(ui::KeyBinding::for_action_in(
-                                &StageAll,
-                                &focus_handle,
-                                window,
-                            ))
-                            .on_click(cx.listener(move |this, _, window, cx| {
-                                this.stage_all(&StageAll, window, cx)
-                            }))
-                    }),
-            )
+            .child(h_flex().gap_2().child(self.render_overflow_dropdown(cx)))
     }
 
     pub fn render_commit_editor(&self, cx: &Context<Self>) -> impl IntoElement {
@@ -1136,7 +1136,7 @@ impl GitPanel {
         &self,
         ix: usize,
         entry_details: GitListEntry,
-        cx: &Context<Self>,
+        cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let repo_path = entry_details.repo_path.clone();
         let selected = self.selected_entry == Some(ix);
@@ -1178,9 +1178,13 @@ impl GitPanel {
             .gap_1()
             .items_center()
             .child(
-                IconButton::new("more", IconName::EllipsisVertical)
+                IconButton::new("more", IconName::Ellipsis)
                     .icon_color(Color::Placeholder)
-                    .icon_size(IconSize::Small),
+                    .icon_size(IconSize::Small)
+                    .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
+                        cx.stop_propagation();
+                        this.deploy_context_menu(event.down.position, ix, window, cx);
+                    })),
             );
 
         let mut entry = h_flex()
@@ -1208,6 +1212,13 @@ impl GitPanel {
         }
 
         entry = entry
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                    cx.stop_propagation();
+                    this.deploy_context_menu(event.position, ix, window, cx);
+                }),
+            )
             .child(
                 Checkbox::new(
                     checkbox_id,
@@ -1375,6 +1386,14 @@ impl Render for GitPanel {
             })
             .child(self.render_divider(cx))
             .child(self.render_commit_editor(cx))
+            .children(self.context_menu.as_ref().map(|(menu, position, _)| {
+                deferred(
+                    anchored()
+                        .position(*position)
+                        .anchor(gpui::Corner::TopLeft)
+                        .child(menu.clone()),
+                )
+            }))
     }
 }
 
