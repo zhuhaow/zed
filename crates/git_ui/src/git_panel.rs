@@ -14,7 +14,7 @@ use gpui::*;
 use gpui::{DismissEvent, Pixels, Point, Subscription};
 use menu::{SelectFirst, SelectLast, SelectNext, SelectPrev};
 use project::git::RepositoryHandle;
-use project::{Fs, Project, ProjectEntryId, ProjectPath};
+use project::{Fs, Project, ProjectPath};
 use serde::{Deserialize, Serialize};
 use settings::Settings as _;
 use std::{collections::HashSet, ops::Range, path::PathBuf, sync::Arc, time::Duration, usize};
