@@ -98,7 +98,8 @@ pub struct GitPanel {
     all_staged: Option<bool>,
     width: Option<Pixels>,
     err_sender: mpsc::Sender<anyhow::Error>,
-    context_menu: Option<(Entity<ContextMenu>, Point<Pixels>, Subscription)>,
+    panel_context_menu: Option<(Entity<ContextMenu>, Point<Pixels>, Subscription)>,
+    entry_context_menu: Option<(Entity<ContextMenu>, Point<Pixels>, Subscription)>,
 }
 
 fn commit_message_editor(
@@ -208,7 +209,8 @@ impl GitPanel {
                 project,
                 err_sender,
                 workspace,
-                context_menu: None,
+                panel_context_menu: None,
+                entry_context_menu: None,
             };
             git_panel.schedule_update(window, cx);
             git_panel.show_scrollbar = git_panel.should_show_scrollbar(cx);
@@ -495,7 +497,7 @@ impl GitPanel {
         }
     }
 
-    fn deploy_context_menu(
+    fn deploy_entry_context_menu(
         &mut self,
         position: Point<Pixels>,
         entry_index: usize,
@@ -518,11 +520,37 @@ impl GitPanel {
 
         window.focus(&context_menu.focus_handle(cx));
         let subscription = cx.subscribe(&context_menu, |this, _, _: &DismissEvent, cx| {
-            this.context_menu.take();
+            this.entry_context_menu.take();
             cx.notify();
         });
-        self.context_menu = Some((context_menu, position, subscription));
+        self.entry_context_menu = Some((context_menu, position, subscription));
         self.selected_entry = Some(entry_index);
+
+        cx.notify();
+    }
+
+    fn deploy_panel_context_menu(
+        &mut self,
+        position: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
+            menu.context(self.focus_handle.clone())
+                .action("Stage All", Box::new(StageAll))
+                .action("Unstage All", Box::new(UnstageAll))
+                // .action("Discard All", Box::new(DiscardAll))
+                .action("Commit Changes", Box::new(CommitChanges))
+                .action("Commit All Changes", Box::new(CommitAllChanges))
+                .action("Fill Co-Authors", Box::new(FillCoAuthors))
+        });
+
+        window.focus(&context_menu.focus_handle(cx));
+        let subscription = cx.subscribe(&context_menu, |this, _, _: &DismissEvent, cx| {
+            this.panel_context_menu.take();
+            cx.notify();
+        });
+        self.panel_context_menu = Some((context_menu, position, subscription));
 
         cx.notify();
     }
@@ -860,11 +888,12 @@ impl GitPanel {
             .child(Divider::horizontal_dashed().color(DividerColor::Border))
     }
 
-    fn render_overflow_dropdown(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let focus_handle = self.focus_handle(cx).clone();
-
-        let all_staged = self.all_staged.unwrap_or(false).clone();
-
+    fn render_overflow_dropdown(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let context_menu = self.render_overflow_context_menu(window, cx);
         PopoverMenu::new("overflow-dropdown")
             .trigger(
                 IconButton::new("overflow-dropdown-icon", IconName::Ellipsis)
@@ -875,23 +904,31 @@ impl GitPanel {
                     .tooltip(Tooltip::text("View additional actions and settings")),
             )
             .anchor(Corner::TopRight)
-            .menu(move |window, cx| {
-                let menu = ContextMenu::build(window, cx, |menu, _, _| {
-                    if all_staged {
-                        menu.context(focus_handle.clone())
-                            .action("Unstage All", Box::new(UnstageAll))
-                    } else {
-                        menu.context(focus_handle.clone())
-                            .action("Stage All", Box::new(StageAll))
-                    }
-                });
-                Some(menu)
-            })
+            .menu(move |_, _| Some(context_menu.clone()))
+    }
+
+    fn render_overflow_context_menu(
+        &self,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Entity<ContextMenu> {
+        let focus_handle = self.focus_handle(cx).clone();
+        let all_staged = self.all_staged.unwrap_or(false);
+
+        ContextMenu::build(window, cx, move |menu, _, _| {
+            if all_staged {
+                menu.context(focus_handle.clone())
+                    .action("Unstage All", Box::new(UnstageAll))
+            } else {
+                menu.context(focus_handle.clone())
+                    .action("Stage All", Box::new(StageAll))
+            }
+        })
     }
 
     pub fn render_panel_header(
         &self,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let _focus_handle = self.focus_handle(cx).clone();
@@ -957,7 +994,29 @@ impl GitPanel {
                     ),
             )
             .child(div().flex_grow())
-            .child(h_flex().gap_2().child(self.render_overflow_dropdown(cx)))
+            .child(
+                h_flex()
+                    .gap_2()
+                    .child(self.render_overflow_dropdown(window, cx)),
+            )
+    }
+
+    pub fn render_list_footer(
+        &self,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        // for our use case treat None as false
+        let all_staged = self.all_staged.unwrap_or(false);
+
+        h_flex()
+            .h(px(32.))
+            .items_center()
+            .px_2()
+            .bg(ElevationIndex::Surface.bg(cx))
+            .child(h_flex().gap_2().child("repo selector"))
+            .child(div().flex_grow())
+            .child("stage buttons")
     }
 
     pub fn render_commit_editor(&self, cx: &Context<Self>) -> impl IntoElement {
@@ -1183,7 +1242,7 @@ impl GitPanel {
                     .icon_size(IconSize::Small)
                     .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                         cx.stop_propagation();
-                        this.deploy_context_menu(event.down.position, ix, window, cx);
+                        this.deploy_entry_context_menu(event.down.position, ix, window, cx);
                     })),
             );
 
@@ -1216,7 +1275,7 @@ impl GitPanel {
                 MouseButton::Right,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
                     cx.stop_propagation();
-                    this.deploy_context_menu(event.position, ix, window, cx);
+                    this.deploy_entry_context_menu(event.position, ix, window, cx);
                 }),
             )
             .child(
@@ -1372,6 +1431,13 @@ impl Render for GitPanel {
                     this.hide_scrollbar(window, cx);
                 }
             }))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(|this, event: &MouseDownEvent, window, cx| {
+                    cx.stop_propagation();
+                    this.deploy_panel_context_menu(event.position, window, cx);
+                }),
+            )
             .size_full()
             .overflow_hidden()
             .font_buffer(cx)
@@ -1384,9 +1450,18 @@ impl Render for GitPanel {
             } else {
                 self.render_empty_state(cx).into_any_element()
             })
+            .child(self.render_list_footer(window, cx))
             .child(self.render_divider(cx))
             .child(self.render_commit_editor(cx))
-            .children(self.context_menu.as_ref().map(|(menu, position, _)| {
+            .children(self.panel_context_menu.as_ref().map(|(menu, position, _)| {
+                deferred(
+                    anchored()
+                        .position(*position)
+                        .anchor(gpui::Corner::TopLeft)
+                        .child(menu.clone()),
+                )
+            }))
+            .children(self.entry_context_menu.as_ref().map(|(menu, position, _)| {
                 deferred(
                     anchored()
                         .position(*position)
