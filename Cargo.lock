@@ -16860,6 +16860,7 @@ dependencies = [
  "language_models",
  "log",
  "menu",
+ "project",
  "reqwest_client",
  "rpc",
  "serde",

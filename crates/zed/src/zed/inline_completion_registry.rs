@@ -13,7 +13,13 @@ use supermaven::{Supermaven, SupermavenCompletionProvider};
 use ui::Window;
 use zed_predict_onboarding::ZedPredictModal;
 
-pub fn init(client: Arc<Client>, user_store: Entity<UserStore>, fs: Arc<dyn Fs>, cx: &mut App) {
+pub fn init(
+    client: Arc<Client>,
+    user_store: Entity<UserStore>,
+    fs: Arc<dyn Fs>,
+    worktree_store: Entity<WorktreeStore>,
+    cx: &mut App,
+) {
     let editors: Rc<RefCell<HashMap<WeakEntity<Editor>, AnyWindowHandle>>> = Rc::default();
     cx.observe_new({
         let editors = editors.clone();
@@ -49,6 +55,7 @@ pub fn init(client: Arc<Client>, user_store: Entity<UserStore>, fs: Arc<dyn Fs>,
                 &client,
                 user_store.clone(),
                 window,
+                worktree_store,
                 cx,
             );
         }
@@ -222,6 +229,7 @@ fn assign_inline_completion_provider(
     provider: language::language_settings::InlineCompletionProvider,
     client: &Arc<Client>,
     user_store: Entity<UserStore>,
+    worktree_store: Entity<WorktreeStore>,
     window: &mut Window,
     cx: &mut Context<Editor>,
 ) {
@@ -262,7 +270,11 @@ fn assign_inline_completion_provider(
 
                 if let Some(workspace) = editor.workspace() {
                     let provider = cx.new(|_| {
-                        zeta::ZetaInlineCompletionProvider::new(zeta, workspace.downgrade())
+                        zeta::ZetaInlineCompletionProvider::new(
+                            zeta,
+                            workspace.downgrade(),
+                            worktree_store,
+                        )
                     });
                     editor.set_inline_completion_provider(Some(provider), window, cx);
                 }

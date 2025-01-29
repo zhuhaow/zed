@@ -3,6 +3,7 @@ mod rate_completion_modal;
 
 pub(crate) use completion_diff_element::*;
 use db::kvp::KEY_VALUE_STORE;
+use project::worktree_store::WorktreeStore;
 pub use rate_completion_modal::*;
 
 use anyhow::{anyhow, Context as _, Result};
@@ -31,7 +32,7 @@ use std::{
     future::Future,
     mem,
     ops::Range,
-    path::Path,
+    path::{Path, PathBuf},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -319,14 +320,16 @@ impl Zeta {
         let offset = point.to_offset(&snapshot);
         let excerpt_range = excerpt_range_for_position(point, &snapshot);
         let events = self.events.clone();
-        let path = snapshot
-            .file()
+        let file = snapshot.file();
+        let path = file
             .map(|f| Arc::from(f.full_path(cx).as_path()))
             .unwrap_or_else(|| Arc::from(Path::new("untitled")));
 
         let client = self.client.clone();
         let llm_token = self.llm_token.clone();
-        let can_sample = self.sampling_preferences.can_sample_at(&snapshot, cx);
+        let can_sample = self
+            .sampling_preferences
+            .can_sample_at(&snapshot, file.path(), cx);
         let is_staff = cx.is_staff();
 
         cx.spawn(|_, cx| async move {
@@ -794,13 +797,13 @@ and then another
 
     fn update_sampling_preference_for_project(
         &mut self,
-        worktree_id: WorktreeId,
+        root_dir: PathBuf,
         can_sample: bool,
         cx: &mut Context<Self>,
     ) {
         self.sampling_preferences
             .worktrees
-            .insert(worktree_id, can_sample);
+            .insert(root_dir, can_sample);
         self.persist_predict_sampling_preferences(cx);
     }
 
@@ -855,14 +858,17 @@ struct PredictSamplingPreferences {
     /// Set when a user clicks on "Never Ask Again", can never be unset.
     never_ask_again: bool,
     /// Tell if edit predictions can be sampled in a specific project.
-    worktrees: HashMap<WorktreeId, bool>,
+    worktrees: HashMap<PathBuf, bool>,
 }
 
 impl PredictSamplingPreferences {
-    fn can_sample_at(&self, snapshot: &BufferSnapshot, cx: &mut Context<Zeta>) -> bool {
-        snapshot
-            .file()
-            .is_some_and(|file| self.worktrees.contains_key(&file.worktree_id(cx)))
+    // fn can_sample_at(&self, snapshot: &BufferSnapshot, cx: &mut Context<Zeta>) -> bool {
+    //     snapshot
+    //         .file()
+    //         .is_some_and(|file| self.worktrees.contains_key(&file.worktree_id(cx)))
+    // }
+    fn can_sample_at(&self, path: &Path) -> bool {
+        self.worktrees.contains_key(&path.to_path_buf())
     }
 }
 
@@ -1066,6 +1072,7 @@ struct PendingCompletion {
 pub struct ZetaInlineCompletionProvider {
     zeta: Entity<Zeta>,
     workspace: WeakEntity<Workspace>,
+    worktree_store: Entity<WorktreeStore>,
     pending_completions: ArrayVec<PendingCompletion, 2>,
     next_pending_completion_id: usize,
     current_completion: Option<CurrentInlineCompletion>,
@@ -1074,13 +1081,18 @@ pub struct ZetaInlineCompletionProvider {
 impl ZetaInlineCompletionProvider {
     pub const DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(8);
 
-    pub fn new(zeta: Entity<Zeta>, workspace: WeakEntity<Workspace>) -> Self {
+    pub fn new(
+        zeta: Entity<Zeta>,
+        workspace: WeakEntity<Workspace>,
+        worktree_store: Entity<WorktreeStore>,
+    ) -> Self {
         Self {
             zeta,
             pending_completions: ArrayVec::new(),
             next_pending_completion_id: 0,
             current_completion: None,
             workspace,
+            worktree_store,
         }
     }
 }
@@ -1235,11 +1247,16 @@ impl inline_completion::InlineCompletionProvider for ZetaInlineCompletionProvide
         let worktree_id = file.worktree_id(cx);
         let zeta = self.zeta.read(cx);
 
+        let Some(worktree) = self.workspace_store.read(cx).worktree_for_id(worktree_id) else {
+            return;
+        };
+
+        let Some(root_dir) = worktree.read(cx).root_dir() else {
+            return;
+        };
+
         if zeta.sampling_preferences.never_ask_again
-            || zeta
-                .sampling_preferences
-                .worktrees
-                .contains_key(&worktree_id)
+            || zeta.sampling_preferences.worktrees.contains_key(&root_dir)
         {
             return;
         }
