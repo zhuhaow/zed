@@ -6,7 +6,7 @@ use crate::{
     with_parser, CachedLspAdapter, File, Language, LanguageConfig, LanguageId, LanguageMatcher,
     LanguageServerName, LspAdapter, ToolchainLister, PLAIN_TEXT,
 };
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, Context, Result};
 use collections::{hash_map, HashMap, HashSet};
 
 use futures::{
@@ -14,7 +14,7 @@ use futures::{
     Future,
 };
 use globset::GlobSet;
-use gpui::{App, BackgroundExecutor, SharedString};
+use gpui::{AppContext, BackgroundExecutor};
 use lsp::LanguageServerId;
 use parking_lot::{Mutex, RwLock};
 use postage::watch;
@@ -36,15 +36,15 @@ use util::{maybe, paths::PathExt, post_inc, ResultExt};
 #[derive(
     Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
-pub struct LanguageName(SharedString);
+pub struct LanguageName(pub Arc<str>);
 
 impl LanguageName {
     pub fn new(s: &str) -> Self {
-        Self(SharedString::new(s))
+        Self(Arc::from(s))
     }
 
     pub fn from_proto(s: String) -> Self {
-        Self(SharedString::from(s))
+        Self(Arc::from(s))
     }
     pub fn to_proto(self) -> String {
         self.0.to_string()
@@ -54,18 +54,6 @@ impl LanguageName {
             "Plain Text" => "plaintext".to_string(),
             language_name => language_name.to_lowercase(),
         }
-    }
-}
-
-impl From<LanguageName> for SharedString {
-    fn from(value: LanguageName) -> Self {
-        value.0
-    }
-}
-
-impl AsRef<str> for LanguageName {
-    fn as_ref(&self) -> &str {
-        self.0.as_ref()
     }
 }
 
@@ -83,7 +71,7 @@ impl std::fmt::Display for LanguageName {
 
 impl<'a> From<&'a str> for LanguageName {
     fn from(str: &'a str) -> LanguageName {
-        LanguageName(SharedString::new(str))
+        LanguageName(str.into())
     }
 }
 
@@ -625,7 +613,7 @@ impl LanguageRegistry {
         self: &Arc<Self>,
         file: &Arc<dyn File>,
         content: Option<&Rope>,
-        cx: &App,
+        cx: &AppContext,
     ) -> Option<AvailableLanguage> {
         let user_file_types = all_language_settings(Some(file), cx);
 
@@ -669,7 +657,7 @@ impl LanguageRegistry {
                 .iter()
                 .any(|suffix| path_suffixes.contains(&Some(suffix.as_str())));
             let custom_suffixes = user_file_types
-                .and_then(|types| types.get(language_name.as_ref()))
+                .and_then(|types| types.get(&language_name.0))
                 .unwrap_or(&empty);
             let path_matches_custom_suffix = path_suffixes
                 .iter()
@@ -916,7 +904,7 @@ impl LanguageRegistry {
         server_id: LanguageServerId,
         name: &LanguageServerName,
         binary: lsp::LanguageServerBinary,
-        cx: gpui::AsyncApp,
+        cx: gpui::AsyncAppContext,
     ) -> Option<lsp::LanguageServer> {
         let mut state = self.state.write();
         let fake_entry = state.fake_server_entries.get_mut(&name)?;

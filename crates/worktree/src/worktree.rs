@@ -26,7 +26,8 @@ use git::{
     GitHostingProviderRegistry, COOKIES, DOT_GIT, FSMONITOR_DAEMON, GITIGNORE,
 };
 use gpui::{
-    App, AppContext as _, AsyncApp, BackgroundExecutor, Context, Entity, EventEmitter, Task,
+    AppContext, AsyncAppContext, BackgroundExecutor, Context, EventEmitter, Model, ModelContext,
+    Task,
 };
 use ignore::IgnoreStack;
 use language::DiskState;
@@ -117,7 +118,7 @@ pub struct LoadedBinaryFile {
 pub struct LocalWorktree {
     snapshot: LocalSnapshot,
     scan_requests_tx: channel::Sender<ScanRequest>,
-    path_prefixes_to_scan_tx: channel::Sender<PathPrefixScanRequest>,
+    path_prefixes_to_scan_tx: channel::Sender<Arc<Path>>,
     is_scanning: (watch::Sender<bool>, watch::Receiver<bool>),
     _background_scanner_tasks: Vec<Task<()>>,
     update_observer: Option<UpdateObservationState>,
@@ -127,11 +128,6 @@ pub struct LocalWorktree {
     next_entry_id: Arc<AtomicUsize>,
     settings: WorktreeSettings,
     share_private_files: bool,
-}
-
-pub struct PathPrefixScanRequest {
-    path: Arc<Path>,
-    done: SmallVec<[barrier::Sender; 1]>,
 }
 
 struct ScanRequest {
@@ -549,8 +545,8 @@ impl Worktree {
         visible: bool,
         fs: Arc<dyn Fs>,
         next_entry_id: Arc<AtomicUsize>,
-        cx: &mut AsyncApp,
-    ) -> Result<Entity<Self>> {
+        cx: &mut AsyncAppContext,
+    ) -> Result<Model<Self>> {
         let abs_path = path.into();
         let metadata = fs
             .metadata(&abs_path)
@@ -566,7 +562,7 @@ impl Worktree {
 
         let root_file_handle = fs.open_handle(&abs_path).await.log_err();
 
-        cx.new(move |cx: &mut Context<Worktree>| {
+        cx.new_model(move |cx: &mut ModelContext<Worktree>| {
             let mut snapshot = LocalSnapshot {
                 ignores_by_parent_abs_path: Default::default(),
                 git_repositories: Default::default(),
@@ -640,9 +636,9 @@ impl Worktree {
         replica_id: ReplicaId,
         worktree: proto::WorktreeMetadata,
         client: AnyProtoClient,
-        cx: &mut App,
-    ) -> Entity<Self> {
-        cx.new(|cx: &mut Context<Self>| {
+        cx: &mut AppContext,
+    ) -> Model<Self> {
+        cx.new_model(|cx: &mut ModelContext<Self>| {
             let snapshot = Snapshot::new(
                 worktree.id,
                 worktree.root_name,
@@ -769,7 +765,7 @@ impl Worktree {
         !self.is_local()
     }
 
-    pub fn settings_location(&self, _: &Context<Self>) -> SettingsLocation<'static> {
+    pub fn settings_location(&self, _: &ModelContext<Self>) -> SettingsLocation<'static> {
         SettingsLocation {
             worktree_id: self.id(),
             path: Path::new(EMPTY_PATH),
@@ -827,13 +823,17 @@ impl Worktree {
         }
     }
 
-    pub fn root_file(&self, cx: &Context<Self>) -> Option<Arc<File>> {
+    pub fn root_file(&self, cx: &ModelContext<Self>) -> Option<Arc<File>> {
         let entry = self.root_entry()?;
-        Some(File::for_entry(entry.clone(), cx.entity()))
+        Some(File::for_entry(entry.clone(), cx.handle()))
     }
 
-    pub fn observe_updates<F, Fut>(&mut self, project_id: u64, cx: &Context<Worktree>, callback: F)
-    where
+    pub fn observe_updates<F, Fut>(
+        &mut self,
+        project_id: u64,
+        cx: &ModelContext<Worktree>,
+        callback: F,
+    ) where
         F: 'static + Send + Fn(proto::UpdateWorktree) -> Fut,
         Fut: 'static + Send + Future<Output = bool>,
     {
@@ -862,7 +862,7 @@ impl Worktree {
         }
     }
 
-    pub fn load_file(&self, path: &Path, cx: &Context<Worktree>) -> Task<Result<LoadedFile>> {
+    pub fn load_file(&self, path: &Path, cx: &ModelContext<Worktree>) -> Task<Result<LoadedFile>> {
         match self {
             Worktree::Local(this) => this.load_file(path, cx),
             Worktree::Remote(_) => {
@@ -871,7 +871,7 @@ impl Worktree {
         }
     }
 
-    pub fn load_staged_file(&self, path: &Path, cx: &App) -> Task<Result<Option<String>>> {
+    pub fn load_staged_file(&self, path: &Path, cx: &AppContext) -> Task<Result<Option<String>>> {
         match self {
             Worktree::Local(this) => {
                 let path = Arc::from(path);
@@ -898,7 +898,7 @@ impl Worktree {
     pub fn load_binary_file(
         &self,
         path: &Path,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<LoadedBinaryFile>> {
         match self {
             Worktree::Local(this) => this.load_binary_file(path, cx),
@@ -913,7 +913,7 @@ impl Worktree {
         path: &Path,
         text: Rope,
         line_ending: LineEnding,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<Arc<File>>> {
         match self {
             Worktree::Local(this) => this.write_file(path, text, line_ending, cx),
@@ -927,7 +927,7 @@ impl Worktree {
         &mut self,
         path: impl Into<Arc<Path>>,
         is_directory: bool,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<CreatedEntry>> {
         let path = path.into();
         let worktree_id = self.id();
@@ -972,7 +972,7 @@ impl Worktree {
         &mut self,
         entry_id: ProjectEntryId,
         trash: bool,
-        cx: &mut Context<Worktree>,
+        cx: &mut ModelContext<Worktree>,
     ) -> Option<Task<Result<()>>> {
         let task = match self {
             Worktree::Local(this) => this.delete_entry(entry_id, trash, cx),
@@ -1007,7 +1007,7 @@ impl Worktree {
         &mut self,
         entry_id: ProjectEntryId,
         new_path: impl Into<Arc<Path>>,
-        cx: &Context<Self>,
+        cx: &ModelContext<Self>,
     ) -> Task<Result<CreatedEntry>> {
         let new_path = new_path.into();
         match self {
@@ -1021,7 +1021,7 @@ impl Worktree {
         entry_id: ProjectEntryId,
         relative_worktree_source_path: Option<PathBuf>,
         new_path: impl Into<Arc<Path>>,
-        cx: &Context<Self>,
+        cx: &ModelContext<Self>,
     ) -> Task<Result<Option<Entry>>> {
         let new_path = new_path.into();
         match self {
@@ -1064,7 +1064,7 @@ impl Worktree {
         target_directory: PathBuf,
         paths: Vec<Arc<Path>>,
         overwrite_existing_files: bool,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<Vec<ProjectEntryId>>> {
         match self {
             Worktree::Local(this) => {
@@ -1079,7 +1079,7 @@ impl Worktree {
     pub fn expand_entry(
         &mut self,
         entry_id: ProjectEntryId,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Option<Task<Result<()>>> {
         match self {
             Worktree::Local(this) => this.expand_entry(entry_id, cx),
@@ -1102,36 +1102,10 @@ impl Worktree {
         }
     }
 
-    pub fn expand_all_for_entry(
-        &mut self,
-        entry_id: ProjectEntryId,
-        cx: &Context<Worktree>,
-    ) -> Option<Task<Result<()>>> {
-        match self {
-            Worktree::Local(this) => this.expand_all_for_entry(entry_id, cx),
-            Worktree::Remote(this) => {
-                let response = this.client.request(proto::ExpandAllForProjectEntry {
-                    project_id: this.project_id,
-                    entry_id: entry_id.to_proto(),
-                });
-                Some(cx.spawn(move |this, mut cx| async move {
-                    let response = response.await?;
-                    this.update(&mut cx, |this, _| {
-                        this.as_remote_mut()
-                            .unwrap()
-                            .wait_for_snapshot(response.worktree_scan_id as usize)
-                    })?
-                    .await?;
-                    Ok(())
-                }))
-            }
-        }
-    }
-
     pub async fn handle_create_entry(
-        this: Entity<Self>,
+        this: Model<Self>,
         request: proto::CreateProjectEntry,
-        mut cx: AsyncApp,
+        mut cx: AsyncAppContext,
     ) -> Result<proto::ProjectEntryResponse> {
         let (scan_id, entry) = this.update(&mut cx, |this, cx| {
             (
@@ -1149,9 +1123,9 @@ impl Worktree {
     }
 
     pub async fn handle_delete_entry(
-        this: Entity<Self>,
+        this: Model<Self>,
         request: proto::DeleteProjectEntry,
-        mut cx: AsyncApp,
+        mut cx: AsyncAppContext,
     ) -> Result<proto::ProjectEntryResponse> {
         let (scan_id, task) = this.update(&mut cx, |this, cx| {
             (
@@ -1171,9 +1145,9 @@ impl Worktree {
     }
 
     pub async fn handle_expand_entry(
-        this: Entity<Self>,
+        this: Model<Self>,
         request: proto::ExpandProjectEntry,
-        mut cx: AsyncApp,
+        mut cx: AsyncAppContext,
     ) -> Result<proto::ExpandProjectEntryResponse> {
         let task = this.update(&mut cx, |this, cx| {
             this.expand_entry(ProjectEntryId::from_proto(request.entry_id), cx)
@@ -1185,25 +1159,10 @@ impl Worktree {
         })
     }
 
-    pub async fn handle_expand_all_for_entry(
-        this: Entity<Self>,
-        request: proto::ExpandAllForProjectEntry,
-        mut cx: AsyncApp,
-    ) -> Result<proto::ExpandAllForProjectEntryResponse> {
-        let task = this.update(&mut cx, |this, cx| {
-            this.expand_all_for_entry(ProjectEntryId::from_proto(request.entry_id), cx)
-        })?;
-        task.ok_or_else(|| anyhow!("no such entry"))?.await?;
-        let scan_id = this.read_with(&cx, |this, _| this.scan_id())?;
-        Ok(proto::ExpandAllForProjectEntryResponse {
-            worktree_scan_id: scan_id as u64,
-        })
-    }
-
     pub async fn handle_rename_entry(
-        this: Entity<Self>,
+        this: Model<Self>,
         request: proto::RenameProjectEntry,
-        mut cx: AsyncApp,
+        mut cx: AsyncAppContext,
     ) -> Result<proto::ProjectEntryResponse> {
         let (scan_id, task) = this.update(&mut cx, |this, cx| {
             (
@@ -1225,9 +1184,9 @@ impl Worktree {
     }
 
     pub async fn handle_copy_entry(
-        this: Entity<Self>,
+        this: Model<Self>,
         request: proto::CopyProjectEntry,
-        mut cx: AsyncApp,
+        mut cx: AsyncAppContext,
     ) -> Result<proto::ProjectEntryResponse> {
         let (scan_id, task) = this.update(&mut cx, |this, cx| {
             let relative_worktree_source_path =
@@ -1263,7 +1222,7 @@ impl LocalWorktree {
         !self.share_private_files && self.settings.is_path_private(path)
     }
 
-    fn restart_background_scanners(&mut self, cx: &Context<Worktree>) {
+    fn restart_background_scanners(&mut self, cx: &ModelContext<Worktree>) {
         let (scan_requests_tx, scan_requests_rx) = channel::unbounded();
         let (path_prefixes_to_scan_tx, path_prefixes_to_scan_rx) = channel::unbounded();
         self.scan_requests_tx = scan_requests_tx;
@@ -1284,8 +1243,8 @@ impl LocalWorktree {
     fn start_background_scanner(
         &mut self,
         scan_requests_rx: channel::Receiver<ScanRequest>,
-        path_prefixes_to_scan_rx: channel::Receiver<PathPrefixScanRequest>,
-        cx: &Context<Worktree>,
+        path_prefixes_to_scan_rx: channel::Receiver<Arc<Path>>,
+        cx: &ModelContext<Worktree>,
     ) {
         let snapshot = self.snapshot();
         let share_private_files = self.share_private_files;
@@ -1386,7 +1345,7 @@ impl LocalWorktree {
         &mut self,
         new_snapshot: LocalSnapshot,
         entry_changes: UpdatedEntriesSet,
-        cx: &mut Context<Worktree>,
+        cx: &mut ModelContext<Worktree>,
     ) {
         let repo_changes = self.changed_repos(&self.snapshot, &new_snapshot);
         self.snapshot = new_snapshot;
@@ -1530,6 +1489,11 @@ impl LocalWorktree {
         self.settings.clone()
     }
 
+    pub fn local_git_repo(&self, path: &Path) -> Option<Arc<dyn GitRepository>> {
+        self.local_repo_for_path(path)
+            .map(|local_repo| local_repo.repo_ptr.clone())
+    }
+
     pub fn get_local_repo(&self, repo: &RepositoryEntry) -> Option<&LocalRepositoryEntry> {
         self.git_repositories.get(&repo.work_directory_id)
     }
@@ -1537,7 +1501,7 @@ impl LocalWorktree {
     fn load_binary_file(
         &self,
         path: &Path,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<LoadedBinaryFile>> {
         let path = Arc::from(path);
         let abs_path = self.absolutize(&path);
@@ -1545,7 +1509,7 @@ impl LocalWorktree {
         let entry = self.refresh_entry(path.clone(), None, cx);
         let is_private = self.is_path_private(path.as_ref());
 
-        let worktree = cx.weak_entity();
+        let worktree = cx.weak_model();
         cx.background_executor().spawn(async move {
             let abs_path = abs_path?;
             let content = fs.load_bytes(&abs_path).await?;
@@ -1582,7 +1546,7 @@ impl LocalWorktree {
         })
     }
 
-    fn load_file(&self, path: &Path, cx: &Context<Worktree>) -> Task<Result<LoadedFile>> {
+    fn load_file(&self, path: &Path, cx: &ModelContext<Worktree>) -> Task<Result<LoadedFile>> {
         let path = Arc::from(path);
         let abs_path = self.absolutize(&path);
         let fs = self.fs.clone();
@@ -1642,7 +1606,7 @@ impl LocalWorktree {
         &self,
         path: impl Into<Arc<Path>>,
         is_dir: bool,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<CreatedEntry>> {
         let path = path.into();
         let abs_path = match self.absolutize(&path) {
@@ -1707,7 +1671,7 @@ impl LocalWorktree {
         path: impl Into<Arc<Path>>,
         text: Rope,
         line_ending: LineEnding,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<Arc<File>>> {
         let path = path.into();
         let fs = self.fs.clone();
@@ -1762,7 +1726,7 @@ impl LocalWorktree {
         &self,
         entry_id: ProjectEntryId,
         trash: bool,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Option<Task<Result<()>>> {
         let entry = self.entry_for_id(entry_id)?.clone();
         let abs_path = self.absolutize(&entry.path);
@@ -1814,7 +1778,7 @@ impl LocalWorktree {
         &self,
         entry_id: ProjectEntryId,
         new_path: impl Into<Arc<Path>>,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<CreatedEntry>> {
         let old_path = match self.entry_for_id(entry_id) {
             Some(entry) => entry.path.clone(),
@@ -1872,7 +1836,7 @@ impl LocalWorktree {
         entry_id: ProjectEntryId,
         relative_worktree_source_path: Option<PathBuf>,
         new_path: impl Into<Arc<Path>>,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<Option<Entry>>> {
         let old_path = match self.entry_for_id(entry_id) {
             Some(entry) => entry.path.clone(),
@@ -1913,7 +1877,7 @@ impl LocalWorktree {
         target_directory: PathBuf,
         paths: Vec<Arc<Path>>,
         overwrite_existing_files: bool,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<Vec<ProjectEntryId>>> {
         let worktree_path = self.abs_path().clone();
         let fs = self.fs.clone();
@@ -1960,7 +1924,7 @@ impl LocalWorktree {
                 })
                 .await
                 .log_err();
-            let mut refresh = cx.read_entity(
+            let mut refresh = cx.read_model(
                 &this.upgrade().with_context(|| "Dropped worktree")?,
                 |this, _| {
                     Ok::<postage::barrier::Receiver, anyhow::Error>(
@@ -1980,7 +1944,7 @@ impl LocalWorktree {
                 .log_err();
 
             let this = this.upgrade().with_context(|| "Dropped worktree")?;
-            cx.read_entity(&this, |this, _| {
+            cx.read_model(&this, |this, _| {
                 paths_to_refresh
                     .iter()
                     .filter_map(|path| Some(this.entry_for_path(path)?.id))
@@ -1992,25 +1956,12 @@ impl LocalWorktree {
     fn expand_entry(
         &self,
         entry_id: ProjectEntryId,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Option<Task<Result<()>>> {
         let path = self.entry_for_id(entry_id)?.path.clone();
         let mut refresh = self.refresh_entries_for_paths(vec![path]);
         Some(cx.background_executor().spawn(async move {
             refresh.next().await;
-            Ok(())
-        }))
-    }
-
-    fn expand_all_for_entry(
-        &self,
-        entry_id: ProjectEntryId,
-        cx: &Context<Worktree>,
-    ) -> Option<Task<Result<()>>> {
-        let path = self.entry_for_id(entry_id).unwrap().path.clone();
-        let mut rx = self.add_path_prefix_to_scan(path.clone());
-        Some(cx.background_executor().spawn(async move {
-            rx.next().await;
             Ok(())
         }))
     }
@@ -2026,22 +1977,15 @@ impl LocalWorktree {
         rx
     }
 
-    pub fn add_path_prefix_to_scan(&self, path_prefix: Arc<Path>) -> barrier::Receiver {
-        let (tx, rx) = barrier::channel();
-        self.path_prefixes_to_scan_tx
-            .try_send(PathPrefixScanRequest {
-                path: path_prefix,
-                done: smallvec![tx],
-            })
-            .ok();
-        rx
+    pub fn add_path_prefix_to_scan(&self, path_prefix: Arc<Path>) {
+        self.path_prefixes_to_scan_tx.try_send(path_prefix).ok();
     }
 
     fn refresh_entry(
         &self,
         path: Arc<Path>,
         old_path: Option<Arc<Path>>,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<Option<Entry>>> {
         if self.settings.is_path_excluded(&path) {
             return Task::ready(Ok(None));
@@ -2065,7 +2009,7 @@ impl LocalWorktree {
         })
     }
 
-    fn observe_updates<F, Fut>(&mut self, project_id: u64, cx: &Context<Worktree>, callback: F)
+    fn observe_updates<F, Fut>(&mut self, project_id: u64, cx: &ModelContext<Worktree>, callback: F)
     where
         F: 'static + Send + Fn(proto::UpdateWorktree) -> Fut,
         Fut: Send + Future<Output = bool>,
@@ -2120,7 +2064,7 @@ impl LocalWorktree {
         });
     }
 
-    pub fn share_private_files(&mut self, cx: &Context<Worktree>) {
+    pub fn share_private_files(&mut self, cx: &ModelContext<Worktree>) {
         self.share_private_files = true;
         self.restart_background_scanners(cx);
     }
@@ -2149,7 +2093,7 @@ impl RemoteWorktree {
         }
     }
 
-    fn observe_updates<F, Fut>(&mut self, project_id: u64, cx: &Context<Worktree>, callback: F)
+    fn observe_updates<F, Fut>(&mut self, project_id: u64, cx: &ModelContext<Worktree>, callback: F)
     where
         F: 'static + Send + Fn(proto::UpdateWorktree) -> Fut,
         Fut: 'static + Send + Future<Output = bool>,
@@ -2215,7 +2159,7 @@ impl RemoteWorktree {
         &mut self,
         entry: proto::Entry,
         scan_id: usize,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<Entry>> {
         let wait_for_snapshot = self.wait_for_snapshot(scan_id);
         cx.spawn(|this, mut cx| async move {
@@ -2234,7 +2178,7 @@ impl RemoteWorktree {
         &self,
         entry_id: ProjectEntryId,
         trash: bool,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Option<Task<Result<()>>> {
         let response = self.client.request(proto::DeleteProjectEntry {
             project_id: self.project_id,
@@ -2263,7 +2207,7 @@ impl RemoteWorktree {
         &self,
         entry_id: ProjectEntryId,
         new_path: impl Into<Arc<Path>>,
-        cx: &Context<Worktree>,
+        cx: &ModelContext<Worktree>,
     ) -> Task<Result<CreatedEntry>> {
         let new_path = new_path.into();
         let response = self.client.request(proto::RenameProjectEntry {
@@ -2719,27 +2663,14 @@ impl Snapshot {
     }
 
     pub fn child_entries<'a>(&'a self, parent_path: &'a Path) -> ChildEntriesIter<'a> {
-        let options = ChildEntriesOptions {
-            include_files: true,
-            include_dirs: true,
-            include_ignored: true,
-        };
-        self.child_entries_with_options(parent_path, options)
-    }
-
-    pub fn child_entries_with_options<'a>(
-        &'a self,
-        parent_path: &'a Path,
-        options: ChildEntriesOptions,
-    ) -> ChildEntriesIter<'a> {
         let mut cursor = self.entries_by_path.cursor(&());
         cursor.seek(&TraversalTarget::path(parent_path), Bias::Right, &());
         let traversal = Traversal {
             snapshot: self,
             cursor,
-            include_files: options.include_files,
-            include_dirs: options.include_dirs,
-            include_ignored: options.include_ignored,
+            include_files: true,
+            include_dirs: true,
+            include_ignored: true,
         };
         ChildEntriesIter {
             traversal,
@@ -2751,8 +2682,6 @@ impl Snapshot {
         self.entry_for_path("")
     }
 
-    /// TODO: what's the difference between `root_dir` and `abs_path`?
-    /// is there any? if so, document it.
     pub fn root_dir(&self) -> Option<Arc<Path>> {
         self.root_entry()
             .filter(|entry| entry.is_dir())
@@ -3473,7 +3402,7 @@ impl fmt::Debug for Snapshot {
 
 #[derive(Clone, PartialEq)]
 pub struct File {
-    pub worktree: Entity<Worktree>,
+    pub worktree: Model<Worktree>,
     pub path: Arc<Path>,
     pub disk_state: DiskState,
     pub entry_id: Option<ProjectEntryId>,
@@ -3498,7 +3427,7 @@ impl language::File for File {
         &self.path
     }
 
-    fn full_path(&self, cx: &App) -> PathBuf {
+    fn full_path(&self, cx: &AppContext) -> PathBuf {
         let mut full_path = PathBuf::new();
         let worktree = self.worktree.read(cx);
 
@@ -3524,13 +3453,13 @@ impl language::File for File {
 
     /// Returns the last component of this handle's absolute path. If this handle refers to the root
     /// of its worktree, then this method will return the name of the worktree itself.
-    fn file_name<'a>(&'a self, cx: &'a App) -> &'a OsStr {
+    fn file_name<'a>(&'a self, cx: &'a AppContext) -> &'a OsStr {
         self.path
             .file_name()
             .unwrap_or_else(|| OsStr::new(&self.worktree.read(cx).root_name))
     }
 
-    fn worktree_id(&self, cx: &App) -> WorktreeId {
+    fn worktree_id(&self, cx: &AppContext) -> WorktreeId {
         self.worktree.read(cx).id()
     }
 
@@ -3538,7 +3467,7 @@ impl language::File for File {
         self
     }
 
-    fn to_proto(&self, cx: &App) -> rpc::proto::File {
+    fn to_proto(&self, cx: &AppContext) -> rpc::proto::File {
         rpc::proto::File {
             worktree_id: self.worktree.read(cx).id().to_proto(),
             entry_id: self.entry_id.map(|id| id.to_proto()),
@@ -3554,7 +3483,7 @@ impl language::File for File {
 }
 
 impl language::LocalFile for File {
-    fn abs_path(&self, cx: &App) -> PathBuf {
+    fn abs_path(&self, cx: &AppContext) -> PathBuf {
         let worktree_path = &self.worktree.read(cx).as_local().unwrap().abs_path;
         if self.path.as_ref() == Path::new("") {
             worktree_path.as_path().to_path_buf()
@@ -3563,7 +3492,7 @@ impl language::LocalFile for File {
         }
     }
 
-    fn load(&self, cx: &App) -> Task<Result<String>> {
+    fn load(&self, cx: &AppContext) -> Task<Result<String>> {
         let worktree = self.worktree.read(cx).as_local().unwrap();
         let abs_path = worktree.absolutize(&self.path);
         let fs = worktree.fs.clone();
@@ -3571,7 +3500,7 @@ impl language::LocalFile for File {
             .spawn(async move { fs.load(&abs_path?).await })
     }
 
-    fn load_bytes(&self, cx: &App) -> Task<Result<Vec<u8>>> {
+    fn load_bytes(&self, cx: &AppContext) -> Task<Result<Vec<u8>>> {
         let worktree = self.worktree.read(cx).as_local().unwrap();
         let abs_path = worktree.absolutize(&self.path);
         let fs = worktree.fs.clone();
@@ -3581,7 +3510,7 @@ impl language::LocalFile for File {
 }
 
 impl File {
-    pub fn for_entry(entry: Entry, worktree: Entity<Worktree>) -> Arc<Self> {
+    pub fn for_entry(entry: Entry, worktree: Model<Worktree>) -> Arc<Self> {
         Arc::new(Self {
             worktree,
             path: entry.path.clone(),
@@ -3598,8 +3527,8 @@ impl File {
 
     pub fn from_proto(
         proto: rpc::proto::File,
-        worktree: Entity<Worktree>,
-        cx: &App,
+        worktree: Model<Worktree>,
+        cx: &AppContext,
     ) -> Result<Self> {
         let worktree_id = worktree
             .read(cx)
@@ -3635,11 +3564,11 @@ impl File {
         file.and_then(|f| f.as_any().downcast_ref())
     }
 
-    pub fn worktree_id(&self, cx: &App) -> WorktreeId {
+    pub fn worktree_id(&self, cx: &AppContext) -> WorktreeId {
         self.worktree.read(cx).id()
     }
 
-    pub fn project_entry_id(&self, _: &App) -> Option<ProjectEntryId> {
+    pub fn project_entry_id(&self, _: &AppContext) -> Option<ProjectEntryId> {
         match self.disk_state {
             DiskState::Deleted => None,
             _ => self.entry_id,
@@ -4083,7 +4012,7 @@ struct BackgroundScanner {
     status_updates_tx: UnboundedSender<ScanState>,
     executor: BackgroundExecutor,
     scan_requests_rx: channel::Receiver<ScanRequest>,
-    path_prefixes_to_scan_rx: channel::Receiver<PathPrefixScanRequest>,
+    path_prefixes_to_scan_rx: channel::Receiver<Arc<Path>>,
     next_entry_id: Arc<AtomicUsize>,
     phase: BackgroundScannerPhase,
     watcher: Arc<dyn Watcher>,
@@ -4208,24 +4137,23 @@ impl BackgroundScanner {
                     }
                 }
 
-                path_prefix_request = self.path_prefixes_to_scan_rx.recv().fuse() => {
-                    let Ok(request) = path_prefix_request else { break };
-                    log::trace!("adding path prefix {:?}", request.path);
+                path_prefix = self.path_prefixes_to_scan_rx.recv().fuse() => {
+                    let Ok(path_prefix) = path_prefix else { break };
+                    log::trace!("adding path prefix {:?}", path_prefix);
 
-                    let did_scan = self.forcibly_load_paths(&[request.path.clone()]).await;
+                    let did_scan = self.forcibly_load_paths(&[path_prefix.clone()]).await;
                     if did_scan {
                         let abs_path =
                         {
                             let mut state = self.state.lock();
-                            state.path_prefixes_to_scan.insert(request.path.clone());
-                            state.snapshot.abs_path.as_path().join(&request.path)
+                            state.path_prefixes_to_scan.insert(path_prefix.clone());
+                            state.snapshot.abs_path.as_path().join(&path_prefix)
                         };
 
                         if let Some(abs_path) = self.fs.canonicalize(&abs_path).await.log_err() {
                             self.process_events(vec![abs_path]).await;
                         }
                     }
-                    self.send_status_update(false, request.done);
                 }
 
                 paths = fs_events_rx.next().fuse() => {
@@ -5539,7 +5467,7 @@ pub trait WorktreeModelHandle {
     ) -> futures::future::LocalBoxFuture<'a, ()>;
 }
 
-impl WorktreeModelHandle for Entity<Worktree> {
+impl WorktreeModelHandle for Model<Worktree> {
     // When the worktree's FS event stream sometimes delivers "redundant" events for FS changes that
     // occurred before the worktree was constructed. These events can cause the worktree to perform
     // extra directory scans, and emit extra scan-state notifications.
@@ -6062,12 +5990,6 @@ impl<'a, 'b> SeekTarget<'a, PathSummary<Unit>, TraversalProgress<'a>> for Traver
     fn cmp(&self, cursor_location: &TraversalProgress<'a>, _: &()) -> Ordering {
         self.cmp_progress(cursor_location)
     }
-}
-
-pub struct ChildEntriesOptions {
-    pub include_files: bool,
-    pub include_dirs: bool,
-    pub include_ignored: bool,
 }
 
 pub struct ChildEntriesIter<'a> {

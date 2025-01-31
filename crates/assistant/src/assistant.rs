@@ -1,6 +1,5 @@
 #![cfg_attr(target_os = "windows", allow(unused, dead_code))]
 
-mod assistant_configuration;
 pub mod assistant_panel;
 mod inline_assistant;
 pub mod slash_command_settings;
@@ -15,14 +14,15 @@ use client::Client;
 use command_palette_hooks::CommandPaletteFilter;
 use feature_flags::FeatureFlagAppExt;
 use fs::Fs;
-use gpui::{actions, App, Global, UpdateGlobal};
+use gpui::{actions, AppContext, Global, UpdateGlobal};
 use language_model::{
     LanguageModelId, LanguageModelProviderId, LanguageModelRegistry, LanguageModelResponseMessage,
 };
-use prompt_library::PromptBuilder;
+use prompt_library::{PromptBuilder, PromptLoadingParams};
 use semantic_index::{CloudEmbeddingProvider, SemanticDb};
 use serde::Deserialize;
 use settings::{Settings, SettingsStore};
+use util::ResultExt;
 
 pub use crate::assistant_panel::{AssistantPanel, AssistantPanelEvent};
 pub(crate) use crate::inline_assistant::*;
@@ -33,6 +33,7 @@ actions!(
     [
         InsertActivePrompt,
         DeployHistory,
+        DeployPromptLibrary,
         NewContext,
         CycleNextInlineAssist,
         CyclePreviousInlineAssist
@@ -67,7 +68,7 @@ impl Global for Assistant {}
 impl Assistant {
     const NAMESPACE: &'static str = "assistant";
 
-    fn set_enabled(&mut self, enabled: bool, cx: &mut App) {
+    fn set_enabled(&mut self, enabled: bool, cx: &mut AppContext) {
         if self.enabled == enabled {
             return;
         }
@@ -91,9 +92,9 @@ impl Assistant {
 pub fn init(
     fs: Arc<dyn Fs>,
     client: Arc<Client>,
-    prompt_builder: Arc<PromptBuilder>,
-    cx: &mut App,
-) {
+    stdout_is_a_pty: bool,
+    cx: &mut AppContext,
+) -> Arc<PromptBuilder> {
     cx.set_global(Assistant::default());
     AssistantSettings::register(cx);
     SlashCommandSettings::register(cx);
@@ -133,6 +134,16 @@ pub fn init(
     assistant_panel::init(cx);
     context_server::init(cx);
 
+    let prompt_builder = PromptBuilder::new(Some(PromptLoadingParams {
+        fs: fs.clone(),
+        repo_path: stdout_is_a_pty
+            .then(|| std::env::current_dir().log_err())
+            .flatten(),
+        cx,
+    }))
+    .log_err()
+    .map(Arc::new)
+    .unwrap_or_else(|| Arc::new(PromptBuilder::new(None).unwrap()));
     register_slash_commands(Some(prompt_builder.clone()), cx);
     inline_assistant::init(
         fs.clone(),
@@ -163,9 +174,11 @@ pub fn init(
         });
     })
     .detach();
+
+    prompt_builder
 }
 
-fn init_language_model_settings(cx: &mut App) {
+fn init_language_model_settings(cx: &mut AppContext) {
     update_active_language_model_from_settings(cx);
 
     cx.observe_global::<SettingsStore>(update_active_language_model_from_settings)
@@ -184,7 +197,7 @@ fn init_language_model_settings(cx: &mut App) {
     .detach();
 }
 
-fn update_active_language_model_from_settings(cx: &mut App) {
+fn update_active_language_model_from_settings(cx: &mut AppContext) {
     let settings = AssistantSettings::get_global(cx);
     let provider_name = LanguageModelProviderId::from(settings.default_model.provider.clone());
     let model_id = LanguageModelId::from(settings.default_model.model.clone());
@@ -204,7 +217,7 @@ fn update_active_language_model_from_settings(cx: &mut App) {
     });
 }
 
-fn register_slash_commands(prompt_builder: Option<Arc<PromptBuilder>>, cx: &mut App) {
+fn register_slash_commands(prompt_builder: Option<Arc<PromptBuilder>>, cx: &mut AppContext) {
     let slash_command_registry = SlashCommandRegistry::global(cx);
 
     slash_command_registry.register_command(assistant_slash_commands::FileSlashCommand, true);
@@ -278,7 +291,7 @@ fn register_slash_commands(prompt_builder: Option<Arc<PromptBuilder>>, cx: &mut 
     .detach();
 }
 
-fn update_slash_commands_from_settings(cx: &mut App) {
+fn update_slash_commands_from_settings(cx: &mut AppContext) {
     let slash_command_registry = SlashCommandRegistry::global(cx);
     let settings = SlashCommandSettings::get_global(cx);
 

@@ -11,8 +11,8 @@ use editor::{Anchor, Editor, FoldPlaceholder, ToPoint};
 use file_icons::FileIcons;
 use fuzzy::PathMatch;
 use gpui::{
-    AnyElement, App, DismissEvent, Empty, Entity, FocusHandle, Focusable, Stateful, Task,
-    WeakEntity,
+    AnyElement, AppContext, DismissEvent, Empty, FocusHandle, FocusableView, Stateful, Task, View,
+    WeakModel, WeakView,
 };
 use multi_buffer::{MultiBufferPoint, MultiBufferRow};
 use picker::{Picker, PickerDelegate};
@@ -27,18 +27,17 @@ use crate::context_picker::{ConfirmBehavior, ContextPicker};
 use crate::context_store::{ContextStore, FileInclusion};
 
 pub struct FileContextPicker {
-    picker: Entity<Picker<FileContextPickerDelegate>>,
+    picker: View<Picker<FileContextPickerDelegate>>,
 }
 
 impl FileContextPicker {
     pub fn new(
-        context_picker: WeakEntity<ContextPicker>,
-        workspace: WeakEntity<Workspace>,
-        editor: WeakEntity<Editor>,
-        context_store: WeakEntity<ContextStore>,
+        context_picker: WeakView<ContextPicker>,
+        workspace: WeakView<Workspace>,
+        editor: WeakView<Editor>,
+        context_store: WeakModel<ContextStore>,
         confirm_behavior: ConfirmBehavior,
-        window: &mut Window,
-        cx: &mut Context<Self>,
+        cx: &mut ViewContext<Self>,
     ) -> Self {
         let delegate = FileContextPickerDelegate::new(
             context_picker,
@@ -47,29 +46,29 @@ impl FileContextPicker {
             context_store,
             confirm_behavior,
         );
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new_view(|cx| Picker::uniform_list(delegate, cx));
 
         Self { picker }
     }
 }
 
-impl Focusable for FileContextPicker {
-    fn focus_handle(&self, cx: &App) -> FocusHandle {
+impl FocusableView for FileContextPicker {
+    fn focus_handle(&self, cx: &AppContext) -> FocusHandle {
         self.picker.focus_handle(cx)
     }
 }
 
 impl Render for FileContextPicker {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _cx: &mut ViewContext<Self>) -> impl IntoElement {
         self.picker.clone()
     }
 }
 
 pub struct FileContextPickerDelegate {
-    context_picker: WeakEntity<ContextPicker>,
-    workspace: WeakEntity<Workspace>,
-    editor: WeakEntity<Editor>,
-    context_store: WeakEntity<ContextStore>,
+    context_picker: WeakView<ContextPicker>,
+    workspace: WeakView<Workspace>,
+    editor: WeakView<Editor>,
+    context_store: WeakModel<ContextStore>,
     confirm_behavior: ConfirmBehavior,
     matches: Vec<PathMatch>,
     selected_index: usize,
@@ -77,10 +76,10 @@ pub struct FileContextPickerDelegate {
 
 impl FileContextPickerDelegate {
     pub fn new(
-        context_picker: WeakEntity<ContextPicker>,
-        workspace: WeakEntity<Workspace>,
-        editor: WeakEntity<Editor>,
-        context_store: WeakEntity<ContextStore>,
+        context_picker: WeakView<ContextPicker>,
+        workspace: WeakView<Workspace>,
+        editor: WeakView<Editor>,
+        context_store: WeakModel<ContextStore>,
         confirm_behavior: ConfirmBehavior,
     ) -> Self {
         Self {
@@ -98,9 +97,8 @@ impl FileContextPickerDelegate {
         &mut self,
         query: String,
         cancellation_flag: Arc<AtomicBool>,
-        workspace: &Entity<Workspace>,
-
-        cx: &mut Context<Picker<Self>>,
+        workspace: &View<Workspace>,
+        cx: &mut ViewContext<Picker<Self>>,
     ) -> Task<Vec<PathMatch>> {
         if query.is_empty() {
             let workspace = workspace.read(cx);
@@ -124,7 +122,7 @@ impl FileContextPickerDelegate {
             let file_matches = project.worktrees(cx).flat_map(|worktree| {
                 let worktree = worktree.read(cx);
                 let path_prefix: Arc<str> = worktree.root_name().into();
-                worktree.files(false, 0).map(move |entry| PathMatch {
+                worktree.files(true, 0).map(move |entry| PathMatch {
                     score: 0.,
                     positions: Vec::new(),
                     worktree_id: worktree.id().to_usize(),
@@ -182,32 +180,22 @@ impl PickerDelegate for FileContextPickerDelegate {
         self.selected_index
     }
 
-    fn set_selected_index(
-        &mut self,
-        ix: usize,
-        _window: &mut Window,
-        _cx: &mut Context<Picker<Self>>,
-    ) {
+    fn set_selected_index(&mut self, ix: usize, _cx: &mut ViewContext<Picker<Self>>) {
         self.selected_index = ix;
     }
 
-    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+    fn placeholder_text(&self, _cx: &mut WindowContext) -> Arc<str> {
         "Search files…".into()
     }
 
-    fn update_matches(
-        &mut self,
-        query: String,
-        window: &mut Window,
-        cx: &mut Context<Picker<Self>>,
-    ) -> Task<()> {
+    fn update_matches(&mut self, query: String, cx: &mut ViewContext<Picker<Self>>) -> Task<()> {
         let Some(workspace) = self.workspace.upgrade() else {
             return Task::ready(());
         };
 
         let search_task = self.search(query, Arc::<AtomicBool>::default(), &workspace, cx);
 
-        cx.spawn_in(window, |this, mut cx| async move {
+        cx.spawn(|this, mut cx| async move {
             // TODO: This should be probably be run in the background.
             let paths = search_task.await;
 
@@ -218,7 +206,7 @@ impl PickerDelegate for FileContextPickerDelegate {
         })
     }
 
-    fn confirm(&mut self, _secondary: bool, window: &mut Window, cx: &mut Context<Picker<Self>>) {
+    fn confirm(&mut self, _secondary: bool, cx: &mut ViewContext<Picker<Self>>) {
         let Some(mat) = self.matches.get(self.selected_index) else {
             return;
         };
@@ -243,7 +231,7 @@ impl PickerDelegate for FileContextPickerDelegate {
         };
 
         editor.update(cx, |editor, cx| {
-            editor.transact(window, cx, |editor, window, cx| {
+            editor.transact(cx, |editor, cx| {
                 // Move empty selections left by 1 column to select the `@`s, so they get overwritten when we insert.
                 {
                     let mut selections = editor.selections.all::<MultiBufferPoint>(cx);
@@ -259,9 +247,7 @@ impl PickerDelegate for FileContextPickerDelegate {
                         }
                     }
 
-                    editor.change_selections(Some(Autoscroll::fit()), window, cx, |s| {
-                        s.select(selections)
-                    });
+                    editor.change_selections(Some(Autoscroll::fit()), cx, |s| s.select(selections));
                 }
 
                 let start_anchors = {
@@ -274,7 +260,7 @@ impl PickerDelegate for FileContextPickerDelegate {
                         .collect::<Vec<_>>()
                 };
 
-                editor.insert(&full_path, window, cx);
+                editor.insert(&full_path, cx);
 
                 let end_anchors = {
                     let snapshot = editor.buffer().read(cx).snapshot(cx);
@@ -286,15 +272,14 @@ impl PickerDelegate for FileContextPickerDelegate {
                         .collect::<Vec<_>>()
                 };
 
-                editor.insert("\n", window, cx); // Needed to end the fold
+                editor.insert("\n", cx); // Needed to end the fold
 
                 let placeholder = FoldPlaceholder {
                     render: render_fold_icon_button(IconName::File, file_name.into()),
                     ..Default::default()
                 };
 
-                let render_trailer =
-                    move |_row, _unfold, _window: &mut Window, _cx: &mut App| Empty.into_any();
+                let render_trailer = move |_row, _unfold, _cx: &mut WindowContext| Empty.into_any();
 
                 let buffer = editor.buffer().read(cx).snapshot(cx);
                 let mut rows_to_fold = BTreeSet::new();
@@ -315,7 +300,7 @@ impl PickerDelegate for FileContextPickerDelegate {
                 editor.insert_creases(crease_iter, cx);
 
                 for buffer_row in rows_to_fold {
-                    editor.fold_at(&FoldAt { buffer_row }, window, cx);
+                    editor.fold_at(&FoldAt { buffer_row }, cx);
                 }
             });
         });
@@ -331,19 +316,19 @@ impl PickerDelegate for FileContextPickerDelegate {
         };
 
         let confirm_behavior = self.confirm_behavior;
-        cx.spawn_in(window, |this, mut cx| async move {
+        cx.spawn(|this, mut cx| async move {
             match task.await.notify_async_err(&mut cx) {
                 None => anyhow::Ok(()),
-                Some(()) => this.update_in(&mut cx, |this, window, cx| match confirm_behavior {
+                Some(()) => this.update(&mut cx, |this, cx| match confirm_behavior {
                     ConfirmBehavior::KeepOpen => {}
-                    ConfirmBehavior::Close => this.delegate.dismissed(window, cx),
+                    ConfirmBehavior::Close => this.delegate.dismissed(cx),
                 }),
             }
         })
         .detach_and_log_err(cx);
     }
 
-    fn dismissed(&mut self, _: &mut Window, cx: &mut Context<Picker<Self>>) {
+    fn dismissed(&mut self, cx: &mut ViewContext<Picker<Self>>) {
         self.context_picker
             .update(cx, |_, cx| {
                 cx.emit(DismissEvent);
@@ -355,8 +340,7 @@ impl PickerDelegate for FileContextPickerDelegate {
         &self,
         ix: usize,
         selected: bool,
-        _window: &mut Window,
-        cx: &mut Context<Picker<Self>>,
+        cx: &mut ViewContext<Picker<Self>>,
     ) -> Option<Self::ListItem> {
         let path_match = &self.matches[ix];
 
@@ -379,8 +363,8 @@ pub fn render_file_context_entry(
     id: ElementId,
     path: &Path,
     path_prefix: &Arc<str>,
-    context_store: WeakEntity<ContextStore>,
-    cx: &App,
+    context_store: WeakModel<ContextStore>,
+    cx: &WindowContext,
 ) -> Stateful<Div> {
     let (file_name, directory) = if path == Path::new("") {
         (SharedString::from(path_prefix.clone()), None)
@@ -412,12 +396,12 @@ pub fn render_file_context_entry(
 
     h_flex()
         .id(id)
-        .gap_1p5()
+        .gap_1()
         .w_full()
-        .child(file_icon.size(IconSize::Small).color(Color::Muted))
+        .child(file_icon.size(IconSize::Small))
         .child(
             h_flex()
-                .gap_1()
+                .gap_2()
                 .child(Label::new(file_name))
                 .children(directory.map(|directory| {
                     Label::new(directory)
@@ -425,12 +409,11 @@ pub fn render_file_context_entry(
                         .color(Color::Muted)
                 })),
         )
+        .child(div().w_full())
         .when_some(added, |el, added| match added {
             FileInclusion::Direct(_) => el.child(
                 h_flex()
-                    .w_full()
-                    .justify_end()
-                    .gap_0p5()
+                    .gap_1()
                     .child(
                         Icon::new(IconName::Check)
                             .size(IconSize::Small)
@@ -443,9 +426,7 @@ pub fn render_file_context_entry(
 
                 el.child(
                     h_flex()
-                        .w_full()
-                        .justify_end()
-                        .gap_0p5()
+                        .gap_1()
                         .child(
                             Icon::new(IconName::Check)
                                 .size(IconSize::Small)
@@ -453,7 +434,7 @@ pub fn render_file_context_entry(
                         )
                         .child(Label::new("Included").size(LabelSize::Small)),
                 )
-                .tooltip(Tooltip::text(format!("in {dir_name}")))
+                .tooltip(move |cx| Tooltip::text(format!("in {dir_name}"), cx))
             }
         })
 }
@@ -461,8 +442,8 @@ pub fn render_file_context_entry(
 fn render_fold_icon_button(
     icon: IconName,
     label: SharedString,
-) -> Arc<dyn Send + Sync + Fn(FoldId, Range<Anchor>, &mut Window, &mut App) -> AnyElement> {
-    Arc::new(move |fold_id, _fold_range, _window, _cx| {
+) -> Arc<dyn Send + Sync + Fn(FoldId, Range<Anchor>, &mut WindowContext) -> AnyElement> {
+    Arc::new(move |fold_id, _fold_range, _cx| {
         ButtonLike::new(fold_id)
             .style(ButtonStyle::Filled)
             .layer(ElevationIndex::ElevatedSurface)
@@ -477,14 +458,13 @@ fn fold_toggle(
 ) -> impl Fn(
     MultiBufferRow,
     bool,
-    Arc<dyn Fn(bool, &mut Window, &mut App) + Send + Sync>,
-    &mut Window,
-    &mut App,
+    Arc<dyn Fn(bool, &mut WindowContext) + Send + Sync>,
+    &mut WindowContext,
 ) -> AnyElement {
-    move |row, is_folded, fold, _window, _cx| {
+    move |row, is_folded, fold, _cx| {
         Disclosure::new((name, row.0 as u64), !is_folded)
             .toggle_state(is_folded)
-            .on_click(move |_e, window, cx| fold(!is_folded, window, cx))
+            .on_click(move |_e, cx| fold(!is_folded, cx))
             .into_any_element()
     }
 }

@@ -8,6 +8,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use assistant_context_editor::ContextStore;
 use assistant_slash_command::SlashCommandWorkingSet;
+use assistant_tool::ToolWorkingSet;
 use call::{room, ActiveCall, ParticipantLocation, Room};
 use client::{User, RECEIVE_TIMEOUT};
 use collections::{HashMap, HashSet};
@@ -17,7 +18,7 @@ use prompt_library::PromptBuilder;
 
 use git::status::{FileStatus, StatusCode, TrackedStatus, UnmergedStatus, UnmergedStatusCode};
 use gpui::{
-    px, size, App, BackgroundExecutor, Entity, Modifiers, MouseButton, MouseDownEvent,
+    px, size, AppContext, BackgroundExecutor, Model, Modifiers, MouseButton, MouseDownEvent,
     TestAppContext, UpdateGlobal,
 };
 use language::{
@@ -2072,7 +2073,7 @@ async fn test_mute_deafen(
     }
 
     fn participant_audio_state(
-        room: &Entity<Room>,
+        room: &Model<Room>,
         cx: &TestAppContext,
     ) -> Vec<ParticipantAudioState> {
         room.read_with(cx, |room, _| {
@@ -2251,7 +2252,7 @@ async fn test_room_location(
     );
 
     fn participant_locations(
-        room: &Entity<Room>,
+        room: &Model<Room>,
         cx: &TestAppContext,
     ) -> Vec<(String, ParticipantLocation)> {
         room.read_with(cx, |room, _| {
@@ -2592,7 +2593,7 @@ async fn test_git_diff_base_change(
     change_set_local_a.read_with(cx_a, |change_set, cx| {
         let buffer = buffer_local_a.read(cx);
         assert_eq!(
-            change_set.base_text_string().as_deref(),
+            change_set.base_text_string(cx).as_deref(),
             Some(diff_base.as_str())
         );
         git::diff::assert_hunks(
@@ -2620,7 +2621,7 @@ async fn test_git_diff_base_change(
     change_set_remote_a.read_with(cx_b, |change_set, cx| {
         let buffer = buffer_remote_a.read(cx);
         assert_eq!(
-            change_set.base_text_string().as_deref(),
+            change_set.base_text_string(cx).as_deref(),
             Some(diff_base.as_str())
         );
         git::diff::assert_hunks(
@@ -2642,7 +2643,7 @@ async fn test_git_diff_base_change(
     change_set_local_a.read_with(cx_a, |change_set, cx| {
         let buffer = buffer_local_a.read(cx);
         assert_eq!(
-            change_set.base_text_string().as_deref(),
+            change_set.base_text_string(cx).as_deref(),
             Some(new_diff_base.as_str())
         );
         git::diff::assert_hunks(
@@ -2656,7 +2657,7 @@ async fn test_git_diff_base_change(
     change_set_remote_a.read_with(cx_b, |change_set, cx| {
         let buffer = buffer_remote_a.read(cx);
         assert_eq!(
-            change_set.base_text_string().as_deref(),
+            change_set.base_text_string(cx).as_deref(),
             Some(new_diff_base.as_str())
         );
         git::diff::assert_hunks(
@@ -2702,7 +2703,7 @@ async fn test_git_diff_base_change(
     change_set_local_b.read_with(cx_a, |change_set, cx| {
         let buffer = buffer_local_b.read(cx);
         assert_eq!(
-            change_set.base_text_string().as_deref(),
+            change_set.base_text_string(cx).as_deref(),
             Some(diff_base.as_str())
         );
         git::diff::assert_hunks(
@@ -2729,7 +2730,7 @@ async fn test_git_diff_base_change(
     change_set_remote_b.read_with(cx_b, |change_set, cx| {
         let buffer = buffer_remote_b.read(cx);
         assert_eq!(
-            change_set.base_text_string().as_deref(),
+            change_set.base_text_string(cx).as_deref(),
             Some(diff_base.as_str())
         );
         git::diff::assert_hunks(
@@ -2751,7 +2752,7 @@ async fn test_git_diff_base_change(
     change_set_local_b.read_with(cx_a, |change_set, cx| {
         let buffer = buffer_local_b.read(cx);
         assert_eq!(
-            change_set.base_text_string().as_deref(),
+            change_set.base_text_string(cx).as_deref(),
             Some(new_diff_base.as_str())
         );
         git::diff::assert_hunks(
@@ -2765,7 +2766,7 @@ async fn test_git_diff_base_change(
     change_set_remote_b.read_with(cx_b, |change_set, cx| {
         let buffer = buffer_remote_b.read(cx);
         assert_eq!(
-            change_set.base_text_string().as_deref(),
+            change_set.base_text_string(cx).as_deref(),
             Some(new_diff_base.as_str())
         );
         git::diff::assert_hunks(
@@ -2820,7 +2821,7 @@ async fn test_git_branch_name(
     executor.run_until_parked();
 
     #[track_caller]
-    fn assert_branch(branch_name: Option<impl Into<String>>, project: &Project, cx: &App) {
+    fn assert_branch(branch_name: Option<impl Into<String>>, project: &Project, cx: &AppContext) {
         let branch_name = branch_name.map(Into::into);
         let worktrees = project.visible_worktrees(cx).collect::<Vec<_>>();
         assert_eq!(worktrees.len(), 1);
@@ -2930,7 +2931,7 @@ async fn test_git_status_sync(
         file: &impl AsRef<Path>,
         status: Option<FileStatus>,
         project: &Project,
-        cx: &App,
+        cx: &AppContext,
     ) {
         let file = file.as_ref();
         let worktrees = project.visible_worktrees(cx).collect::<Vec<_>>();
@@ -6166,7 +6167,7 @@ async fn test_right_click_menu_behind_collab_panel(cx: &mut TestAppContext) {
     cx.simulate_resize(size(px(300.), px(300.)));
 
     cx.simulate_keystrokes("cmd-n cmd-n cmd-n");
-    cx.update(|window, _cx| window.refresh());
+    cx.update(|cx| cx.refresh());
 
     let tab_bounds = cx.debug_bounds("TAB-2").unwrap();
     let new_tab_button_bounds = cx.debug_bounds("ICON-Plus").unwrap();
@@ -6259,14 +6260,14 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
 
     let pane = workspace.update(cx, |workspace, _| workspace.active_pane().clone());
 
-    let get_path = |pane: &Pane, idx: usize, cx: &App| {
+    let get_path = |pane: &Pane, idx: usize, cx: &AppContext| {
         pane.item_for_index(idx).unwrap().project_path(cx).unwrap()
     };
 
     // Opening item 3 as a "permanent" tab
     workspace
-        .update_in(cx, |workspace, window, cx| {
-            workspace.open_path(path_3.clone(), None, false, window, cx)
+        .update(cx, |workspace, cx| {
+            workspace.open_path(path_3.clone(), None, false, cx)
         })
         .await
         .unwrap();
@@ -6282,8 +6283,8 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
 
     // Open item 1 as preview
     workspace
-        .update_in(cx, |workspace, window, cx| {
-            workspace.open_path_preview(path_1.clone(), None, true, true, window, cx)
+        .update(cx, |workspace, cx| {
+            workspace.open_path_preview(path_1.clone(), None, true, true, cx)
         })
         .await
         .unwrap();
@@ -6303,8 +6304,8 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
 
     // Open item 2 as preview
     workspace
-        .update_in(cx, |workspace, window, cx| {
-            workspace.open_path_preview(path_2.clone(), None, true, true, window, cx)
+        .update(cx, |workspace, cx| {
+            workspace.open_path_preview(path_2.clone(), None, true, true, cx)
         })
         .await
         .unwrap();
@@ -6324,9 +6325,7 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
 
     // Going back should show item 1 as preview
     workspace
-        .update_in(cx, |workspace, window, cx| {
-            workspace.go_back(pane.downgrade(), window, cx)
-        })
+        .update(cx, |workspace, cx| workspace.go_back(pane.downgrade(), cx))
         .await
         .unwrap();
 
@@ -6344,11 +6343,10 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
     });
 
     // Closing item 1
-    pane.update_in(cx, |pane, window, cx| {
+    pane.update(cx, |pane, cx| {
         pane.close_item_by_id(
             pane.active_item().unwrap().item_id(),
             workspace::SaveIntent::Skip,
-            window,
             cx,
         )
     })
@@ -6366,9 +6364,7 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
 
     // Going back should show item 1 as preview
     workspace
-        .update_in(cx, |workspace, window, cx| {
-            workspace.go_back(pane.downgrade(), window, cx)
-        })
+        .update(cx, |workspace, cx| workspace.go_back(pane.downgrade(), cx))
         .await
         .unwrap();
 
@@ -6386,9 +6382,9 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
     });
 
     // Close permanent tab
-    pane.update_in(cx, |pane, window, cx| {
+    pane.update(cx, |pane, cx| {
         let id = pane.items().next().unwrap().item_id();
-        pane.close_item_by_id(id, workspace::SaveIntent::Skip, window, cx)
+        pane.close_item_by_id(id, workspace::SaveIntent::Skip, cx)
     })
     .await
     .unwrap();
@@ -6435,8 +6431,8 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
 
     // Open item 2 as preview in right pane
     workspace
-        .update_in(cx, |workspace, window, cx| {
-            workspace.open_path_preview(path_2.clone(), None, true, true, window, cx)
+        .update(cx, |workspace, cx| {
+            workspace.open_path_preview(path_2.clone(), None, true, true, cx)
         })
         .await
         .unwrap();
@@ -6467,14 +6463,14 @@ async fn test_preview_tabs(cx: &mut TestAppContext) {
     });
 
     // Focus left pane
-    workspace.update_in(cx, |workspace, window, cx| {
-        workspace.activate_pane_in_direction(workspace::SplitDirection::Left, window, cx)
+    workspace.update(cx, |workspace, cx| {
+        workspace.activate_pane_in_direction(workspace::SplitDirection::Left, cx)
     });
 
     // Open item 2 as preview in left pane
     workspace
-        .update_in(cx, |workspace, window, cx| {
-            workspace.open_path_preview(path_2.clone(), None, true, true, window, cx)
+        .update(cx, |workspace, cx| {
+            workspace.open_path_preview(path_2.clone(), None, true, true, cx)
         })
         .await
         .unwrap();
@@ -6546,6 +6542,7 @@ async fn test_context_collaboration_with_reconnect(
                 project_a.clone(),
                 prompt_builder.clone(),
                 Arc::new(SlashCommandWorkingSet::default()),
+                Arc::new(ToolWorkingSet::default()),
                 cx,
             )
         })
@@ -6557,6 +6554,7 @@ async fn test_context_collaboration_with_reconnect(
                 project_b.clone(),
                 prompt_builder.clone(),
                 Arc::new(SlashCommandWorkingSet::default()),
+                Arc::new(ToolWorkingSet::default()),
                 cx,
             )
         })

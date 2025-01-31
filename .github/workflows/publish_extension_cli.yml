@@ -12,7 +12,6 @@ env:
 jobs:
   publish:
     name: Publish zed-extension CLI
-    if: github.repository_owner == 'zed-industries'
     runs-on:
       - ubuntu-latest
     steps:

@@ -2,7 +2,7 @@ use crate::{Event, *};
 use ::git::diff::assert_hunks;
 use fs::FakeFs;
 use futures::{future, StreamExt};
-use gpui::{App, SemanticVersion, UpdateGlobal};
+use gpui::{AppContext, SemanticVersion, UpdateGlobal};
 use http_client::Url;
 use language::{
     language_settings::{language_settings, AllLanguageSettings, LanguageSettingsContent},
@@ -27,7 +27,7 @@ use unindent::Unindent as _;
 use util::{
     assert_set_eq,
     paths::{replace_path_separator, PathMatcher},
-    test::TempTree,
+    test::temp_tree,
     TryFutureExt as _,
 };
 
@@ -67,7 +67,7 @@ async fn test_symlinks(cx: &mut gpui::TestAppContext) {
     init_test(cx);
     cx.executor().allow_parking();
 
-    let dir = TempTree::new(json!({
+    let dir = temp_tree(json!({
         "root": {
             "apple": "",
             "banana": {
@@ -106,7 +106,7 @@ async fn test_symlinks(cx: &mut gpui::TestAppContext) {
 async fn test_editorconfig_support(cx: &mut gpui::TestAppContext) {
     init_test(cx);
 
-    let dir = TempTree::new(json!({
+    let dir = temp_tree(json!({
         ".editorconfig": r#"
         root = true
         [*.rs]
@@ -2643,7 +2643,10 @@ async fn test_definition(cx: &mut gpui::TestAppContext) {
         assert_eq!(list_worktrees(&project, cx), [("/dir/b.rs".as_ref(), true)]);
     });
 
-    fn list_worktrees<'a>(project: &'a Entity<Project>, cx: &'a App) -> Vec<(&'a Path, bool)> {
+    fn list_worktrees<'a>(
+        project: &'a Model<Project>,
+        cx: &'a AppContext,
+    ) -> Vec<(&'a Path, bool)> {
         project
             .read(cx)
             .worktrees(cx)
@@ -3187,7 +3190,7 @@ async fn test_rescan_and_remote_updates(cx: &mut gpui::TestAppContext) {
     init_test(cx);
     cx.executor().allow_parking();
 
-    let dir = TempTree::new(json!({
+    let dir = temp_tree(json!({
         "a": {
             "file1": "",
             "file2": "",
@@ -5648,7 +5651,7 @@ async fn test_unstaged_changes_for_buffer(cx: &mut gpui::TestAppContext) {
         assert_hunks(
             unstaged_changes.diff_hunks_intersecting_range(Anchor::MIN..Anchor::MAX, &snapshot),
             &snapshot,
-            &unstaged_changes.base_text.as_ref().unwrap().text(),
+            &unstaged_changes.base_text.as_ref().unwrap().read(cx).text(),
             &[
                 (0..1, "", "// print goodbye\n"),
                 (
@@ -5678,14 +5681,14 @@ async fn test_unstaged_changes_for_buffer(cx: &mut gpui::TestAppContext) {
         assert_hunks(
             unstaged_changes.diff_hunks_intersecting_range(Anchor::MIN..Anchor::MAX, &snapshot),
             &snapshot,
-            &unstaged_changes.base_text.as_ref().unwrap().text(),
+            &unstaged_changes.base_text.as_ref().unwrap().read(cx).text(),
             &[(2..3, "", "    println!(\"goodbye world\");\n")],
         );
     });
 }
 
 async fn search(
-    project: &Entity<Project>,
+    project: &Model<Project>,
     query: SearchQuery,
     cx: &mut gpui::TestAppContext,
 ) -> Result<HashMap<String, Vec<Range<usize>>>> {
@@ -5804,10 +5807,10 @@ fn tsx_lang() -> Arc<Language> {
 }
 
 fn get_all_tasks(
-    project: &Entity<Project>,
+    project: &Model<Project>,
     worktree_id: Option<WorktreeId>,
     task_context: &TaskContext,
-    cx: &mut App,
+    cx: &mut AppContext,
 ) -> Vec<(TaskSourceKind, ResolvedTask)> {
     let (mut old, new) = project.update(cx, |project, cx| {
         project

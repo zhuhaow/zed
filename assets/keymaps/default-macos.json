@@ -127,7 +127,7 @@
       "ctrl-cmd-space": "editor::ShowCharacterPalette",
       "cmd-;": "editor::ToggleLineNumbers",
       "cmd-alt-z": "editor::RevertSelectedHunks",
-      "cmd-'": "editor::ToggleSelectedDiffHunks",
+      "cmd-'": "editor::ToggleHunkDiff",
       "cmd-\"": "editor::ExpandAllHunkDiffs",
       "cmd-alt-g b": "editor::ToggleGitBlame",
       "cmd-i": "editor::ShowSignatureHelp",
@@ -145,13 +145,12 @@
       "cmd-shift-enter": "editor::NewlineAbove",
       "cmd-k z": "editor::ToggleSoftWrap",
       "cmd-f": "buffer_search::Deploy",
-      "cmd-alt-f": "buffer_search::DeployReplace",
+      "cmd-alt-f": ["buffer_search::Deploy", { "replace_enabled": true }],
       "cmd-alt-l": ["buffer_search::Deploy", { "selection_search_enabled": true }],
       "cmd-e": ["buffer_search::Deploy", { "focus": false }],
       "cmd->": "assistant::QuoteSelection",
       "cmd-<": "assistant::InsertIntoEditor",
-      "cmd-alt-e": "editor::SelectEnclosingSymbol",
-      "alt-enter": "editor::OpenSelectionsInMultibuffer"
+      "cmd-alt-e": "editor::SelectEnclosingSymbol"
     }
   },
   {
@@ -504,7 +503,6 @@
       "cmd-shift-m": "diagnostics::Deploy",
       "cmd-shift-e": "project_panel::ToggleFocus",
       "cmd-shift-b": "outline_panel::ToggleFocus",
-      "ctrl-shift-g": "git_panel::ToggleFocus",
       "cmd-?": "assistant::ToggleFocus",
       "cmd-alt-s": "workspace::SaveAll",
       "cmd-k m": "language_selector::Toggle",
@@ -622,7 +620,7 @@
     "bindings": {
       "alt-enter": "editor::OpenExcerpts",
       "shift-enter": "editor::ExpandExcerpts",
-      "cmd-alt-enter": "editor::OpenExcerptsSplit",
+      "cmd-k enter": "editor::OpenExcerptsSplit",
       "cmd-shift-e": "pane::RevealInProjectPanel",
       "cmd-f8": "editor::GoToHunk",
       "cmd-shift-f8": "editor::GoToPrevHunk",
@@ -669,7 +667,7 @@
       "shift-down": "menu::SelectNext",
       "shift-up": "menu::SelectPrev",
       "alt-enter": "editor::OpenExcerpts",
-      "cmd-alt-enter": "editor::OpenExcerptsSplit"
+      "cmd-k enter": "editor::OpenExcerptsSplit"
     }
   },
   {
@@ -834,8 +832,6 @@
       // Terminal.app compatibility
       "alt-left": ["terminal::SendText", "\u001bb"],
       "alt-right": ["terminal::SendText", "\u001bf"],
-      "alt-b": ["terminal::SendText", "\u001bb"],
-      "alt-f": ["terminal::SendText", "\u001bf"],
       // There are conflicting bindings for these keys in the global context.
       // these bindings override them, remove at your own risk:
       "up": ["terminal::SendKeystroke", "up"],
@@ -883,7 +879,7 @@
     }
   },
   {
-    "context": "ZedPredictModal",
+    "context": "ZedPredictTos",
     "use_key_equivalents": true,
     "bindings": {
       "escape": "menu::Cancel"
