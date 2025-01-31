@@ -929,6 +929,7 @@ impl GitPanel {
     pub fn render_panel_header(
         &self,
         window: &mut Window,
+        has_write_access: bool,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let _focus_handle = self.focus_handle(cx).clone();
@@ -971,7 +972,7 @@ impl GitPanel {
                         } else {
                             Tooltip::text("Stage all changes")
                         })
-                        .disabled(entry_count == 0)
+                        .disabled(!has_write_access || entry_count == 0)
                         .on_click(cx.listener(
                             move |git_panel, _, window, cx| match all_staged {
                                 true => git_panel.unstage_all(&UnstageAll, window, cx),
@@ -1019,7 +1020,11 @@ impl GitPanel {
             .child("stage buttons")
     }
 
-    pub fn render_commit_editor(&self, cx: &Context<Self>) -> impl IntoElement {
+    pub fn render_commit_editor(
+        &self,
+        has_write_access: bool,
+        cx: &Context<Self>,
+    ) -> impl IntoElement {
         let editor = self.commit_editor.clone();
         let editor_focus_handle = editor.read(cx).focus_handle(cx).clone();
         let (can_commit, can_commit_all) =
@@ -1027,8 +1032,8 @@ impl GitPanel {
                 .as_ref()
                 .map_or((false, false), |active_repository| {
                     (
-                        active_repository.can_commit(false, cx),
-                        active_repository.can_commit(true, cx),
+                        has_write_access && active_repository.can_commit(false, cx),
+                        has_write_access && active_repository.can_commit(true, cx),
                     )
                 });
 
@@ -1166,7 +1171,7 @@ impl GitPanel {
         )
     }
 
-    fn render_entries(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_entries(&self, has_write_access: bool, cx: &mut Context<Self>) -> impl IntoElement {
         let entry_count = self.visible_entries.len();
 
         h_flex()
@@ -1177,7 +1182,7 @@ impl GitPanel {
                     move |git_panel, range, _window, cx| {
                         let mut items = Vec::with_capacity(range.end - range.start);
                         git_panel.for_each_visible_entry(range, cx, |ix, details, cx| {
-                            items.push(git_panel.render_entry(ix, details, cx));
+                            items.push(git_panel.render_entry(ix, details, has_write_access, cx));
                         });
                         items
                     }
@@ -1195,7 +1200,8 @@ impl GitPanel {
         &self,
         ix: usize,
         entry_details: GitListEntry,
-        cx: &mut Context<Self>,
+        has_write_access: bool,
+        cx: &Context<Self>,
     ) -> impl IntoElement {
         let repo_path = entry_details.repo_path.clone();
         let selected = self.selected_entry == Some(ix);
@@ -1285,6 +1291,7 @@ impl GitPanel {
                         .is_staged
                         .map_or(ToggleState::Indeterminate, ToggleState::from),
                 )
+                .disabled(!has_write_access)
                 .fill()
                 .elevation(ElevationIndex::Surface)
                 .on_click({
@@ -1366,19 +1373,23 @@ impl Render for GitPanel {
             .map_or(false, |active_repository| {
                 active_repository.entry_count() > 0
             });
-        let has_co_authors = self
+        let room = self
             .workspace
             .upgrade()
-            .and_then(|workspace| workspace.read(cx).active_call()?.read(cx).room().cloned())
-            .map(|room| {
-                let room = room.read(cx);
-                room.local_participant().can_write()
-                    && room
-                        .remote_participants()
-                        .values()
-                        .any(|remote_participant| remote_participant.can_write())
-            })
-            .unwrap_or(false);
+            .and_then(|workspace| workspace.read(cx).active_call()?.read(cx).room().cloned());
+
+        let has_write_access = room
+            .as_ref()
+            .map_or(true, |room| room.read(cx).local_participant().can_write());
+
+        let has_co_authors = room.map_or(false, |room| {
+            has_write_access
+                && room
+                    .read(cx)
+                    .remote_participants()
+                    .values()
+                    .any(|remote_participant| remote_participant.can_write())
+        });
 
         v_flex()
             .id("git_panel")
@@ -1443,16 +1454,16 @@ impl Render for GitPanel {
             .font_buffer(cx)
             .py_1()
             .bg(ElevationIndex::Surface.bg(cx))
-            .child(self.render_panel_header(window, cx))
+            .child(self.render_panel_header(window, has_write_access, cx))
             .child(self.render_divider(cx))
             .child(if has_entries {
-                self.render_entries(cx).into_any_element()
+                self.render_entries(has_write_access, cx).into_any_element()
             } else {
                 self.render_empty_state(cx).into_any_element()
             })
             .child(self.render_list_footer(window, cx))
             .child(self.render_divider(cx))
-            .child(self.render_commit_editor(cx))
+            .child(self.render_commit_editor(has_write_access, cx))
             .children(self.panel_context_menu.as_ref().map(|(menu, position, _)| {
                 deferred(
                     anchored()

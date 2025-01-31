@@ -119,12 +119,10 @@ impl AssistantPanel {
         cx.spawn(|mut cx| async move {
             let tools = Arc::new(ToolWorkingSet::default());
             log::info!("[assistant2-debug] initializing ThreadStore");
-            let thread_store = workspace
-                .update(&mut cx, |workspace, cx| {
-                    let project = workspace.project().clone();
-                    ThreadStore::new(project, tools.clone(), cx)
-                })?
-                .await?;
+            let thread_store = workspace.update(&mut cx, |workspace, cx| {
+                let project = workspace.project().clone();
+                ThreadStore::new(project, tools.clone(), cx)
+            })??;
             log::info!("[assistant2-debug] finished initializing ThreadStore");
 
             let slash_commands = Arc::new(SlashCommandWorkingSet::default());
@@ -136,7 +134,6 @@ impl AssistantPanel {
                         project,
                         prompt_builder.clone(),
                         slash_commands,
-                        tools.clone(),
                         cx,
                     )
                 })?
@@ -614,9 +611,16 @@ impl AssistantPanel {
                     SharedString::from(context_editor.read(cx).title(cx).to_string())
                 })
                 .unwrap_or_else(|| SharedString::from("Loading Summary…")),
-            ActiveView::History => "History / Thread".into(),
-            ActiveView::PromptEditorHistory => "History / Prompt Editor".into(),
-            ActiveView::Configuration => "Configuration".into(),
+            ActiveView::History | ActiveView::PromptEditorHistory => "History".into(),
+            ActiveView::Configuration => "Assistant Settings".into(),
+        };
+
+        let sub_title = match self.active_view {
+            ActiveView::Thread => None,
+            ActiveView::PromptEditor => None,
+            ActiveView::History => Some("Thread"),
+            ActiveView::PromptEditorHistory => Some("Prompt Editor"),
+            ActiveView::Configuration => None,
         };
 
         h_flex()
@@ -629,7 +633,24 @@ impl AssistantPanel {
             .bg(cx.theme().colors().tab_bar_background)
             .border_b_1()
             .border_color(cx.theme().colors().border)
-            .child(h_flex().child(Label::new(title)))
+            .child(
+                h_flex()
+                    .child(Label::new(title))
+                    .when(sub_title.is_some(), |this| {
+                        this.child(
+                            h_flex()
+                                .pl_1p5()
+                                .gap_1p5()
+                                .child(
+                                    Label::new("/")
+                                        .size(LabelSize::Small)
+                                        .color(Color::Disabled)
+                                        .alpha(0.5),
+                                )
+                                .child(Label::new(sub_title.unwrap())),
+                        )
+                    }),
+            )
             .child(
                 h_flex()
                     .h_full()
@@ -678,9 +699,9 @@ impl AssistantPanel {
                         IconButton::new("configure-assistant", IconName::Settings)
                             .icon_size(IconSize::Small)
                             .style(ButtonStyle::Subtle)
-                            .tooltip(Tooltip::text("Configure Assistant"))
-                            .on_click(move |_event, _window, cx| {
-                                cx.dispatch_action(&OpenConfiguration);
+                            .tooltip(Tooltip::text("Assistant Settings"))
+                            .on_click(move |_event, window, cx| {
+                                window.dispatch_action(OpenConfiguration.boxed_clone(), cx);
                             }),
                     ),
             )

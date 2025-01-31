@@ -22,9 +22,9 @@ use slotmap::SlotMap;
 
 pub use async_context::*;
 use collections::{FxHashMap, FxHashSet, HashMap, VecDeque};
+pub use context::*;
 pub use entity_map::*;
 use http_client::HttpClient;
-pub use model_context::*;
 #[cfg(any(test, feature = "test-support"))]
 pub use test_context::*;
 use util::ResultExt;
@@ -41,8 +41,8 @@ use crate::{
 };
 
 mod async_context;
+mod context;
 mod entity_map;
-mod model_context;
 #[cfg(any(test, feature = "test-support"))]
 mod test_context;
 
@@ -1236,15 +1236,9 @@ impl App {
         T: 'static,
     {
         let window_handle = window.handle;
-        let (subscription, activate) = self.release_listeners.insert(
-            handle.entity_id(),
-            Box::new(move |entity, cx| {
-                let entity = entity.downcast_mut().expect("invalid entity type");
-                let _ = window_handle.update(cx, |_, window, cx| on_release(entity, window, cx));
-            }),
-        );
-        activate();
-        subscription
+        self.observe_release(&handle, move |entity, cx| {
+            let _ = window_handle.update(cx, |_, window, cx| on_release(entity, window, cx));
+        })
     }
 
     /// Register a callback to be invoked when a keystroke is received by the application
@@ -1672,6 +1666,21 @@ impl AppContext for App {
             .map_err(|_| anyhow!("root view's type has changed"))?;
 
         Ok(read(view, self))
+    }
+
+    fn background_spawn<R>(&self, future: impl Future<Output = R> + Send + 'static) -> Task<R>
+    where
+        R: Send + 'static,
+    {
+        self.background_executor.spawn(future)
+    }
+
+    fn read_global<G, R>(&self, callback: impl FnOnce(&G, &App) -> R) -> Self::Result<R>
+    where
+        G: Global,
+    {
+        let mut g = self.global::<G>();
+        callback(&g, self)
     }
 }
 
