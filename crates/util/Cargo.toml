@@ -1,8 +1,8 @@
 [package]
 name = "util"
 version = "0.1.0"
-edition.workspace = true
-publish.workspace = true
+edition = "2021"
+publish = false
 license = "Apache-2.0"
 
 [lints]
@@ -32,7 +32,7 @@ rust-embed.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 smol.workspace = true
-take-until.workspace = true
+take-until = "0.2.0"
 tempfile = { workspace = true, optional = true }
 unicase.workspace = true
 

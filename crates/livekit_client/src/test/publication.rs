@@ -8,20 +8,20 @@ pub enum TrackPublication {
 
 #[derive(Clone, Debug)]
 pub struct LocalTrackPublication {
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     pub(crate) sid: TrackSid,
     pub(crate) room: WeakRoom,
 }
 
 #[derive(Clone, Debug)]
 pub struct RemoteTrackPublication {
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     pub(crate) sid: TrackSid,
     pub(crate) room: WeakRoom,
     pub(crate) track: RemoteTrack,
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl TrackPublication {
     pub fn sid(&self) -> TrackSid {
         match self {
@@ -38,7 +38,7 @@ impl TrackPublication {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl LocalTrackPublication {
     pub fn sid(&self) -> TrackSid {
         self.sid.clone()
@@ -71,7 +71,7 @@ impl LocalTrackPublication {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl RemoteTrackPublication {
     pub fn sid(&self) -> TrackSid {
         self.sid.clone()

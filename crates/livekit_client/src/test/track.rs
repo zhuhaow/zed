@@ -1,8 +1,8 @@
 use super::*;
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(windows))]
 use webrtc::{audio_source::RtcAudioSource, video_source::RtcVideoSource};
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(windows))]
 pub use livekit::track::{TrackKind, TrackSource};
 
 #[derive(Clone, Debug)]
@@ -25,14 +25,14 @@ pub struct LocalAudioTrack {}
 
 #[derive(Clone, Debug)]
 pub struct RemoteVideoTrack {
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     pub(super) server_track: Arc<TestServerVideoTrack>,
     pub(super) _room: WeakRoom,
 }
 
 #[derive(Clone, Debug)]
 pub struct RemoteAudioTrack {
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     pub(super) server_track: Arc<TestServerAudioTrack>,
     pub(super) room: WeakRoom,
 }
@@ -43,17 +43,17 @@ pub enum RtcTrack {
 }
 
 pub struct RtcAudioTrack {
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     pub(super) server_track: Arc<TestServerAudioTrack>,
     pub(super) room: WeakRoom,
 }
 
 pub struct RtcVideoTrack {
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     pub(super) _server_track: Arc<TestServerVideoTrack>,
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl RemoteTrack {
     pub fn sid(&self) -> TrackSid {
         match self {
@@ -84,21 +84,21 @@ impl RemoteTrack {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(windows))]
 impl LocalVideoTrack {
     pub fn create_video_track(_name: &str, _source: RtcVideoSource) -> Self {
         Self {}
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(windows))]
 impl LocalAudioTrack {
     pub fn create_audio_track(_name: &str, _source: RtcAudioSource) -> Self {
         Self {}
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl RemoteAudioTrack {
     pub fn sid(&self) -> TrackSid {
         self.server_track.sid.clone()
@@ -134,7 +134,7 @@ impl RemoteAudioTrack {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl RemoteVideoTrack {
     pub fn sid(&self) -> TrackSid {
         self.server_track.sid.clone()
@@ -151,7 +151,7 @@ impl RemoteVideoTrack {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl RtcTrack {
     pub fn enabled(&self) -> bool {
         match self {
@@ -168,7 +168,7 @@ impl RtcTrack {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl RtcAudioTrack {
     pub fn set_enabled(&self, enabled: bool) {
         if let Some(room) = self.room.upgrade() {

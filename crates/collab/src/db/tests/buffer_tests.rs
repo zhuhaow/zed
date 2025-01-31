@@ -13,7 +13,6 @@ async fn test_channel_buffers(db: &Arc<Database>) {
     let a_id = db
         .create_user(
             "user_a@example.com",
-            None,
             false,
             NewUserParams {
                 github_login: "user_a".into(),
@@ -26,7 +25,6 @@ async fn test_channel_buffers(db: &Arc<Database>) {
     let b_id = db
         .create_user(
             "user_b@example.com",
-            None,
             false,
             NewUserParams {
                 github_login: "user_b".into(),
@@ -41,7 +39,6 @@ async fn test_channel_buffers(db: &Arc<Database>) {
     let c_id = db
         .create_user(
             "user_c@example.com",
-            None,
             false,
             NewUserParams {
                 github_login: "user_c".into(),
@@ -179,7 +176,6 @@ async fn test_channel_buffers_last_operations(db: &Database) {
     let user_id = db
         .create_user(
             "user_a@example.com",
-            None,
             false,
             NewUserParams {
                 github_login: "user_a".into(),
@@ -192,7 +188,6 @@ async fn test_channel_buffers_last_operations(db: &Database) {
     let observer_id = db
         .create_user(
             "user_b@example.com",
-            None,
             false,
             NewUserParams {
                 github_login: "user_b".into(),

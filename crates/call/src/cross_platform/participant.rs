@@ -1,14 +1,14 @@
-#![cfg_attr(all(target_os = "windows", target_env = "gnu"), allow(unused))]
+#![cfg_attr(target_os = "windows", allow(unused))]
 
 use anyhow::{anyhow, Result};
 use client::{proto, ParticipantIndex, User};
 use collections::HashMap;
-use gpui::WeakEntity;
+use gpui::WeakModel;
 use livekit_client::AudioStream;
 use project::Project;
 use std::sync::Arc;
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 pub use livekit_client::id::TrackSid;
 pub use livekit_client::track::{RemoteAudioTrack, RemoteVideoTrack};
 
@@ -39,17 +39,8 @@ impl ParticipantLocation {
 #[derive(Clone, Default)]
 pub struct LocalParticipant {
     pub projects: Vec<proto::ParticipantProject>,
-    pub active_project: Option<WeakEntity<Project>>,
+    pub active_project: Option<WeakModel<Project>>,
     pub role: proto::ChannelRole,
-}
-
-impl LocalParticipant {
-    pub fn can_write(&self) -> bool {
-        matches!(
-            self.role,
-            proto::ChannelRole::Admin | proto::ChannelRole::Member
-        )
-    }
 }
 
 pub struct RemoteParticipant {
@@ -61,24 +52,17 @@ pub struct RemoteParticipant {
     pub participant_index: ParticipantIndex,
     pub muted: bool,
     pub speaking: bool,
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     pub video_tracks: HashMap<TrackSid, RemoteVideoTrack>,
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     pub audio_tracks: HashMap<TrackSid, (RemoteAudioTrack, AudioStream)>,
 }
 
 impl RemoteParticipant {
     pub fn has_video_tracks(&self) -> bool {
-        #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+        #[cfg(not(target_os = "windows"))]
         return !self.video_tracks.is_empty();
-        #[cfg(all(target_os = "windows", target_env = "gnu"))]
+        #[cfg(target_os = "windows")]
         return false;
-    }
-
-    pub fn can_write(&self) -> bool {
-        matches!(
-            self.role,
-            proto::ChannelRole::Admin | proto::ChannelRole::Member
-        )
     }
 }

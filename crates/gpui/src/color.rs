@@ -553,7 +553,6 @@ impl<'de> Deserialize<'de> for Hsla {
 pub(crate) enum BackgroundTag {
     Solid = 0,
     LinearGradient = 1,
-    PatternSlash = 2,
 }
 
 /// A color space for color interpolation.
@@ -604,15 +603,6 @@ impl Default for Background {
             colors: [LinearColorStop::default(), LinearColorStop::default()],
             pad: 0,
         }
-    }
-}
-
-/// Creates a hash pattern background
-pub fn pattern_slash(color: Hsla) -> Background {
-    Background {
-        tag: BackgroundTag::PatternSlash,
-        solid: color,
-        ..Default::default()
     }
 }
 
@@ -693,7 +683,6 @@ impl Background {
         match self.tag {
             BackgroundTag::Solid => self.solid.is_transparent(),
             BackgroundTag::LinearGradient => self.colors.iter().all(|c| c.color.is_transparent()),
-            BackgroundTag::PatternSlash => self.solid.is_transparent(),
         }
     }
 }

@@ -2,7 +2,7 @@ mod supported_countries;
 
 use std::{pin::Pin, str::FromStr};
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use futures::{io::BufReader, stream::BoxStream, AsyncBufReadExt, AsyncReadExt, Stream, StreamExt};
 use http_client::http::{HeaderMap, HeaderValue};
@@ -148,13 +148,8 @@ impl Model {
         }
     }
 
-    pub const DEFAULT_BETA_HEADERS: &[&str] = &["prompt-caching-2024-07-31"];
-
     pub fn beta_headers(&self) -> String {
-        let mut headers = Self::DEFAULT_BETA_HEADERS
-            .into_iter()
-            .map(|header| header.to_string())
-            .collect::<Vec<_>>();
+        let mut headers = vec!["prompt-caching-2024-07-31".to_string()];
 
         if let Self::Custom {
             extra_beta_headers, ..
@@ -191,14 +186,12 @@ pub async fn complete(
     request: Request,
 ) -> Result<Response, AnthropicError> {
     let uri = format!("{api_url}/v1/messages");
-    let beta_headers = Model::from_id(&request.model)
-        .map(|model| model.beta_headers())
-        .unwrap_or_else(|_err| Model::DEFAULT_BETA_HEADERS.join(","));
+    let model = Model::from_id(&request.model)?;
     let request_builder = HttpRequest::builder()
         .method(Method::POST)
         .uri(uri)
         .header("Anthropic-Version", "2023-06-01")
-        .header("Anthropic-Beta", beta_headers)
+        .header("Anthropic-Beta", model.beta_headers())
         .header("X-Api-Key", api_key)
         .header("Content-Type", "application/json");
 
@@ -309,14 +302,12 @@ pub async fn stream_completion_with_rate_limit_info(
         stream: true,
     };
     let uri = format!("{api_url}/v1/messages");
-    let beta_headers = Model::from_id(&request.base.model)
-        .map(|model| model.beta_headers())
-        .unwrap_or_else(|_err| Model::DEFAULT_BETA_HEADERS.join(","));
+    let model = Model::from_id(&request.base.model)?;
     let request_builder = HttpRequest::builder()
         .method(Method::POST)
         .uri(uri)
         .header("Anthropic-Version", "2023-06-01")
-        .header("Anthropic-Beta", beta_headers)
+        .header("Anthropic-Beta", model.beta_headers())
         .header("X-Api-Key", api_key)
         .header("Content-Type", "application/json");
     let serialized_request =

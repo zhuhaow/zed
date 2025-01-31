@@ -9,10 +9,13 @@ use std::{
 use anyhow::{anyhow, Context as _};
 use collections::{BTreeMap, HashMap};
 use feature_flags::FeatureFlagAppExt;
-use git::diff::{BufferDiff, DiffHunk};
+use git::{
+    diff::{BufferDiff, DiffHunk},
+    repository::GitFileStatus,
+};
 use gpui::{
-    actions, AnyElement, AnyView, App, Entity, EventEmitter, FocusHandle, Focusable,
-    InteractiveElement, Render, Subscription, Task, WeakEntity,
+    actions, AnyElement, AnyView, AppContext, EventEmitter, FocusHandle, FocusableView,
+    InteractiveElement, Model, Render, Subscription, Task, View, WeakView,
 };
 use language::{Buffer, BufferRow};
 use multi_buffer::{ExcerptId, ExcerptRange, ExpandExcerptDirection, MultiBuffer};
@@ -30,8 +33,8 @@ use crate::{Editor, EditorEvent, DEFAULT_MULTIBUFFER_CONTEXT};
 
 actions!(project_diff, [Deploy]);
 
-pub fn init(cx: &mut App) {
-    cx.observe_new(ProjectDiffEditor::register).detach();
+pub fn init(cx: &mut AppContext) {
+    cx.observe_new_views(ProjectDiffEditor::register).detach();
 }
 
 const UPDATE_DEBOUNCE: Duration = Duration::from_millis(50);
@@ -39,11 +42,11 @@ const UPDATE_DEBOUNCE: Duration = Duration::from_millis(50);
 struct ProjectDiffEditor {
     buffer_changes: BTreeMap<WorktreeId, HashMap<ProjectEntryId, Changes>>,
     entry_order: HashMap<WorktreeId, Vec<(ProjectPath, ProjectEntryId)>>,
-    excerpts: Entity<MultiBuffer>,
-    editor: Entity<Editor>,
+    excerpts: Model<MultiBuffer>,
+    editor: View<Editor>,
 
-    project: Entity<Project>,
-    workspace: WeakEntity<Workspace>,
+    project: Model<Project>,
+    workspace: WeakView<Workspace>,
     focus_handle: FocusHandle,
     worktree_rescans: HashMap<WorktreeId, Task<()>>,
     _subscriptions: Vec<Subscription>,
@@ -51,50 +54,41 @@ struct ProjectDiffEditor {
 
 #[derive(Debug)]
 struct Changes {
-    buffer: Entity<Buffer>,
+    _status: GitFileStatus,
+    buffer: Model<Buffer>,
     hunks: Vec<DiffHunk>,
 }
 
 impl ProjectDiffEditor {
-    fn register(
-        workspace: &mut Workspace,
-        _window: Option<&mut Window>,
-        _: &mut Context<Workspace>,
-    ) {
+    fn register(workspace: &mut Workspace, _: &mut ViewContext<Workspace>) {
         workspace.register_action(Self::deploy);
     }
 
-    fn deploy(
-        workspace: &mut Workspace,
-        _: &Deploy,
-        window: &mut Window,
-        cx: &mut Context<Workspace>,
-    ) {
+    fn deploy(workspace: &mut Workspace, _: &Deploy, cx: &mut ViewContext<Workspace>) {
         if !cx.is_staff() {
             return;
         }
 
         if let Some(existing) = workspace.item_of_type::<Self>(cx) {
-            workspace.activate_item(&existing, true, true, window, cx);
+            workspace.activate_item(&existing, true, true, cx);
         } else {
-            let workspace_handle = cx.entity().downgrade();
+            let workspace_handle = cx.view().downgrade();
             let project_diff =
-                cx.new(|cx| Self::new(workspace.project().clone(), workspace_handle, window, cx));
-            workspace.add_item_to_active_pane(Box::new(project_diff), None, true, window, cx);
+                cx.new_view(|cx| Self::new(workspace.project().clone(), workspace_handle, cx));
+            workspace.add_item_to_active_pane(Box::new(project_diff), None, true, cx);
         }
     }
 
     fn new(
-        project: Entity<Project>,
-        workspace: WeakEntity<Workspace>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
+        project: Model<Project>,
+        workspace: WeakView<Workspace>,
+        cx: &mut ViewContext<Self>,
     ) -> Self {
         // TODO diff change subscriptions. For that, needed:
         // * `-20/+50` stats retrieval: some background process that reacts on file changes
         let focus_handle = cx.focus_handle();
         let changed_entries_subscription =
-            cx.subscribe_in(&project, window, |project_diff_editor, _, e, window, cx| {
+            cx.subscribe(&project, |project_diff_editor, _, e, cx| {
                 let mut worktree_to_rescan = None;
                 match e {
                     project::Event::WorktreeAdded(id) => {
@@ -147,16 +141,16 @@ impl ProjectDiffEditor {
                 }
 
                 if let Some(worktree_to_rescan) = worktree_to_rescan {
-                    project_diff_editor.schedule_worktree_rescan(worktree_to_rescan, window, cx);
+                    project_diff_editor.schedule_worktree_rescan(worktree_to_rescan, cx);
                 }
             });
 
-        let excerpts = cx.new(|cx| MultiBuffer::new(project.read(cx).capability()));
+        let excerpts = cx.new_model(|cx| MultiBuffer::new(project.read(cx).capability()));
 
-        let editor = cx.new(|cx| {
+        let editor = cx.new_view(|cx| {
             let mut diff_display_editor =
-                Editor::for_multibuffer(excerpts.clone(), Some(project.clone()), true, window, cx);
-            diff_display_editor.set_expand_all_diff_hunks(cx);
+                Editor::for_multibuffer(excerpts.clone(), Some(project.clone()), true, cx);
+            diff_display_editor.set_expand_all_diff_hunks();
             diff_display_editor
         });
 
@@ -171,16 +165,16 @@ impl ProjectDiffEditor {
             excerpts,
             _subscriptions: vec![changed_entries_subscription],
         };
-        new_self.schedule_rescan_all(window, cx);
+        new_self.schedule_rescan_all(cx);
         new_self
     }
 
-    fn schedule_rescan_all(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    fn schedule_rescan_all(&mut self, cx: &mut ViewContext<Self>) {
         let mut current_worktrees = HashSet::<WorktreeId>::default();
         for worktree in self.project.read(cx).worktrees(cx).collect::<Vec<_>>() {
             let worktree_id = worktree.read(cx).id();
             current_worktrees.insert(worktree_id);
-            self.schedule_worktree_rescan(worktree_id, window, cx);
+            self.schedule_worktree_rescan(worktree_id, cx);
         }
 
         self.worktree_rescans
@@ -191,16 +185,11 @@ impl ProjectDiffEditor {
             .retain(|worktree_id, _| current_worktrees.contains(worktree_id));
     }
 
-    fn schedule_worktree_rescan(
-        &mut self,
-        id: WorktreeId,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    fn schedule_worktree_rescan(&mut self, id: WorktreeId, cx: &mut ViewContext<Self>) {
         let project = self.project.clone();
         self.worktree_rescans.insert(
             id,
-            cx.spawn_in(window, |project_diff_editor, mut cx| async move {
+            cx.spawn(|project_diff_editor, mut cx| async move {
                 cx.background_executor().timer(UPDATE_DEBOUNCE).await;
                 let open_tasks = project
                     .update(&mut cx, |project, cx| {
@@ -210,13 +199,14 @@ impl ProjectDiffEditor {
                             .repositories()
                             .iter()
                             .flat_map(|entry| {
-                                entry
-                                    .status()
-                                    .map(|git_entry| entry.join(git_entry.repo_path))
+                                entry.status().map(|git_entry| {
+                                    (git_entry.combined_status(), entry.join(git_entry.repo_path))
+                                })
                             })
-                            .filter_map(|path| {
+                            .filter_map(|(status, path)| {
                                 let id = snapshot.entry_for_path(&path)?.id;
                                 Some((
+                                    status,
                                     id,
                                     ProjectPath {
                                         worktree_id: snapshot.id(),
@@ -228,9 +218,9 @@ impl ProjectDiffEditor {
                         Some(
                             applicable_entries
                                 .into_iter()
-                                .map(|(entry_id, entry_path)| {
+                                .map(|(status, entry_id, entry_path)| {
                                     let open_task = project.open_path(entry_path.clone(), cx);
-                                    (entry_id, entry_path, open_task)
+                                    (status, entry_id, entry_path, open_task)
                                 })
                                 .collect::<Vec<_>>(),
                         )
@@ -244,10 +234,15 @@ impl ProjectDiffEditor {
                         let mut new_entries = Vec::new();
                         let mut buffers = HashMap::<
                             ProjectEntryId,
-                            (text::BufferSnapshot, Entity<Buffer>, BufferDiff),
+                            (
+                                GitFileStatus,
+                                text::BufferSnapshot,
+                                Model<Buffer>,
+                                BufferDiff,
+                            ),
                         >::default();
                         let mut change_sets = Vec::new();
-                        for (entry_id, entry_path, open_task) in open_tasks {
+                        for (status, entry_id, entry_path, open_task) in open_tasks {
                             let Some(buffer) = open_task
                                 .await
                                 .and_then(|(_, opened_model)| {
@@ -273,10 +268,11 @@ impl ProjectDiffEditor {
                                 continue;
                             };
 
-                            cx.update(|_, cx| {
+                            cx.update(|cx| {
                                 buffers.insert(
                                     entry_id,
                                     (
+                                        status,
                                         buffer.read(cx).text_snapshot(),
                                         buffer,
                                         change_set.read(cx).diff_to_buffer.clone(),
@@ -299,10 +295,11 @@ impl ProjectDiffEditor {
                     .background_executor()
                     .spawn(async move {
                         let mut new_changes = HashMap::<ProjectEntryId, Changes>::default();
-                        for (entry_id, (buffer_snapshot, buffer, buffer_diff)) in buffers {
+                        for (entry_id, (status, buffer_snapshot, buffer, buffer_diff)) in buffers {
                             new_changes.insert(
                                 entry_id,
                                 Changes {
+                                    _status: status,
                                     buffer,
                                     hunks: buffer_diff
                                         .hunks_in_row_range(0..BufferRow::MAX, &buffer_snapshot)
@@ -322,14 +319,12 @@ impl ProjectDiffEditor {
                     .await;
 
                 project_diff_editor
-                    .update_in(&mut cx, |project_diff_editor, _window, cx| {
+                    .update(&mut cx, |project_diff_editor, cx| {
                         project_diff_editor.update_excerpts(id, new_changes, new_entry_order, cx);
                         project_diff_editor.editor.update(cx, |editor, cx| {
-                            editor.buffer.update(cx, |buffer, cx| {
-                                for change_set in change_sets {
-                                    buffer.add_change_set(change_set, cx)
-                                }
-                            });
+                            for change_set in change_sets {
+                                editor.diff_map.add_change_set(change_set, cx)
+                            }
                         });
                     })
                     .ok();
@@ -342,8 +337,7 @@ impl ProjectDiffEditor {
         worktree_id: WorktreeId,
         new_changes: HashMap<ProjectEntryId, Changes>,
         new_entry_order: Vec<(ProjectPath, ProjectEntryId)>,
-
-        cx: &mut Context<ProjectDiffEditor>,
+        cx: &mut ViewContext<ProjectDiffEditor>,
     ) {
         if let Some(current_order) = self.entry_order.get(&worktree_id) {
             let current_entries = self.buffer_changes.entry(worktree_id).or_default();
@@ -351,7 +345,7 @@ impl ProjectDiffEditor {
             let mut excerpts_to_remove = Vec::new();
             let mut new_excerpt_hunks = BTreeMap::<
                 ExcerptId,
-                Vec<(ProjectPath, Entity<Buffer>, Vec<Range<text::Anchor>>)>,
+                Vec<(ProjectPath, Model<Buffer>, Vec<Range<text::Anchor>>)>,
             >::new();
             let mut excerpt_to_expand =
                 HashMap::<(u32, ExpandExcerptDirection), Vec<ExcerptId>>::default();
@@ -918,8 +912,8 @@ impl ProjectDiffEditor {
 
 impl EventEmitter<EditorEvent> for ProjectDiffEditor {}
 
-impl Focusable for ProjectDiffEditor {
-    fn focus_handle(&self, _: &App) -> FocusHandle {
+impl FocusableView for ProjectDiffEditor {
+    fn focus_handle(&self, _: &AppContext) -> FocusHandle {
         self.focus_handle.clone()
     }
 }
@@ -931,26 +925,20 @@ impl Item for ProjectDiffEditor {
         Editor::to_item_events(event, f)
     }
 
-    fn deactivated(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.editor
-            .update(cx, |editor, cx| editor.deactivated(window, cx));
+    fn deactivated(&mut self, cx: &mut ViewContext<Self>) {
+        self.editor.update(cx, |editor, cx| editor.deactivated(cx));
     }
 
-    fn navigate(
-        &mut self,
-        data: Box<dyn Any>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> bool {
+    fn navigate(&mut self, data: Box<dyn Any>, cx: &mut ViewContext<Self>) -> bool {
         self.editor
-            .update(cx, |editor, cx| editor.navigate(data, window, cx))
+            .update(cx, |editor, cx| editor.navigate(data, cx))
     }
 
-    fn tab_tooltip_text(&self, _: &App) -> Option<SharedString> {
+    fn tab_tooltip_text(&self, _: &AppContext) -> Option<SharedString> {
         Some("Project Diff".into())
     }
 
-    fn tab_content(&self, params: TabContentParams, _window: &Window, _: &App) -> AnyElement {
+    fn tab_content(&self, params: TabContentParams, _: &WindowContext) -> AnyElement {
         if self.buffer_changes.is_empty() {
             Label::new("No changes")
                 .color(if params.selected {
@@ -1000,22 +988,17 @@ impl Item for ProjectDiffEditor {
 
     fn for_each_project_item(
         &self,
-        cx: &App,
+        cx: &AppContext,
         f: &mut dyn FnMut(gpui::EntityId, &dyn project::ProjectItem),
     ) {
         self.editor.for_each_project_item(cx, f)
     }
 
-    fn is_singleton(&self, _: &App) -> bool {
+    fn is_singleton(&self, _: &AppContext) -> bool {
         false
     }
 
-    fn set_nav_history(
-        &mut self,
-        nav_history: ItemNavHistory,
-        _: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    fn set_nav_history(&mut self, nav_history: ItemNavHistory, cx: &mut ViewContext<Self>) {
         self.editor.update(cx, |editor, _| {
             editor.set_nav_history(Some(nav_history));
         });
@@ -1024,63 +1007,59 @@ impl Item for ProjectDiffEditor {
     fn clone_on_split(
         &self,
         _workspace_id: Option<workspace::WorkspaceId>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Option<Entity<Self>>
+        cx: &mut ViewContext<Self>,
+    ) -> Option<View<Self>>
     where
         Self: Sized,
     {
-        Some(cx.new(|cx| {
-            ProjectDiffEditor::new(self.project.clone(), self.workspace.clone(), window, cx)
+        Some(cx.new_view(|cx| {
+            ProjectDiffEditor::new(self.project.clone(), self.workspace.clone(), cx)
         }))
     }
 
-    fn is_dirty(&self, cx: &App) -> bool {
+    fn is_dirty(&self, cx: &AppContext) -> bool {
         self.excerpts.read(cx).is_dirty(cx)
     }
 
-    fn has_conflict(&self, cx: &App) -> bool {
+    fn has_conflict(&self, cx: &AppContext) -> bool {
         self.excerpts.read(cx).has_conflict(cx)
     }
 
-    fn can_save(&self, _: &App) -> bool {
+    fn can_save(&self, _: &AppContext) -> bool {
         true
     }
 
     fn save(
         &mut self,
         format: bool,
-        project: Entity<Project>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
+        project: Model<Project>,
+        cx: &mut ViewContext<Self>,
     ) -> Task<anyhow::Result<()>> {
-        self.editor.save(format, project, window, cx)
+        self.editor.save(format, project, cx)
     }
 
     fn save_as(
         &mut self,
-        _: Entity<Project>,
+        _: Model<Project>,
         _: ProjectPath,
-        _window: &mut Window,
-        _: &mut Context<Self>,
+        _: &mut ViewContext<Self>,
     ) -> Task<anyhow::Result<()>> {
         unreachable!()
     }
 
     fn reload(
         &mut self,
-        project: Entity<Project>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
+        project: Model<Project>,
+        cx: &mut ViewContext<Self>,
     ) -> Task<anyhow::Result<()>> {
-        self.editor.reload(project, window, cx)
+        self.editor.reload(project, cx)
     }
 
     fn act_as_type<'a>(
         &'a self,
         type_id: TypeId,
-        self_handle: &'a Entity<Self>,
-        _: &'a App,
+        self_handle: &'a View<Self>,
+        _: &'a AppContext,
     ) -> Option<AnyView> {
         if type_id == TypeId::of::<Self>() {
             Some(self_handle.to_any())
@@ -1091,28 +1070,22 @@ impl Item for ProjectDiffEditor {
         }
     }
 
-    fn breadcrumb_location(&self, _: &App) -> ToolbarItemLocation {
+    fn breadcrumb_location(&self, _: &AppContext) -> ToolbarItemLocation {
         ToolbarItemLocation::PrimaryLeft
     }
 
-    fn breadcrumbs(&self, theme: &theme::Theme, cx: &App) -> Option<Vec<BreadcrumbText>> {
+    fn breadcrumbs(&self, theme: &theme::Theme, cx: &AppContext) -> Option<Vec<BreadcrumbText>> {
         self.editor.breadcrumbs(theme, cx)
     }
 
-    fn added_to_workspace(
-        &mut self,
-        workspace: &mut Workspace,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.editor.update(cx, |editor, cx| {
-            editor.added_to_workspace(workspace, window, cx)
-        });
+    fn added_to_workspace(&mut self, workspace: &mut Workspace, cx: &mut ViewContext<Self>) {
+        self.editor
+            .update(cx, |editor, cx| editor.added_to_workspace(workspace, cx));
     }
 }
 
 impl Render for ProjectDiffEditor {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let child = if self.buffer_changes.is_empty() {
             div()
                 .bg(cx.theme().colors().editor_background)
@@ -1134,7 +1107,6 @@ impl Render for ProjectDiffEditor {
 
 #[cfg(test)]
 mod tests {
-    use git::status::{StatusCode, TrackedStatus};
     use gpui::{SemanticVersion, TestAppContext, VisualTestContext};
     use project::buffer_store::BufferChangeSet;
     use serde_json::json;
@@ -1143,8 +1115,6 @@ mod tests {
         ops::Deref as _,
         path::{Path, PathBuf},
     };
-
-    use crate::test::editor_test_context::assert_state_with_diff;
 
     use super::*;
 
@@ -1179,15 +1149,14 @@ mod tests {
         .await;
 
         let project = Project::test(fs.clone(), [Path::new("/root")], cx).await;
-        let workspace =
-            cx.add_window(|window, cx| Workspace::test_new(project.clone(), window, cx));
+        let workspace = cx.add_window(|cx| Workspace::test_new(project.clone(), cx));
         let cx = &mut VisualTestContext::from_window(*workspace.deref(), cx);
 
         let file_a_editor = workspace
-            .update(cx, |workspace, window, cx| {
+            .update(cx, |workspace, cx| {
                 let file_a_editor =
-                    workspace.open_abs_path(PathBuf::from("/root/file_a"), true, window, cx);
-                ProjectDiffEditor::deploy(workspace, &Deploy, window, cx);
+                    workspace.open_abs_path(PathBuf::from("/root/file_a"), true, cx);
+                ProjectDiffEditor::deploy(workspace, &Deploy, cx);
                 file_a_editor
             })
             .unwrap()
@@ -1196,7 +1165,7 @@ mod tests {
             .downcast::<Editor>()
             .expect("did not open an editor for file_a");
         let project_diff_editor = workspace
-            .update(cx, |workspace, _, cx| {
+            .update(cx, |workspace, cx| {
                 workspace
                     .active_pane()
                     .read(cx)
@@ -1215,23 +1184,29 @@ mod tests {
         let old_text = file_a_editor.update(cx, |editor, cx| editor.text(cx));
         let change = "an edit after git add";
         file_a_editor
-            .update_in(cx, |file_a_editor, window, cx| {
-                file_a_editor.insert(change, window, cx);
-                file_a_editor.save(false, project.clone(), window, cx)
+            .update(cx, |file_a_editor, cx| {
+                file_a_editor.insert(change, cx);
+                file_a_editor.save(false, project.clone(), cx)
             })
             .await
             .expect("failed to save a file");
-        file_a_editor.update_in(cx, |file_a_editor, _window, cx| {
-            let change_set = cx.new(|cx| {
+        file_a_editor.update(cx, |file_a_editor, cx| {
+            let change_set = cx.new_model(|cx| {
                 BufferChangeSet::new_with_base_text(
                     old_text.clone(),
-                    &file_a_editor.buffer().read(cx).as_singleton().unwrap(),
+                    file_a_editor
+                        .buffer()
+                        .read(cx)
+                        .as_singleton()
+                        .unwrap()
+                        .read(cx)
+                        .text_snapshot(),
                     cx,
                 )
             });
-            file_a_editor.buffer.update(cx, |buffer, cx| {
-                buffer.add_change_set(change_set.clone(), cx)
-            });
+            file_a_editor
+                .diff_map
+                .add_change_set(change_set.clone(), cx);
             project.update(cx, |project, cx| {
                 project.buffer_store().update(cx, |buffer_store, cx| {
                     buffer_store.set_change_set(
@@ -1249,29 +1224,20 @@ mod tests {
         });
         fs.set_status_for_repo_via_git_operation(
             Path::new("/root/.git"),
-            &[(
-                Path::new("file_a"),
-                TrackedStatus {
-                    worktree_status: StatusCode::Modified,
-                    index_status: StatusCode::Unmodified,
-                }
-                .into(),
-            )],
+            &[(Path::new("file_a"), GitFileStatus::Modified)],
         );
         cx.executor()
             .advance_clock(UPDATE_DEBOUNCE + Duration::from_millis(100));
         cx.run_until_parked();
-        let editor = project_diff_editor.update(cx, |diff_editor, _| diff_editor.editor.clone());
 
-        assert_state_with_diff(
-            &editor,
-            cx,
-            indoc::indoc! {
-            "
-                - This is file_a
-                + an edit after git addThis is file_aˇ",
-            },
-        );
+        project_diff_editor.update(cx, |project_diff_editor, cx| {
+            assert_eq!(
+                // TODO assert it better: extract added text (based on the background changes) and deleted text (based on the deleted blocks added)
+                project_diff_editor.editor.read(cx).text(cx),
+                format!("{change}{old_text}"),
+                "Should have a new change shown in the beginning, and the old text shown as deleted text afterwards"
+            );
+        });
     }
 
     fn init_test(cx: &mut gpui::TestAppContext) {

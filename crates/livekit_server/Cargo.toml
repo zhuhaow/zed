@@ -1,9 +1,9 @@
 [package]
 name = "livekit_server"
 version = "0.1.0"
-edition.workspace = true
+edition = "2021"
 description = "SDK for the LiveKit server API"
-publish.workspace = true
+publish = false
 license = "AGPL-3.0-or-later"
 
 [lints]

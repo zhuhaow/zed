@@ -726,8 +726,6 @@ impl Database {
                             user.github_login
                         ),
                         github_login: user.github_login,
-                        name: user.name,
-                        email: user.email_address,
                     })
                 }
                 proto::ChannelMember {

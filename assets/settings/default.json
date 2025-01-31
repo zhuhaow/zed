@@ -10,9 +10,8 @@
     "light": "One Light",
     "dark": "One Dark"
   },
-  "icon_theme": "Zed (Default)",
   // The name of a base set of key bindings to use.
-  // This setting can take six values, each named after another
+  // This setting can take four values, each named after another
   // text editor:
   //
   // 1. "VSCode"
@@ -203,7 +202,7 @@
   // Example: ["string", "comment"]
   "inline_completions_disabled_in": [],
   // Whether to show tabs and spaces in the editor.
-  // This setting can take four values:
+  // This setting can take three values:
   //
   // 1. Draw tabs and spaces only for the selected text (default):
   //    "selection"
@@ -393,7 +392,7 @@
     /// Scrollbar-related settings
     "scrollbar": {
       /// When to show the scrollbar in the project panel.
-      /// This setting can take five values:
+      /// This setting can take four values:
       ///
       /// 1. null (default): Inherit editor settings
       /// 2. Show the scrollbar if there's important information or
@@ -465,7 +464,7 @@
     /// Scrollbar-related settings
     "scrollbar": {
       /// When to show the scrollbar in the project panel.
-      /// This setting can take five values:
+      /// This setting can take four values:
       ///
       /// 1. null (default): Inherit editor settings
       /// 2. Show the scrollbar if there's important information or
@@ -593,9 +592,7 @@
     // Whether or not to show the tab bar in the editor
     "show": true,
     // Whether or not to show the navigation history buttons.
-    "show_nav_history_buttons": true,
-    /// Whether or not to show the tab bar buttons.
-    "show_tab_bar_buttons": true
+    "show_nav_history_buttons": true
   },
   // Settings related to the editor's tabs
   "tabs": {
@@ -911,23 +908,6 @@
       // The shell running in the terminal needs to be configured to emit the title.
       // Example: `echo -e "\e]2;New Title\007";`
       "breadcrumbs": true
-    },
-    /// Scrollbar-related settings
-    "scrollbar": {
-      /// When to show the scrollbar in the terminal.
-      /// This setting can take five values:
-      ///
-      /// 1. null (default): Inherit editor settings
-      /// 2. Show the scrollbar if there's important information or
-      ///    follow the system's configured behavior (default):
-      ///   "auto"
-      /// 3. Match the system's configured behavior:
-      ///    "system"
-      /// 4. Always show the scrollbar:
-      ///    "always"
-      /// 5. Never show the scrollbar:
-      ///    "never"
-      "show": null
     }
     // Set the terminal's font size. If this option is not included,
     // the terminal will default to matching the buffer's font size.

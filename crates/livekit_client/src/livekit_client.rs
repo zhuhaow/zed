@@ -1,11 +1,7 @@
-#![cfg_attr(all(target_os = "windows", target_env = "gnu"), allow(unused))]
+#![cfg_attr(target_os = "windows", allow(unused))]
 
 mod remote_video_track_view;
-#[cfg(any(
-    test,
-    feature = "test-support",
-    all(target_os = "windows", target_env = "gnu")
-))]
+#[cfg(any(test, feature = "test-support", target_os = "windows"))]
 pub mod test;
 
 use anyhow::{anyhow, Context as _, Result};
@@ -17,7 +13,7 @@ use gpui::{
 use parking_lot::Mutex;
 use std::{borrow::Cow, collections::VecDeque, future::Future, pin::Pin, sync::Arc, thread};
 use util::{debug_panic, ResultExt as _};
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 use webrtc::{
     audio_frame::AudioFrame,
     audio_source::{native::NativeAudioSource, AudioSourceOptions, RtcAudioSource},
@@ -27,27 +23,13 @@ use webrtc::{
     video_stream::native::NativeVideoStream,
 };
 
-#[cfg(all(
-    not(any(test, feature = "test-support")),
-    not(all(target_os = "windows", target_env = "gnu"))
-))]
+#[cfg(all(not(any(test, feature = "test-support")), not(target_os = "windows")))]
 use livekit::track::RemoteAudioTrack;
-#[cfg(all(
-    not(any(test, feature = "test-support")),
-    not(all(target_os = "windows", target_env = "gnu"))
-))]
+#[cfg(all(not(any(test, feature = "test-support")), not(target_os = "windows")))]
 pub use livekit::*;
-#[cfg(any(
-    test,
-    feature = "test-support",
-    all(target_os = "windows", target_env = "gnu")
-))]
+#[cfg(any(test, feature = "test-support", target_os = "windows"))]
 use test::track::RemoteAudioTrack;
-#[cfg(any(
-    test,
-    feature = "test-support",
-    all(target_os = "windows", target_env = "gnu")
-))]
+#[cfg(any(test, feature = "test-support", target_os = "windows"))]
 pub use test::*;
 
 pub use remote_video_track_view::{RemoteVideoTrackView, RemoteVideoTrackViewEvent};
@@ -64,7 +46,7 @@ pub enum AudioStream {
 
 struct Dispatcher(Arc<dyn gpui::PlatformDispatcher>);
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl livekit::dispatcher::Dispatcher for Dispatcher {
     fn dispatch(&self, runnable: livekit::dispatcher::Runnable) {
         self.0.dispatch(runnable, None);
@@ -86,7 +68,7 @@ fn http_2_status(status: http_client::http::StatusCode) -> http_2::StatusCode {
         .expect("valid status code to status code conversion")
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl livekit::dispatcher::HttpClient for HttpClientAdapter {
     fn get(
         &self,
@@ -141,14 +123,14 @@ impl livekit::dispatcher::HttpClient for HttpClientAdapter {
     }
 }
 
-#[cfg(all(target_os = "windows", target_env = "gnu"))]
+#[cfg(target_os = "windows")]
 pub fn init(
     dispatcher: Arc<dyn gpui::PlatformDispatcher>,
     http_client: Arc<dyn http_client::HttpClient>,
 ) {
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 pub fn init(
     dispatcher: Arc<dyn gpui::PlatformDispatcher>,
     http_client: Arc<dyn http_client::HttpClient>,
@@ -157,7 +139,7 @@ pub fn init(
     livekit::dispatcher::set_http_client(HttpClientAdapter(http_client));
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 pub async fn capture_local_video_track(
     capture_source: &dyn ScreenCaptureSource,
 ) -> Result<(track::LocalVideoTrack, Box<dyn ScreenCaptureStream>)> {
@@ -191,7 +173,7 @@ pub async fn capture_local_video_track(
     ))
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 pub fn capture_local_audio_track(
     background_executor: &BackgroundExecutor,
 ) -> Result<Task<(track::LocalAudioTrack, AudioStream)>> {
@@ -283,7 +265,7 @@ pub fn capture_local_audio_track(
     }))
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 pub fn play_remote_audio_track(
     track: &RemoteAudioTrack,
     background_executor: &BackgroundExecutor,
@@ -354,7 +336,7 @@ fn default_device(input: bool) -> anyhow::Result<(cpal::Device, cpal::SupportedS
     Ok((device, config))
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 fn get_default_output() -> anyhow::Result<(cpal::Device, cpal::SupportedStreamConfig)> {
     let host = cpal::default_host();
     let output_device = host
@@ -364,7 +346,7 @@ fn get_default_output() -> anyhow::Result<(cpal::Device, cpal::SupportedStreamCo
     Ok((output_device, output_config))
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 fn start_output_stream(
     output_config: cpal::SupportedStreamConfig,
     output_device: cpal::Device,
@@ -449,14 +431,14 @@ fn start_output_stream(
     (receive_task, thread)
 }
 
-#[cfg(all(target_os = "windows", target_env = "gnu"))]
+#[cfg(target_os = "windows")]
 pub fn play_remote_video_track(
     track: &track::RemoteVideoTrack,
 ) -> impl Stream<Item = RemoteVideoFrame> {
     futures::stream::empty()
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 pub fn play_remote_video_track(
     track: &track::RemoteVideoTrack,
 ) -> impl Stream<Item = RemoteVideoFrame> {
@@ -484,7 +466,7 @@ fn video_frame_buffer_from_webrtc(buffer: Box<dyn VideoBuffer>) -> Option<Remote
 #[cfg(not(target_os = "macos"))]
 pub type RemoteVideoFrame = Arc<gpui::RenderImage>;
 
-#[cfg(not(any(target_os = "macos", all(target_os = "windows", target_env = "gnu"))))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn video_frame_buffer_from_webrtc(buffer: Box<dyn VideoBuffer>) -> Option<RemoteVideoFrame> {
     use gpui::RenderImage;
     use image::{Frame, RgbaImage};
@@ -535,7 +517,7 @@ fn video_frame_buffer_to_webrtc(frame: ScreenCaptureFrame) -> Option<impl AsRef<
     }
 }
 
-#[cfg(not(any(target_os = "macos", all(target_os = "windows", target_env = "gnu"))))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn video_frame_buffer_to_webrtc(_frame: ScreenCaptureFrame) -> Option<impl AsRef<dyn VideoBuffer>> {
     None as Option<Box<dyn VideoBuffer>>
 }

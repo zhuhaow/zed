@@ -1,7 +1,6 @@
 pub mod arc_cow;
 pub mod command;
 pub mod fs;
-pub mod markdown;
 pub mod paths;
 pub mod serde;
 #[cfg(any(test, feature = "test-support"))]
@@ -377,7 +376,6 @@ pub trait ResultExt<E> {
     /// Assert that this result should never be an error in development or tests.
     fn debug_assert_ok(self, reason: &str) -> Self;
     fn warn_on_err(self) -> Option<Self::Ok>;
-    fn log_with_level(self, level: log::Level) -> Option<Self::Ok>;
     fn anyhow(self) -> anyhow::Result<Self::Ok>
     where
         E: Into<anyhow::Error>;
@@ -391,7 +389,13 @@ where
 
     #[track_caller]
     fn log_err(self) -> Option<T> {
-        self.log_with_level(log::Level::Error)
+        match self {
+            Ok(value) => Some(value),
+            Err(error) => {
+                log_error_with_caller(*Location::caller(), error, log::Level::Error);
+                None
+            }
+        }
     }
 
     #[track_caller]
@@ -404,15 +408,10 @@ where
 
     #[track_caller]
     fn warn_on_err(self) -> Option<T> {
-        self.log_with_level(log::Level::Warn)
-    }
-
-    #[track_caller]
-    fn log_with_level(self, level: log::Level) -> Option<T> {
         match self {
             Ok(value) => Some(value),
             Err(error) => {
-                log_error_with_caller(*Location::caller(), error, level);
+                log_error_with_caller(*Location::caller(), error, log::Level::Warn);
                 None
             }
         }

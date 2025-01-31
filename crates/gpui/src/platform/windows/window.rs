@@ -11,7 +11,7 @@ use std::{
 };
 
 use ::util::ResultExt;
-use anyhow::{Context as _, Result};
+use anyhow::{Context, Result};
 use async_task::Runnable;
 use futures::channel::oneshot::{self, Receiver};
 use itertools::Itertools;
@@ -69,7 +69,6 @@ pub(crate) struct WindowsWindowStatePtr {
     pub(crate) windows_version: WindowsVersion,
     pub(crate) validation_number: usize,
     pub(crate) main_receiver: flume::Receiver<Runnable>,
-    pub(crate) main_thread_id_win32: u32,
 }
 
 impl WindowsWindowState {
@@ -243,7 +242,6 @@ impl WindowsWindowStatePtr {
             windows_version: context.windows_version,
             validation_number: context.validation_number,
             main_receiver: context.main_receiver.clone(),
-            main_thread_id_win32: context.main_thread_id_win32,
         }))
     }
 
@@ -357,7 +355,6 @@ struct WindowCreateContext<'a> {
     validation_number: usize,
     main_receiver: flume::Receiver<Runnable>,
     gpu_context: &'a BladeContext,
-    main_thread_id_win32: u32,
 }
 
 impl WindowsWindow {
@@ -374,7 +371,6 @@ impl WindowsWindow {
             windows_version,
             validation_number,
             main_receiver,
-            main_thread_id_win32,
         } = creation_info;
         let classname = register_wnd_class(icon);
         let hide_title_bar = params
@@ -419,7 +415,6 @@ impl WindowsWindow {
             validation_number,
             main_receiver,
             gpu_context,
-            main_thread_id_win32,
         };
         let lpparam = Some(&context as *const _ as *const _);
         let creation_result = unsafe {
@@ -443,7 +438,7 @@ impl WindowsWindow {
         let state_ptr = context.inner.take().unwrap()?;
         let hwnd = creation_result?;
         register_drag_drop(state_ptr.clone())?;
-        configure_dwm_dark_mode(hwnd);
+
         state_ptr.state.borrow_mut().border_offset.update(hwnd)?;
         let placement = retrieve_window_placement(
             hwnd,

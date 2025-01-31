@@ -5,7 +5,7 @@ mod keymap_file;
 mod settings_file;
 mod settings_store;
 
-use gpui::App;
+use gpui::AppContext;
 use rust_embed::RustEmbed;
 use std::{borrow::Cow, fmt, str};
 use util::asset_str;
@@ -13,7 +13,7 @@ use util::asset_str;
 pub use editable_setting_control::*;
 pub use json_schema::*;
 pub use key_equivalents::*;
-pub use keymap_file::{KeymapFile, KeymapFileLoadResult};
+pub use keymap_file::KeymapFile;
 pub use settings_file::*;
 pub use settings_store::{
     parse_json_with_comments, InvalidSettingsError, LocalSettingsKind, Settings, SettingsLocation,
@@ -60,7 +60,7 @@ impl fmt::Display for WorktreeId {
 #[exclude = "*.DS_Store"]
 pub struct SettingsAssets;
 
-pub fn init(cx: &mut App) {
+pub fn init(cx: &mut AppContext) {
     let mut settings = SettingsStore::new(cx);
     settings
         .set_default_settings(&default_settings(), cx)
@@ -82,10 +82,8 @@ pub fn default_keymap() -> Cow<'static, str> {
     asset_str::<SettingsAssets>(DEFAULT_KEYMAP_PATH)
 }
 
-pub const VIM_KEYMAP_PATH: &str = "keymaps/vim.json";
-
 pub fn vim_keymap() -> Cow<'static, str> {
-    asset_str::<SettingsAssets>(VIM_KEYMAP_PATH)
+    asset_str::<SettingsAssets>("keymaps/vim.json")
 }
 
 pub fn initial_user_settings_content() -> Cow<'static, str> {

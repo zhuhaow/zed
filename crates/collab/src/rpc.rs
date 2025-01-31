@@ -333,9 +333,6 @@ impl Server {
             .add_request_handler(forward_mutating_project_request::<proto::CopyProjectEntry>)
             .add_request_handler(forward_mutating_project_request::<proto::DeleteProjectEntry>)
             .add_request_handler(forward_mutating_project_request::<proto::ExpandProjectEntry>)
-            .add_request_handler(
-                forward_mutating_project_request::<proto::ExpandAllForProjectEntry>,
-            )
             .add_request_handler(forward_mutating_project_request::<proto::OnTypeFormatting>)
             .add_request_handler(forward_mutating_project_request::<proto::SaveBuffer>)
             .add_request_handler(forward_mutating_project_request::<proto::BlameBuffer>)
@@ -391,9 +388,6 @@ impl Server {
             .add_request_handler(forward_mutating_project_request::<proto::OpenContext>)
             .add_request_handler(forward_mutating_project_request::<proto::CreateContext>)
             .add_request_handler(forward_mutating_project_request::<proto::SynchronizeContexts>)
-            .add_request_handler(forward_mutating_project_request::<proto::Stage>)
-            .add_request_handler(forward_mutating_project_request::<proto::Unstage>)
-            .add_request_handler(forward_mutating_project_request::<proto::Commit>)
             .add_message_handler(broadcast_project_message_from_host::<proto::AdvertiseContexts>)
             .add_message_handler(update_context)
             .add_request_handler({
@@ -2424,8 +2418,6 @@ async fn get_users(
             id: user.id.to_proto(),
             avatar_url: format!("https://github.com/{}.png?size=128", user.github_login),
             github_login: user.github_login,
-            email: user.email_address,
-            name: user.name,
         })
         .collect();
     response.send(proto::UsersResponse { users })?;
@@ -2457,8 +2449,6 @@ async fn fuzzy_search_users(
             id: user.id.to_proto(),
             avatar_url: format!("https://github.com/{}.png?size=128", user.github_login),
             github_login: user.github_login,
-            name: user.name,
-            email: user.email_address,
         })
         .collect();
     response.send(proto::UsersResponse { users })?;

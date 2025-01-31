@@ -1,9 +1,9 @@
 [package]
 description = "Shared logic for communication between the Zed app and the zed.dev server"
-edition.workspace = true
+edition = "2021"
 name = "rpc"
 version = "0.1.0"
-publish.workspace = true
+publish = false
 license = "GPL-3.0-or-later"
 
 [lints]

@@ -2,17 +2,17 @@ pub mod participant;
 pub mod publication;
 pub mod track;
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(windows))]
 pub mod webrtc;
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(windows))]
 use self::id::*;
 use self::{participant::*, publication::*, track::*};
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use collections::{btree_map::Entry as BTreeEntry, hash_map::Entry, BTreeMap, HashMap, HashSet};
 use gpui::BackgroundExecutor;
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(windows))]
 use livekit::options::TrackPublishOptions;
 use livekit_server::{proto, token};
 use parking_lot::Mutex;
@@ -22,7 +22,7 @@ use std::sync::{
     Arc, Weak,
 };
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(windows))]
 pub use livekit::{id, options, ConnectionState, DisconnectReason, RoomOptions};
 
 static SERVERS: Mutex<BTreeMap<String, Arc<TestServer>>> = Mutex::new(BTreeMap::new());
@@ -31,12 +31,12 @@ pub struct TestServer {
     pub url: String,
     pub api_key: String,
     pub secret_key: String,
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     rooms: Mutex<HashMap<String, TestServerRoom>>,
     executor: BackgroundExecutor,
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl TestServer {
     pub fn create(
         url: String,
@@ -534,7 +534,7 @@ impl TestServer {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 #[derive(Default, Debug)]
 struct TestServerRoom {
     client_rooms: HashMap<ParticipantIdentity, Room>,
@@ -543,7 +543,7 @@ struct TestServerRoom {
     participant_permissions: HashMap<ParticipantIdentity, proto::ParticipantPermission>,
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 #[derive(Debug)]
 struct TestServerVideoTrack {
     sid: TrackSid,
@@ -551,7 +551,7 @@ struct TestServerVideoTrack {
     // frames_rx: async_broadcast::Receiver<Frame>,
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 #[derive(Debug)]
 struct TestServerAudioTrack {
     sid: TrackSid,
@@ -590,7 +590,7 @@ pub enum RoomEvent {
     TrackSubscriptionFailed {
         participant: RemoteParticipant,
         error: String,
-        #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+        #[cfg(not(target_os = "windows"))]
         track_sid: TrackSid,
     },
     TrackPublished {
@@ -626,12 +626,12 @@ pub enum RoomEvent {
     ActiveSpeakersChanged {
         speakers: Vec<Participant>,
     },
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     ConnectionStateChanged(ConnectionState),
     Connected {
         participants_with_tracks: Vec<(RemoteParticipant, Vec<RemoteTrackPublication>)>,
     },
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     Disconnected {
         reason: DisconnectReason,
     },
@@ -639,7 +639,7 @@ pub enum RoomEvent {
     Reconnected,
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 #[async_trait]
 impl livekit_server::api::Client for TestApiClient {
     fn url(&self) -> &str {
@@ -703,11 +703,11 @@ impl livekit_server::api::Client for TestApiClient {
 struct RoomState {
     url: String,
     token: String,
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     local_identity: ParticipantIdentity,
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     connection_state: ConnectionState,
-    #[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+    #[cfg(not(target_os = "windows"))]
     paused_audio_tracks: HashSet<TrackSid>,
     updates_tx: mpsc::Sender<RoomEvent>,
 }
@@ -718,7 +718,7 @@ pub struct Room(Arc<Mutex<RoomState>>);
 #[derive(Clone, Debug)]
 pub(crate) struct WeakRoom(Weak<Mutex<RoomState>>);
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl std::fmt::Debug for RoomState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Room")
@@ -731,7 +731,7 @@ impl std::fmt::Debug for RoomState {
     }
 }
 
-#[cfg(all(target_os = "windows", target_env = "gnu"))]
+#[cfg(target_os = "windows")]
 impl std::fmt::Debug for RoomState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Room")
@@ -741,7 +741,7 @@ impl std::fmt::Debug for RoomState {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl Room {
     fn downgrade(&self) -> WeakRoom {
         WeakRoom(Arc::downgrade(&self.0))
@@ -803,7 +803,7 @@ impl Room {
     }
 }
 
-#[cfg(not(all(target_os = "windows", target_env = "gnu")))]
+#[cfg(not(target_os = "windows"))]
 impl Drop for RoomState {
     fn drop(&mut self) {
         if self.connection_state == ConnectionState::Connected {

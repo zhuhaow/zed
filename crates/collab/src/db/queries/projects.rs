@@ -360,8 +360,6 @@ impl Database {
                         update.updated_repositories.iter().flat_map(
                             |repository: &proto::RepositoryEntry| {
                                 repository.updated_statuses.iter().map(|status_entry| {
-                                    let (repo_path, status_kind, first_status, second_status) =
-                                        proto_status_to_db(status_entry.clone());
                                     worktree_repository_statuses::ActiveModel {
                                         project_id: ActiveValue::set(project_id),
                                         worktree_id: ActiveValue::set(worktree_id),
@@ -370,11 +368,8 @@ impl Database {
                                         ),
                                         scan_id: ActiveValue::set(update.scan_id as i64),
                                         is_deleted: ActiveValue::set(false),
-                                        repo_path: ActiveValue::set(repo_path),
-                                        status: ActiveValue::set(0),
-                                        status_kind: ActiveValue::set(status_kind),
-                                        first_status: ActiveValue::set(first_status),
-                                        second_status: ActiveValue::set(second_status),
+                                        repo_path: ActiveValue::set(status_entry.repo_path.clone()),
+                                        status: ActiveValue::set(status_entry.status as i64),
                                     }
                                 })
                             },
@@ -389,9 +384,7 @@ impl Database {
                         ])
                         .update_columns([
                             worktree_repository_statuses::Column::ScanId,
-                            worktree_repository_statuses::Column::StatusKind,
-                            worktree_repository_statuses::Column::FirstStatus,
-                            worktree_repository_statuses::Column::SecondStatus,
+                            worktree_repository_statuses::Column::Status,
                         ])
                         .to_owned(),
                     )
@@ -766,7 +759,10 @@ impl Database {
                     let mut updated_statuses = Vec::new();
                     while let Some(status_entry) = repository_statuses.next().await {
                         let status_entry: worktree_repository_statuses::Model = status_entry?;
-                        updated_statuses.push(db_status_to_proto(status_entry)?);
+                        updated_statuses.push(proto::StatusEntry {
+                            repo_path: status_entry.repo_path,
+                            status: status_entry.status as i32,
+                        });
                     }
 
                     worktree.repository_entries.insert(
