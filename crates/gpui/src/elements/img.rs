@@ -1,8 +1,8 @@
 use crate::{
     px, swap_rgba_pa_to_bgra, AbsoluteLength, AnyElement, App, Asset, AssetLogger, Bounds,
-    DefiniteLength, Element, ElementId, GlobalElementId, Hitbox, Image, InteractiveElement,
-    Interactivity, IntoElement, LayoutId, Length, ObjectFit, Pixels, RenderImage, Resource,
-    SharedString, SharedUri, StyleRefinement, Styled, SvgSize, Task, Window,
+    ContextTask, DefiniteLength, Element, ElementId, GlobalElementId, Hitbox, Image,
+    InteractiveElement, Interactivity, IntoElement, LayoutId, Length, ObjectFit, Pixels,
+    RenderImage, Resource, SharedString, SharedUri, StyleRefinement, Styled, SvgSize, Window,
 };
 use anyhow::{anyhow, Result};
 
@@ -229,7 +229,7 @@ impl DerefMut for Stateful<Img> {
 struct ImgState {
     frame_index: usize,
     last_frame_time: Option<Instant>,
-    started_loading: Option<(Instant, Task<()>)>,
+    started_loading: Option<(Instant, ContextTask<()>)>,
 }
 
 /// The image layout state between frames
@@ -358,8 +358,7 @@ impl Element for Img {
                                         cx.background_executor().timer(LOADING_DELAY).await;
                                         cx.update(move |_, cx| {
                                             cx.notify(parent_view_id);
-                                        })
-                                        .ok();
+                                        });
                                     });
                                     state.started_loading = Some((Instant::now(), task));
                                 }

@@ -17,11 +17,11 @@
 
 use crate::{
     point, px, size, Action, AnyDrag, AnyElement, AnyTooltip, AnyView, App, Bounds, ClickEvent,
-    DispatchPhase, Element, ElementId, Entity, FocusHandle, Global, GlobalElementId, Hitbox,
-    HitboxId, IntoElement, IsZero, KeyContext, KeyDownEvent, KeyUpEvent, LayoutId,
+    ContextTask, DispatchPhase, Element, ElementId, Entity, FocusHandle, Global, GlobalElementId,
+    Hitbox, HitboxId, IntoElement, IsZero, KeyContext, KeyDownEvent, KeyUpEvent, LayoutId,
     ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     ParentElement, Pixels, Point, Render, ScrollWheelEvent, SharedString, Size, Style,
-    StyleRefinement, Styled, Task, TooltipId, Visibility, Window,
+    StyleRefinement, Styled, TooltipId, Visibility, Window,
 };
 use collections::HashMap;
 use refineable::Refineable;
@@ -2298,7 +2298,7 @@ impl ElementClickedState {
 
 pub(crate) enum ActiveTooltip {
     /// Currently delaying before showing the tooltip.
-    WaitingForShow { _task: Task<()> },
+    WaitingForShow { _task: ContextTask<()> },
     /// Tooltip is visible, element was hovered or for hoverable tooltips, the tooltip was hovered.
     Visible {
         tooltip: AnyTooltip,
@@ -2308,7 +2308,7 @@ pub(crate) enum ActiveTooltip {
     /// before hiding it.
     WaitingForHide {
         tooltip: AnyTooltip,
-        _task: Task<()>,
+        _task: ContextTask<()>,
     },
 }
 
@@ -2473,8 +2473,7 @@ fn handle_tooltip_mouse_move(
                             });
                         *active_tooltip.borrow_mut() = new_tooltip;
                         window.refresh();
-                    })
-                    .ok();
+                    });
                 }
             });
             active_tooltip
@@ -2541,7 +2540,7 @@ fn handle_tooltip_check_visible_and_update(
                         .timer(HOVERABLE_TOOLTIP_HIDE_DELAY)
                         .await;
                     if active_tooltip.borrow_mut().take().is_some() {
-                        cx.update(|window, _cx| window.refresh()).ok();
+                        cx.update(|window, _cx| window.refresh());
                     }
                 }
             });
