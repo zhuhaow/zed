@@ -11,9 +11,9 @@ use crate::{
     PromptLevel, Quad, Render, RenderGlyphParams, RenderImage, RenderImageParams, RenderSvgParams,
     Replay, ResizeEdge, ScaledPixels, Scene, Shadow, SharedString, Size, StrikethroughStyle, Style,
     SubscriberSet, Subscription, TaffyLayoutEngine, TextStyle, TextStyleRefinement,
-    TransformationMatrix, Underline, UnderlineStyle, WindowAppearance, WindowBackgroundAppearance,
-    WindowBounds, WindowControls, WindowDecorations, WindowOptions, WindowParams, WindowTextSystem,
-    SUBPIXEL_VARIANTS,
+    TransformationMatrix, Underline, UnderlineStyle, WeakAsyncApp, WeakAsyncWindowContext,
+    WindowAppearance, WindowBackgroundAppearance, WindowBounds, WindowControls, WindowDecorations,
+    WindowOptions, WindowParams, WindowTextSystem, SUBPIXEL_VARIANTS,
 };
 use anyhow::{anyhow, Context as _, Result};
 use collections::{FxHashMap, FxHashSet};
@@ -763,7 +763,7 @@ impl Window {
         platform_window.on_close(Box::new({
             let mut cx = cx.to_async();
             move || {
-                let _ = handle.update(&mut cx, |_, window, _| window.remove_window());
+                let _ = handle.update_weak(&mut cx, |_, window, _| window.remove_window());
             }
         }));
         platform_window.on_request_frame(Box::new({
@@ -777,7 +777,7 @@ impl Window {
                 let next_frame_callbacks = next_frame_callbacks.take();
                 if !next_frame_callbacks.is_empty() {
                     handle
-                        .update(&mut cx, |_, window, cx| {
+                        .update_weak(&mut cx, |_, window, cx| {
                             for callback in next_frame_callbacks {
                                 callback(window, cx);
                             }
@@ -795,7 +795,7 @@ impl Window {
                 if invalidator.is_dirty() {
                     measure("frame duration", || {
                         handle
-                            .update(&mut cx, |_, window, cx| {
+                            .update_weak(&mut cx, |_, window, cx| {
                                 window.draw(cx);
                                 window.present();
                             })
@@ -803,12 +803,12 @@ impl Window {
                     })
                 } else if needs_present {
                     handle
-                        .update(&mut cx, |_, window, _| window.present())
+                        .update_weak(&mut cx, |_, window, _| window.present())
                         .log_err();
                 }
 
                 handle
-                    .update(&mut cx, |_, window, _| {
+                    .update_weak(&mut cx, |_, window, _| {
                         window.complete_frame();
                     })
                     .log_err();
@@ -818,7 +818,7 @@ impl Window {
             let mut cx = cx.to_async();
             move |_, _| {
                 handle
-                    .update(&mut cx, |_, window, cx| window.bounds_changed(cx))
+                    .update_weak(&mut cx, |_, window, cx| window.bounds_changed(cx))
                     .log_err();
             }
         }));
@@ -826,7 +826,7 @@ impl Window {
             let mut cx = cx.to_async();
             move || {
                 handle
-                    .update(&mut cx, |_, window, cx| window.bounds_changed(cx))
+                    .update_weak(&mut cx, |_, window, cx| window.bounds_changed(cx))
                     .log_err();
             }
         }));
@@ -834,7 +834,7 @@ impl Window {
             let mut cx = cx.to_async();
             move || {
                 handle
-                    .update(&mut cx, |_, window, cx| window.appearance_changed(cx))
+                    .update_weak(&mut cx, |_, window, cx| window.appearance_changed(cx))
                     .log_err();
             }
         }));
@@ -842,7 +842,7 @@ impl Window {
             let mut cx = cx.to_async();
             move |active| {
                 handle
-                    .update(&mut cx, |_, window, cx| {
+                    .update_weak(&mut cx, |_, window, cx| {
                         window.active.set(active);
                         window
                             .activation_observers
@@ -857,7 +857,7 @@ impl Window {
             let mut cx = cx.to_async();
             move |active| {
                 handle
-                    .update(&mut cx, |_, window, _| {
+                    .update_weak(&mut cx, |_, window, _| {
                         window.hovered.set(active);
                         window.refresh();
                     })
@@ -868,7 +868,7 @@ impl Window {
             let mut cx = cx.to_async();
             Box::new(move |event| {
                 handle
-                    .update(&mut cx, |_, window, cx| window.dispatch_event(event, cx))
+                    .update_weak(&mut cx, |_, window, cx| window.dispatch_event(event, cx))
                     .log_err()
                     .unwrap_or(DispatchEventResult::default())
             })
@@ -1284,8 +1284,8 @@ impl Window {
 
     /// Creates an [`AsyncWindowContext`], which has a static lifetime and can be held across
     /// await points in async code.
-    pub fn to_async(&self, cx: &App) -> AsyncWindowContext {
-        AsyncWindowContext::new_context(cx.to_async(), self.handle)
+    pub fn to_async(&self, cx: &App) -> WeakAsyncWindowContext {
+        WeakAsyncWindowContext::new_context(cx.to_async(), self.handle)
     }
 
     /// Schedule the given closure to be run directly after the current frame is rendered.
@@ -3710,8 +3710,9 @@ impl Window {
         f: impl Fn(&mut Window, &mut App) -> bool + 'static,
     ) {
         let mut cx = self.to_async(cx);
-        self.platform_window
-            .on_should_close(Box::new(move || cx.update(|window, cx| f(window, cx))))
+        self.platform_window.on_should_close(Box::new(move || {
+            cx.update(|window, cx| f(window, cx)).unwrap_or(true)
+        }))
     }
 
     /// Register an action listener on the window for the next frame. The type of action
@@ -3932,6 +3933,17 @@ impl AnyWindowHandle {
         C: AppContext,
     {
         cx.update_window(self, update)
+    }
+
+    /// Updates the state of the root view of this window.
+    ///
+    /// This will fail if the window has been closed.
+    pub fn update_weak<R>(
+        self,
+        cx: &mut WeakAsyncApp,
+        update: impl FnOnce(AnyView, &mut Window, &mut App) -> R,
+    ) -> Result<R> {
+        cx.update(|cx| cx.update_window(self, update))?
     }
 
     /// Read the state of the root view of this window.
