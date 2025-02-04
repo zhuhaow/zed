@@ -45,8 +45,8 @@ use settings::{
 };
 use std::any::TypeId;
 use std::path::PathBuf;
-use std::sync::atomic::{self, AtomicBool};
 use std::rc::Rc;
+use std::sync::atomic::{self, AtomicBool};
 use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
 use terminal_view::terminal_panel::{self, TerminalPanel};
 use theme::{ActiveTheme, ThemeSettings};
@@ -905,11 +905,11 @@ fn quit(_: &Quit, cx: &mut AppContext) {
             if let Some(workspace) = workspace_windows.first() {
                 let answer = workspace
                     .update(&mut cx, |_, cx| {
-                    cx.prompt(
-                        PromptLevel::Info,
-                        "Are you sure you want to quit?",
-                        None,
-                        &["Quit", "Cancel"],
+                        cx.prompt(
+                            PromptLevel::Info,
+                            "Are you sure you want to quit?",
+                            None,
+                            &["Quit", "Cancel"],
                         )
                     })
                     .log_err();
