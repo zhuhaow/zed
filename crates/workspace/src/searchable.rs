@@ -42,20 +42,18 @@ pub struct SearchOptions {
     /// Specifies whether the  supports search & replace.
     pub replacement: bool,
     pub selection: bool,
-    pub find_in_results: bool,
 }
 
 pub trait SearchableItem: Item + EventEmitter<SearchEvent> {
     type Match: Any + Sync + Send + Clone;
 
-    fn supported_options(&self) -> SearchOptions {
+    fn supported_options() -> SearchOptions {
         SearchOptions {
             case: true,
             word: true,
             regex: true,
             replacement: true,
             selection: true,
-            find_in_results: false,
         }
     }
 
@@ -68,7 +66,7 @@ pub trait SearchableItem: Item + EventEmitter<SearchEvent> {
     }
 
     fn has_filtered_search_ranges(&mut self) -> bool {
-        self.supported_options().selection
+        Self::supported_options().selection
     }
 
     fn toggle_filtered_search_ranges(
@@ -159,7 +157,7 @@ pub trait SearchableItem: Item + EventEmitter<SearchEvent> {
 pub trait SearchableItemHandle: ItemHandle {
     fn downgrade(&self) -> Box<dyn WeakSearchableItemHandle>;
     fn boxed_clone(&self) -> Box<dyn SearchableItemHandle>;
-    fn supported_options(&self, cx: &App) -> SearchOptions;
+    fn supported_options(&self) -> SearchOptions;
     fn subscribe_to_search_events(
         &self,
         window: &mut Window,
@@ -226,8 +224,8 @@ impl<T: SearchableItem> SearchableItemHandle for Entity<T> {
         Box::new(self.clone())
     }
 
-    fn supported_options(&self, cx: &App) -> SearchOptions {
-        self.read(cx).supported_options()
+    fn supported_options(&self) -> SearchOptions {
+        T::supported_options()
     }
 
     fn subscribe_to_search_events(

@@ -36,7 +36,7 @@ use language::{
     markdown, point_to_lsp, prepare_completion_documentation,
     proto::{deserialize_anchor, deserialize_version, serialize_anchor, serialize_version},
     range_from_lsp, range_to_lsp, Bias, Buffer, BufferSnapshot, CachedLspAdapter, CodeLabel,
-    CompletionDocumentation, Diagnostic, DiagnosticEntry, DiagnosticSet, Diff, File as _, Language,
+    Diagnostic, DiagnosticEntry, DiagnosticSet, Diff, Documentation, File as _, Language,
     LanguageName, LanguageRegistry, LanguageServerBinaryStatus, LanguageToolchainStore, LocalFile,
     LspAdapter, LspAdapterDelegate, Patch, PointUtf16, TextBufferSnapshot, ToOffset, ToPointUtf16,
     Transaction, Unclipped,
@@ -4359,13 +4359,12 @@ impl LspStore {
         } else {
             let mut completions = completions.borrow_mut();
             let completion = &mut completions[completion_index];
-            completion.documentation = Some(CompletionDocumentation::Undocumented);
+            completion.documentation = Some(Documentation::Undocumented);
         }
 
         // NB: Zed does not have `details` inside the completion resolve capabilities, but certain language servers violate the spec and do not return `details` immediately, e.g. https://github.com/yioneko/vtsls/issues/213
         // So we have to update the label here anyway...
-        let language = snapshot.language();
-        let mut new_label = match language {
+        let mut new_label = match snapshot.language() {
             Some(language) => {
                 adapter
                     .labels_for_completions(&[completion_item.clone()], language)
@@ -4376,9 +4375,9 @@ impl LspStore {
         .pop()
         .flatten()
         .unwrap_or_else(|| {
-            CodeLabel::fallback_for_completion(
-                &completion_item,
-                language.map(|language| language.as_ref()),
+            CodeLabel::plain(
+                completion_item.label,
+                completion_item.filter_text.as_deref(),
             )
         });
         ensure_uniform_list_compatible_label(&mut new_label);
@@ -4434,16 +4433,16 @@ impl LspStore {
         let lsp_completion = serde_json::from_slice(&response.lsp_completion)?;
 
         let documentation = if response.documentation.is_empty() {
-            CompletionDocumentation::Undocumented
+            Documentation::Undocumented
         } else if response.documentation_is_markdown {
-            CompletionDocumentation::MultiLineMarkdown(
+            Documentation::MultiLineMarkdown(
                 markdown::parse_markdown(&response.documentation, Some(&language_registry), None)
                     .await,
             )
         } else if response.documentation.lines().count() <= 1 {
-            CompletionDocumentation::SingleLine(response.documentation)
+            Documentation::SingleLine(response.documentation)
         } else {
-            CompletionDocumentation::MultiLinePlainText(response.documentation)
+            Documentation::MultiLinePlainText(response.documentation)
         };
 
         let mut completions = completions.borrow_mut();
@@ -5616,7 +5615,7 @@ impl LspStore {
             lsp_store
                 .update(&mut cx, |lsp_store, cx| {
                     lsp_store.buffer_store().update(cx, |buffer_store, cx| {
-                        buffer_store.open_buffer(project_path, false, cx)
+                        buffer_store.open_buffer(project_path, cx)
                     })
                 })?
                 .await
@@ -8031,7 +8030,10 @@ async fn populate_labels_for_completions(
         };
 
         let mut label = label.unwrap_or_else(|| {
-            CodeLabel::fallback_for_completion(&lsp_completion, language.as_deref())
+            CodeLabel::plain(
+                lsp_completion.label.clone(),
+                lsp_completion.filter_text.as_deref(),
+            )
         });
         ensure_uniform_list_compatible_label(&mut label);
 
@@ -8753,7 +8755,7 @@ fn include_text(server: &lsp::LanguageServer) -> Option<bool> {
 /// Completion items are displayed in a `UniformList`.
 /// Usually, those items are single-line strings, but in LSP responses,
 /// completion items `label`, `detail` and `label_details.description` may contain newlines or long spaces.
-/// Many language plugins construct these items by joining these parts together, and we may use `CodeLabel::fallback_for_completion` that uses `label` at least.
+/// Many language plugins construct these items by joining these parts together, and we may fall back to `CodeLabel::plain` that uses `label`.
 /// All that may lead to a newline being inserted into resulting `CodeLabel.text`, which will force `UniformList` to bloat each entry to occupy more space,
 /// breaking the completions menu presentation.
 ///

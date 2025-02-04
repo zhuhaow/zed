@@ -25,8 +25,8 @@ use collections::HashMap;
 use fs::MTime;
 use futures::channel::oneshot;
 use gpui::{
-    AnyElement, App, AppContext as _, Context, Entity, EventEmitter, HighlightStyle, Pixels,
-    SharedString, StyledText, Task, TaskLabel, TextStyle, Window,
+    AnyElement, App, AppContext as _, Context, Entity, EventEmitter, HighlightStyle, Pixels, Task,
+    TaskLabel, Window,
 };
 use lsp::LanguageServerId;
 use parking_lot::Mutex;
@@ -65,7 +65,7 @@ pub use text::{
     Subscription, TextDimension, TextSummary, ToOffset, ToOffsetUtf16, ToPoint, ToPointUtf16,
     Transaction, TransactionId, Unclipped,
 };
-use theme::{ActiveTheme as _, SyntaxTheme};
+use theme::SyntaxTheme;
 #[cfg(any(test, feature = "test-support"))]
 use util::RandomCharIter;
 use util::{debug_panic, maybe, RangeExt};
@@ -236,35 +236,36 @@ pub async fn prepare_completion_documentation(
     documentation: &lsp::Documentation,
     language_registry: &Arc<LanguageRegistry>,
     language: Option<Arc<Language>>,
-) -> CompletionDocumentation {
+) -> Documentation {
     match documentation {
         lsp::Documentation::String(text) => {
             if text.lines().count() <= 1 {
-                CompletionDocumentation::SingleLine(text.clone())
+                Documentation::SingleLine(text.clone())
             } else {
-                CompletionDocumentation::MultiLinePlainText(text.clone())
+                Documentation::MultiLinePlainText(text.clone())
             }
         }
 
         lsp::Documentation::MarkupContent(lsp::MarkupContent { kind, value }) => match kind {
             lsp::MarkupKind::PlainText => {
                 if value.lines().count() <= 1 {
-                    CompletionDocumentation::SingleLine(value.clone())
+                    Documentation::SingleLine(value.clone())
                 } else {
-                    CompletionDocumentation::MultiLinePlainText(value.clone())
+                    Documentation::MultiLinePlainText(value.clone())
                 }
             }
 
             lsp::MarkupKind::Markdown => {
                 let parsed = parse_markdown(value, Some(language_registry), language).await;
-                CompletionDocumentation::MultiLineMarkdown(parsed)
+                Documentation::MultiLineMarkdown(parsed)
             }
         },
     }
 }
 
+/// Documentation associated with a [`Completion`].
 #[derive(Clone, Debug)]
-pub enum CompletionDocumentation {
+pub enum Documentation {
     /// There is no documentation for this completion.
     Undocumented,
     /// A single line of documentation.
@@ -587,212 +588,6 @@ pub struct Runnable {
     pub buffer: BufferId,
 }
 
-#[derive(Default, Clone, Debug)]
-pub struct HighlightedText {
-    pub text: SharedString,
-    pub highlights: Vec<(Range<usize>, HighlightStyle)>,
-}
-
-#[derive(Default, Debug)]
-struct HighlightedTextBuilder {
-    pub text: String,
-    pub highlights: Vec<(Range<usize>, HighlightStyle)>,
-}
-
-impl HighlightedText {
-    pub fn from_buffer_range<T: ToOffset>(
-        range: Range<T>,
-        snapshot: &text::BufferSnapshot,
-        syntax_snapshot: &SyntaxSnapshot,
-        override_style: Option<HighlightStyle>,
-        syntax_theme: &SyntaxTheme,
-    ) -> Self {
-        let mut highlighted_text = HighlightedTextBuilder::default();
-        highlighted_text.add_text_from_buffer_range(
-            range,
-            snapshot,
-            syntax_snapshot,
-            override_style,
-            syntax_theme,
-        );
-        highlighted_text.build()
-    }
-
-    pub fn to_styled_text(&self, default_style: &TextStyle) -> StyledText {
-        gpui::StyledText::new(self.text.clone())
-            .with_highlights(default_style, self.highlights.iter().cloned())
-    }
-}
-
-impl HighlightedTextBuilder {
-    pub fn build(self) -> HighlightedText {
-        HighlightedText {
-            text: self.text.into(),
-            highlights: self.highlights,
-        }
-    }
-
-    pub fn add_text_from_buffer_range<T: ToOffset>(
-        &mut self,
-        range: Range<T>,
-        snapshot: &text::BufferSnapshot,
-        syntax_snapshot: &SyntaxSnapshot,
-        override_style: Option<HighlightStyle>,
-        syntax_theme: &SyntaxTheme,
-    ) {
-        let range = range.to_offset(snapshot);
-        for chunk in Self::highlighted_chunks(range, snapshot, syntax_snapshot) {
-            let start = self.text.len();
-            self.text.push_str(chunk.text);
-            let end = self.text.len();
-
-            if let Some(mut highlight_style) = chunk
-                .syntax_highlight_id
-                .and_then(|id| id.style(syntax_theme))
-            {
-                if let Some(override_style) = override_style {
-                    highlight_style.highlight(override_style);
-                }
-                self.highlights.push((start..end, highlight_style));
-            } else if let Some(override_style) = override_style {
-                self.highlights.push((start..end, override_style));
-            }
-        }
-    }
-
-    fn highlighted_chunks<'a>(
-        range: Range<usize>,
-        snapshot: &'a text::BufferSnapshot,
-        syntax_snapshot: &'a SyntaxSnapshot,
-    ) -> BufferChunks<'a> {
-        let captures = syntax_snapshot.captures(range.clone(), snapshot, |grammar| {
-            grammar.highlights_query.as_ref()
-        });
-
-        let highlight_maps = captures
-            .grammars()
-            .iter()
-            .map(|grammar| grammar.highlight_map())
-            .collect();
-
-        BufferChunks::new(
-            snapshot.as_rope(),
-            range,
-            Some((captures, highlight_maps)),
-            false,
-            None,
-        )
-    }
-}
-
-#[derive(Clone)]
-pub struct EditPreview {
-    old_snapshot: text::BufferSnapshot,
-    applied_edits_snapshot: text::BufferSnapshot,
-    syntax_snapshot: SyntaxSnapshot,
-}
-
-impl EditPreview {
-    pub fn highlight_edits(
-        &self,
-        current_snapshot: &BufferSnapshot,
-        edits: &[(Range<Anchor>, String)],
-        include_deletions: bool,
-        cx: &App,
-    ) -> HighlightedText {
-        let Some(visible_range_in_preview_snapshot) = self.compute_visible_range(edits) else {
-            return HighlightedText::default();
-        };
-
-        let mut highlighted_text = HighlightedTextBuilder::default();
-
-        let mut offset_in_preview_snapshot = visible_range_in_preview_snapshot.start;
-
-        let insertion_highlight_style = HighlightStyle {
-            background_color: Some(cx.theme().status().created_background),
-            ..Default::default()
-        };
-        let deletion_highlight_style = HighlightStyle {
-            background_color: Some(cx.theme().status().deleted_background),
-            ..Default::default()
-        };
-        let syntax_theme = cx.theme().syntax();
-
-        for (range, edit_text) in edits {
-            let edit_new_end_in_preview_snapshot = range
-                .end
-                .bias_right(&self.old_snapshot)
-                .to_offset(&self.applied_edits_snapshot);
-            let edit_start_in_preview_snapshot = edit_new_end_in_preview_snapshot - edit_text.len();
-
-            let unchanged_range_in_preview_snapshot =
-                offset_in_preview_snapshot..edit_start_in_preview_snapshot;
-            if !unchanged_range_in_preview_snapshot.is_empty() {
-                highlighted_text.add_text_from_buffer_range(
-                    unchanged_range_in_preview_snapshot,
-                    &self.applied_edits_snapshot,
-                    &self.syntax_snapshot,
-                    None,
-                    &syntax_theme,
-                );
-            }
-
-            let range_in_current_snapshot = range.to_offset(current_snapshot);
-            if include_deletions && !range_in_current_snapshot.is_empty() {
-                highlighted_text.add_text_from_buffer_range(
-                    range_in_current_snapshot,
-                    &current_snapshot.text,
-                    &current_snapshot.syntax,
-                    Some(deletion_highlight_style),
-                    &syntax_theme,
-                );
-            }
-
-            if !edit_text.is_empty() {
-                highlighted_text.add_text_from_buffer_range(
-                    edit_start_in_preview_snapshot..edit_new_end_in_preview_snapshot,
-                    &self.applied_edits_snapshot,
-                    &self.syntax_snapshot,
-                    Some(insertion_highlight_style),
-                    &syntax_theme,
-                );
-            }
-
-            offset_in_preview_snapshot = edit_new_end_in_preview_snapshot;
-        }
-
-        highlighted_text.add_text_from_buffer_range(
-            offset_in_preview_snapshot..visible_range_in_preview_snapshot.end,
-            &self.applied_edits_snapshot,
-            &self.syntax_snapshot,
-            None,
-            &syntax_theme,
-        );
-
-        highlighted_text.build()
-    }
-
-    fn compute_visible_range(&self, edits: &[(Range<Anchor>, String)]) -> Option<Range<usize>> {
-        let (first, _) = edits.first()?;
-        let (last, _) = edits.last()?;
-
-        let start = first
-            .start
-            .bias_left(&self.old_snapshot)
-            .to_point(&self.applied_edits_snapshot);
-        let end = last
-            .end
-            .bias_right(&self.old_snapshot)
-            .to_point(&self.applied_edits_snapshot);
-
-        // Ensure that the first line of the first edit and the last line of the last edit are always fully visible
-        let range = Point::new(start.row, 0)
-            ..Point::new(end.row, self.applied_edits_snapshot.line_len(end.row));
-
-        Some(range.to_offset(&self.applied_edits_snapshot))
-    }
-}
-
 impl Buffer {
     /// Create a new buffer with the given base text.
     pub fn local<T: Into<String>>(base_text: T, cx: &Context<Self>) -> Self {
@@ -1042,34 +837,6 @@ impl Buffer {
             branch.reparse(cx);
 
             branch
-        })
-    }
-
-    pub fn preview_edits(
-        &self,
-        edits: Arc<[(Range<Anchor>, String)]>,
-        cx: &App,
-    ) -> Task<EditPreview> {
-        let registry = self.language_registry();
-        let language = self.language().cloned();
-        let old_snapshot = self.text.snapshot();
-        let mut branch_buffer = self.text.branch();
-        let mut syntax_snapshot = self.syntax_map.lock().snapshot();
-        cx.background_executor().spawn(async move {
-            if !edits.is_empty() {
-                branch_buffer.edit(edits.iter().cloned());
-                let snapshot = branch_buffer.snapshot();
-                syntax_snapshot.interpolate(&snapshot);
-
-                if let Some(language) = language {
-                    syntax_snapshot.reparse(&snapshot, registry, language);
-                }
-            }
-            EditPreview {
-                old_snapshot,
-                applied_edits_snapshot: branch_buffer.snapshot(),
-                syntax_snapshot,
-            }
         })
     }
 
@@ -1914,17 +1681,12 @@ impl Buffer {
 
     /// Checks if the buffer has unsaved changes.
     pub fn is_dirty(&self) -> bool {
-        if self.capability == Capability::ReadOnly {
-            return false;
-        }
-        if self.has_conflict || self.has_unsaved_edits() {
-            return true;
-        }
-        match self.file.as_ref().map(|f| f.disk_state()) {
-            Some(DiskState::New) => !self.is_empty(),
-            Some(DiskState::Deleted) => true,
-            _ => false,
-        }
+        self.capability != Capability::ReadOnly
+            && (self.has_conflict
+                || self.file.as_ref().map_or(false, |file| {
+                    matches!(file.disk_state(), DiskState::New | DiskState::Deleted)
+                })
+                || self.has_unsaved_edits())
     }
 
     /// Checks if the buffer and its file have both changed since the buffer
@@ -2902,19 +2664,12 @@ impl BufferSnapshot {
             let mut indent_from_prev_row = false;
             let mut outdent_from_prev_row = false;
             let mut outdent_to_row = u32::MAX;
-            let mut from_regex = false;
 
             while let Some((indent_row, delta)) = indent_changes.peek() {
                 match indent_row.cmp(&row) {
                     Ordering::Equal => match delta {
-                        Ordering::Less => {
-                            from_regex = true;
-                            outdent_from_prev_row = true
-                        }
-                        Ordering::Greater => {
-                            indent_from_prev_row = true;
-                            from_regex = true
-                        }
+                        Ordering::Less => outdent_from_prev_row = true,
+                        Ordering::Greater => indent_from_prev_row = true,
                         _ => {}
                     },
 
@@ -2947,32 +2702,32 @@ impl BufferSnapshot {
                 Some(IndentSuggestion {
                     basis_row: prev_row,
                     delta: Ordering::Equal,
-                    within_error: within_error && !from_regex,
+                    within_error,
                 })
             } else if indent_from_prev_row {
                 Some(IndentSuggestion {
                     basis_row: prev_row,
                     delta: Ordering::Greater,
-                    within_error: within_error && !from_regex,
+                    within_error,
                 })
             } else if outdent_to_row < prev_row {
                 Some(IndentSuggestion {
                     basis_row: outdent_to_row,
                     delta: Ordering::Equal,
-                    within_error: within_error && !from_regex,
+                    within_error,
                 })
             } else if outdent_from_prev_row {
                 Some(IndentSuggestion {
                     basis_row: prev_row,
                     delta: Ordering::Less,
-                    within_error: within_error && !from_regex,
+                    within_error,
                 })
             } else if config.auto_indent_using_last_non_empty_line || !self.is_line_blank(prev_row)
             {
                 Some(IndentSuggestion {
                     basis_row: prev_row,
                     delta: Ordering::Equal,
-                    within_error: within_error && !from_regex,
+                    within_error,
                 })
             } else {
                 None
@@ -3020,21 +2775,6 @@ impl BufferSnapshot {
         // We want to look at diagnostic spans only when iterating over language-annotated chunks.
         let diagnostics = language_aware;
         BufferChunks::new(self.text.as_rope(), range, syntax, diagnostics, Some(self))
-    }
-
-    pub fn highlighted_text_for_range<T: ToOffset>(
-        &self,
-        range: Range<T>,
-        override_style: Option<HighlightStyle>,
-        syntax_theme: &SyntaxTheme,
-    ) -> HighlightedText {
-        HighlightedText::from_buffer_range(
-            range,
-            &self.text,
-            &self.syntax,
-            override_style,
-            syntax_theme,
-        )
     }
 
     /// Invokes the given callback for each line of text in the given range of the buffer.

@@ -413,7 +413,8 @@ impl Render for ConfigurationView {
         let lmstudio_reqs =
             "To use LM Studio as a provider for Zed assistant, it needs to be running with at least one model downloaded.";
 
-        let inline_code_bg = cx.theme().colors().editor_foreground.opacity(0.05);
+        let mut inline_code_bg = cx.theme().colors().editor_background;
+        inline_code_bg.fade_out(0.5);
 
         if self.loading_models_task.is_some() {
             div().child(Label::new("Loading models...")).into_any()
@@ -431,7 +432,7 @@ impl Render for ConfigurationView {
                         .child(
                             h_flex()
                                 .gap_0p5()
-                                .child(Label::new("To get your first model, try running"))
+                                .child(Label::new("To get your first model, try running "))
                                 .child(
                                     div()
                                         .bg(inline_code_bg)
@@ -456,7 +457,7 @@ impl Render for ConfigurationView {
                                         this.child(
                                             Button::new("lmstudio-site", "LM Studio")
                                                 .style(ButtonStyle::Subtle)
-                                                .icon(IconName::ArrowUpRight)
+                                                .icon(IconName::ExternalLink)
                                                 .icon_size(IconSize::XSmall)
                                                 .icon_color(Color::Muted)
                                                 .on_click(move |_, _window, cx| {
@@ -471,7 +472,7 @@ impl Render for ConfigurationView {
                                                 "Download LM Studio",
                                             )
                                             .style(ButtonStyle::Subtle)
-                                            .icon(IconName::ArrowUpRight)
+                                            .icon(IconName::ExternalLink)
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
                                             .on_click(move |_, _window, cx| {
@@ -484,7 +485,7 @@ impl Render for ConfigurationView {
                                 .child(
                                     Button::new("view-models", "Model Catalog")
                                         .style(ButtonStyle::Subtle)
-                                        .icon(IconName::ArrowUpRight)
+                                        .icon(IconName::ExternalLink)
                                         .icon_size(IconSize::XSmall)
                                         .icon_color(Color::Muted)
                                         .on_click(move |_, _window, cx| {

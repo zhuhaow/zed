@@ -308,11 +308,6 @@ message Envelope {
         GetStagedTextResponse get_staged_text_response = 289;
 
         RegisterBufferWithLanguageServers register_buffer_with_language_servers = 290;
-
-        Stage stage = 293;
-        Unstage unstage = 294;
-        Commit commit = 295;
-        OpenCommitMessageBuffer open_commit_message_buffer = 296; // current max
     }
 
     reserved 87 to 88;
@@ -795,7 +790,6 @@ message OpenBufferByPath {
     uint64 project_id = 1;
     uint64 worktree_id = 2;
     string path = 3;
-    bool skip_file_contents = 4;
 }
 
 message OpenBufferById {
@@ -2637,32 +2631,4 @@ message InstallExtension {
 message RegisterBufferWithLanguageServers{
     uint64 project_id = 1;
     uint64 buffer_id = 2;
-}
-
-message Stage {
-    uint64 project_id = 1;
-    uint64 worktree_id = 2;
-    uint64 work_directory_id = 3;
-    repeated string paths = 4;
-}
-
-message Unstage {
-    uint64 project_id = 1;
-    uint64 worktree_id = 2;
-    uint64 work_directory_id = 3;
-    repeated string paths = 4;
-}
-
-message Commit {
-    uint64 project_id = 1;
-    uint64 worktree_id = 2;
-    uint64 work_directory_id = 3;
-    optional string name = 4;
-    optional string email = 5;
-}
-
-message OpenCommitMessageBuffer {
-    uint64 project_id = 1;
-    uint64 worktree_id = 2;
-    uint64 work_directory_id = 3;
 }

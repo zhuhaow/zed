@@ -528,7 +528,12 @@ impl MarkdownElement {
         let text_style = self.style.base_text_style.clone();
         let font_id = window.text_system().resolve_font(&text_style.font());
         let font_size = text_style.font_size.to_pixels(window.rem_size());
-        let em_width = window.text_system().em_width(font_id, font_size).unwrap();
+        let em_width = window
+            .text_system()
+            .typographic_bounds(font_id, font_size, 'm')
+            .unwrap()
+            .size
+            .width;
         window.request_autoscroll(Bounds::from_corners(
             point(position.x - 3. * em_width, position.y - 3. * line_height),
             point(position.x + 3. * em_width, position.y + 3. * line_height),

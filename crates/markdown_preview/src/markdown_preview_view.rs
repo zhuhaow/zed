@@ -497,7 +497,7 @@ impl Item for MarkdownPreviewView {
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {
-        Some("Markdown Preview Opened")
+        Some("markdown preview")
     }
 
     fn to_item_events(_event: &Self::Event, _f: impl FnMut(workspace::item::ItemEvent)) {}

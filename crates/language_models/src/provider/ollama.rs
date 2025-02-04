@@ -452,7 +452,8 @@ impl Render for ConfigurationView {
         let ollama_reqs =
             "Ollama must be running with at least one model installed to use it in the assistant.";
 
-        let inline_code_bg = cx.theme().colors().editor_foreground.opacity(0.05);
+        let mut inline_code_bg = cx.theme().colors().editor_background;
+        inline_code_bg.fade_out(0.5);
 
         if self.loading_models_task.is_some() {
             div().child(Label::new("Loading models...")).into_any()
@@ -495,7 +496,7 @@ impl Render for ConfigurationView {
                                         this.child(
                                             Button::new("ollama-site", "Ollama")
                                                 .style(ButtonStyle::Subtle)
-                                                .icon(IconName::ArrowUpRight)
+                                                .icon(IconName::ExternalLink)
                                                 .icon_size(IconSize::XSmall)
                                                 .icon_color(Color::Muted)
                                                 .on_click(move |_, _, cx| cx.open_url(OLLAMA_SITE))
@@ -508,7 +509,7 @@ impl Render for ConfigurationView {
                                                 "Download Ollama",
                                             )
                                             .style(ButtonStyle::Subtle)
-                                            .icon(IconName::ArrowUpRight)
+                                            .icon(IconName::ExternalLink)
                                             .icon_size(IconSize::XSmall)
                                             .icon_color(Color::Muted)
                                             .on_click(move |_, _, cx| {
@@ -521,7 +522,7 @@ impl Render for ConfigurationView {
                                 .child(
                                     Button::new("view-models", "All Models")
                                         .style(ButtonStyle::Subtle)
-                                        .icon(IconName::ArrowUpRight)
+                                        .icon(IconName::ExternalLink)
                                         .icon_size(IconSize::XSmall)
                                         .icon_color(Color::Muted)
                                         .on_click(move |_, _, cx| cx.open_url(OLLAMA_LIBRARY_URL)),

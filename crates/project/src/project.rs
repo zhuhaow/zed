@@ -29,9 +29,7 @@ mod yarn;
 use crate::git::GitState;
 use anyhow::{anyhow, Context as _, Result};
 use buffer_store::{BufferChangeSet, BufferStore, BufferStoreEvent};
-use client::{
-    proto, Client, Collaborator, PendingEntitySubscription, ProjectId, TypedEnvelope, UserStore,
-};
+use client::{proto, Client, Collaborator, PendingEntitySubscription, TypedEnvelope, UserStore};
 use clock::ReplicaId;
 use collections::{BTreeSet, HashMap, HashSet};
 use debounced_delay::DebouncedDelay;
@@ -46,9 +44,8 @@ use image_store::{ImageItemEvent, ImageStoreEvent};
 
 use ::git::{
     blame::Blame,
-    repository::{Branch, GitRepository, RepoPath},
+    repository::{Branch, GitRepository},
     status::FileStatus,
-    COMMIT_MESSAGE,
 };
 use gpui::{
     AnyEntity, App, AppContext as _, AsyncApp, BorrowAppContext, Context, Entity, EventEmitter,
@@ -57,9 +54,9 @@ use gpui::{
 use itertools::Itertools;
 use language::{
     language_settings::InlayHintKind, proto::split_operations, Buffer, BufferEvent,
-    CachedLspAdapter, Capability, CodeLabel, CompletionDocumentation, File as _, Language,
-    LanguageName, LanguageRegistry, PointUtf16, ToOffset, ToPointUtf16, Toolchain, ToolchainList,
-    Transaction, Unclipped,
+    CachedLspAdapter, Capability, CodeLabel, Documentation, File as _, Language, LanguageName,
+    LanguageRegistry, PointUtf16, ToOffset, ToPointUtf16, Toolchain, ToolchainList, Transaction,
+    Unclipped,
 };
 use lsp::{
     CodeActionKind, CompletionContext, CompletionItemKind, DocumentHighlightKind, LanguageServer,
@@ -158,7 +155,7 @@ pub struct Project {
     fs: Arc<dyn Fs>,
     ssh_client: Option<Entity<SshRemoteClient>>,
     client_state: ProjectClientState,
-    git_state: Entity<GitState>,
+    git_state: Option<Entity<GitState>>,
     collaborators: HashMap<proto::PeerId, Collaborator>,
     client_subscriptions: Vec<client::Subscription>,
     worktree_store: Entity<WorktreeStore>,
@@ -369,7 +366,7 @@ pub struct Completion {
     /// The id of the language server that produced this completion.
     pub server_id: LanguageServerId,
     /// The documentation for this completion.
-    pub documentation: Option<CompletionDocumentation>,
+    pub documentation: Option<Documentation>,
     /// The raw completion provided by the language server.
     pub lsp_completion: lsp::CompletionItem,
     /// Whether this completion has been resolved, to ensure it happens once per completion.
@@ -607,11 +604,6 @@ impl Project {
         client.add_model_request_handler(Self::handle_open_new_buffer);
         client.add_model_message_handler(Self::handle_create_buffer_for_peer);
 
-        client.add_model_request_handler(Self::handle_stage);
-        client.add_model_request_handler(Self::handle_unstage);
-        client.add_model_request_handler(Self::handle_commit);
-        client.add_model_request_handler(Self::handle_open_commit_message_buffer);
-
         WorktreeStore::init(&client);
         BufferStore::init(&client);
         LspStore::init(&client);
@@ -701,7 +693,8 @@ impl Project {
                 )
             });
 
-            let git_state = cx.new(|cx| GitState::new(&worktree_store, None, None, cx));
+            let git_state =
+                Some(cx.new(|cx| GitState::new(&worktree_store, languages.clone(), cx)));
 
             cx.subscribe(&lsp_store, Self::on_lsp_store_event).detach();
 
@@ -821,14 +814,8 @@ impl Project {
             });
             cx.subscribe(&lsp_store, Self::on_lsp_store_event).detach();
 
-            let git_state = cx.new(|cx| {
-                GitState::new(
-                    &worktree_store,
-                    Some(ssh_proto.clone()),
-                    Some(ProjectId(SSH_PROJECT_ID)),
-                    cx,
-                )
-            });
+            let git_state =
+                Some(cx.new(|cx| GitState::new(&worktree_store, languages.clone(), cx)));
 
             cx.subscribe(&ssh, Self::on_ssh_event).detach();
             cx.observe(&ssh, |_, _, cx| cx.notify()).detach();
@@ -885,7 +872,6 @@ impl Project {
                 toolchain_store: Some(toolchain_store),
             };
 
-            // ssh -> local machine handlers
             let ssh = ssh.read(cx);
             ssh.subscribe_to_entity(SSH_PROJECT_ID, &cx.entity());
             ssh.subscribe_to_entity(SSH_PROJECT_ID, &this.buffer_store);
@@ -1026,14 +1012,8 @@ impl Project {
             SettingsObserver::new_remote(worktree_store.clone(), task_store.clone(), cx)
         })?;
 
-        let git_state = cx.new(|cx| {
-            GitState::new(
-                &worktree_store,
-                Some(client.clone().into()),
-                Some(ProjectId(remote_id)),
-                cx,
-            )
-        })?;
+        let git_state =
+            Some(cx.new(|cx| GitState::new(&worktree_store, languages.clone(), cx))).transpose()?;
 
         let this = cx.new(|cx| {
             let replica_id = response.payload.replica_id as ReplicaId;
@@ -1933,21 +1913,7 @@ impl Project {
         }
 
         self.buffer_store.update(cx, |buffer_store, cx| {
-            buffer_store.open_buffer(path.into(), false, cx)
-        })
-    }
-
-    pub fn open_buffer_without_contents(
-        &mut self,
-        path: impl Into<ProjectPath>,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<Entity<Buffer>>> {
-        if self.is_disconnected(cx) {
-            return Task::ready(Err(anyhow!(ErrorCode::Disconnected)));
-        }
-
-        self.buffer_store.update(cx, |buffer_store, cx| {
-            buffer_store.open_buffer(path.into(), true, cx)
+            buffer_store.open_buffer(path.into(), cx)
         })
     }
 
@@ -3951,25 +3917,14 @@ impl Project {
     ) -> Result<proto::OpenBufferResponse> {
         let peer_id = envelope.original_sender_id()?;
         let worktree_id = WorktreeId::from_proto(envelope.payload.worktree_id);
-        let skip_file_contents = envelope.payload.skip_file_contents;
         let open_buffer = this.update(&mut cx, |this, cx| {
-            if skip_file_contents {
-                this.open_buffer_without_contents(
-                    ProjectPath {
-                        worktree_id,
-                        path: PathBuf::from(envelope.payload.path).into(),
-                    },
-                    cx,
-                )
-            } else {
-                this.open_buffer(
-                    ProjectPath {
-                        worktree_id,
-                        path: PathBuf::from(envelope.payload.path).into(),
-                    },
-                    cx,
-                )
-            }
+            this.open_buffer(
+                ProjectPath {
+                    worktree_id,
+                    path: PathBuf::from(envelope.payload.path).into(),
+                },
+                cx,
+            )
         })?;
 
         let buffer = open_buffer.await?;
@@ -3987,168 +3942,6 @@ impl Project {
         let peer_id = envelope.original_sender_id()?;
 
         Project::respond_to_open_buffer_request(this, buffer, peer_id, &mut cx)
-    }
-
-    async fn handle_stage(
-        this: Entity<Self>,
-        envelope: TypedEnvelope<proto::Stage>,
-        mut cx: AsyncApp,
-    ) -> Result<proto::Ack> {
-        let worktree_id = WorktreeId::from_proto(envelope.payload.worktree_id);
-        let work_directory_id = ProjectEntryId::from_proto(envelope.payload.work_directory_id);
-        let repository_handle =
-            Self::repository_for_request(&this, worktree_id, work_directory_id, &mut cx)?;
-
-        let entries = envelope
-            .payload
-            .paths
-            .into_iter()
-            .map(PathBuf::from)
-            .map(RepoPath::new)
-            .collect();
-        let (err_sender, mut err_receiver) = mpsc::channel(1);
-        repository_handle
-            .stage_entries(entries, err_sender)
-            .context("staging entries")?;
-        if let Some(error) = err_receiver.next().await {
-            Err(error.context("error during staging"))
-        } else {
-            Ok(proto::Ack {})
-        }
-    }
-
-    async fn handle_unstage(
-        this: Entity<Self>,
-        envelope: TypedEnvelope<proto::Unstage>,
-        mut cx: AsyncApp,
-    ) -> Result<proto::Ack> {
-        let worktree_id = WorktreeId::from_proto(envelope.payload.worktree_id);
-        let work_directory_id = ProjectEntryId::from_proto(envelope.payload.work_directory_id);
-        let repository_handle =
-            Self::repository_for_request(&this, worktree_id, work_directory_id, &mut cx)?;
-
-        let entries = envelope
-            .payload
-            .paths
-            .into_iter()
-            .map(PathBuf::from)
-            .map(RepoPath::new)
-            .collect();
-        let (err_sender, mut err_receiver) = mpsc::channel(1);
-        repository_handle
-            .unstage_entries(entries, err_sender)
-            .context("unstaging entries")?;
-        if let Some(error) = err_receiver.next().await {
-            Err(error.context("error during unstaging"))
-        } else {
-            Ok(proto::Ack {})
-        }
-    }
-
-    async fn handle_commit(
-        this: Entity<Self>,
-        envelope: TypedEnvelope<proto::Commit>,
-        mut cx: AsyncApp,
-    ) -> Result<proto::Ack> {
-        let worktree_id = WorktreeId::from_proto(envelope.payload.worktree_id);
-        let work_directory_id = ProjectEntryId::from_proto(envelope.payload.work_directory_id);
-        let repository_handle =
-            Self::repository_for_request(&this, worktree_id, work_directory_id, &mut cx)?;
-
-        let name = envelope.payload.name.map(SharedString::from);
-        let email = envelope.payload.email.map(SharedString::from);
-        let (err_sender, mut err_receiver) = mpsc::channel(1);
-        cx.update(|cx| {
-            repository_handle
-                .commit(name.zip(email), err_sender, cx)
-                .context("unstaging entries")
-        })??;
-        if let Some(error) = err_receiver.next().await {
-            Err(error.context("error during unstaging"))
-        } else {
-            Ok(proto::Ack {})
-        }
-    }
-
-    async fn handle_open_commit_message_buffer(
-        this: Entity<Self>,
-        envelope: TypedEnvelope<proto::OpenCommitMessageBuffer>,
-        mut cx: AsyncApp,
-    ) -> Result<proto::OpenBufferResponse> {
-        let worktree_id = WorktreeId::from_proto(envelope.payload.worktree_id);
-        let work_directory_id = ProjectEntryId::from_proto(envelope.payload.work_directory_id);
-        let repository_handle =
-            Self::repository_for_request(&this, worktree_id, work_directory_id, &mut cx)?;
-        let git_repository = match &repository_handle.git_repo {
-            git::GitRepo::Local(git_repository) => git_repository.clone(),
-            git::GitRepo::Remote { .. } => {
-                anyhow::bail!("Cannot handle open commit message buffer for remote git repo")
-            }
-        };
-        let commit_message_file = git_repository.dot_git_dir().join(*COMMIT_MESSAGE);
-        let fs = this.update(&mut cx, |project, _| project.fs().clone())?;
-        fs.create_file(
-            &commit_message_file,
-            CreateOptions {
-                overwrite: false,
-                ignore_if_exists: true,
-            },
-        )
-        .await
-        .with_context(|| format!("creating commit message file {commit_message_file:?}"))?;
-
-        let (worktree, relative_path) = this
-            .update(&mut cx, |project, cx| {
-                project.worktree_store.update(cx, |worktree_store, cx| {
-                    worktree_store.find_or_create_worktree(&commit_message_file, false, cx)
-                })
-            })?
-            .await
-            .with_context(|| {
-                format!("deriving worktree for commit message file {commit_message_file:?}")
-            })?;
-
-        let buffer = this
-            .update(&mut cx, |project, cx| {
-                project.buffer_store.update(cx, |buffer_store, cx| {
-                    buffer_store.open_buffer(
-                        ProjectPath {
-                            worktree_id: worktree.read(cx).id(),
-                            path: Arc::from(relative_path),
-                        },
-                        true,
-                        cx,
-                    )
-                })
-            })
-            .with_context(|| {
-                format!("opening buffer for commit message file {commit_message_file:?}")
-            })?
-            .await?;
-        let peer_id = envelope.original_sender_id()?;
-        Project::respond_to_open_buffer_request(this, buffer, peer_id, &mut cx)
-    }
-
-    fn repository_for_request(
-        this: &Entity<Self>,
-        worktree_id: WorktreeId,
-        work_directory_id: ProjectEntryId,
-        cx: &mut AsyncApp,
-    ) -> Result<RepositoryHandle> {
-        this.update(cx, |project, cx| {
-            let repository_handle = project
-                .git_state()
-                .read(cx)
-                .all_repositories()
-                .into_iter()
-                .find(|repository_handle| {
-                    repository_handle.worktree_id == worktree_id
-                        && repository_handle.repository_entry.work_directory_id()
-                            == work_directory_id
-                })
-                .context("missing repository handle")?;
-            anyhow::Ok(repository_handle)
-        })?
     }
 
     fn respond_to_open_buffer_request(
@@ -4187,7 +3980,7 @@ impl Project {
         buffer.read(cx).remote_id()
     }
 
-    pub fn wait_for_remote_buffer(
+    fn wait_for_remote_buffer(
         &mut self,
         id: BufferId,
         cx: &mut Context<Self>,
@@ -4352,16 +4145,19 @@ impl Project {
         &self.buffer_store
     }
 
-    pub fn git_state(&self) -> &Entity<GitState> {
-        &self.git_state
+    pub fn git_state(&self) -> Option<&Entity<GitState>> {
+        self.git_state.as_ref()
     }
 
     pub fn active_repository(&self, cx: &App) -> Option<RepositoryHandle> {
-        self.git_state.read(cx).active_repository()
+        self.git_state()
+            .and_then(|git_state| git_state.read(cx).active_repository())
     }
 
     pub fn all_repositories(&self, cx: &App) -> Vec<RepositoryHandle> {
-        self.git_state.read(cx).all_repositories()
+        self.git_state()
+            .map(|git_state| git_state.read(cx).all_repositories())
+            .unwrap_or_default()
     }
 }
 

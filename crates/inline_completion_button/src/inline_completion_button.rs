@@ -1,5 +1,5 @@
 use anyhow::Result;
-use client::UserStore;
+use client::{Client, UserStore};
 use copilot::{Copilot, Status};
 use editor::{actions::ShowInlineCompletion, scroll::Autoscroll, Editor};
 use feature_flags::{
@@ -21,14 +21,15 @@ use settings::{update_settings_file, Settings, SettingsStore};
 use std::{path::Path, sync::Arc, time::Duration};
 use supermaven::{AccountStatus, Supermaven};
 use ui::{
-    prelude::*, Clickable, ContextMenu, ContextMenuEntry, IconButton, IconButtonShape, PopoverMenu,
-    PopoverMenuHandle, Tooltip,
+    prelude::*, ButtonLike, Clickable, ContextMenu, ContextMenuEntry, IconButton,
+    IconWithIndicator, Indicator, PopoverMenu, PopoverMenuHandle, Tooltip,
 };
 use workspace::{
     create_and_open_local_file, item::ItemHandle, notifications::NotificationId, StatusItemView,
     Toast, Workspace,
 };
 use zed_actions::OpenBrowser;
+use zed_predict_onboarding::ZedPredictModal;
 use zeta::RateCompletionModal;
 
 actions!(zeta, [RateCompletions]);
@@ -45,6 +46,7 @@ pub struct InlineCompletionButton {
     language: Option<Arc<Language>>,
     file: Option<Arc<dyn File>>,
     inline_completion_provider: Option<Arc<dyn inline_completion::InlineCompletionProviderHandle>>,
+    client: Arc<Client>,
     fs: Arc<dyn Fs>,
     workspace: WeakEntity<Workspace>,
     user_store: Entity<UserStore>,
@@ -228,49 +230,71 @@ impl Render for InlineCompletionButton {
                     return div();
                 }
 
-                fn icon_button() -> IconButton {
-                    IconButton::new("zed-predict-pending-button", IconName::ZedPredict)
-                        .shape(IconButtonShape::Square)
-                }
-
                 let current_user_terms_accepted =
                     self.user_store.read(cx).current_user_has_accepted_terms();
 
                 if !current_user_terms_accepted.unwrap_or(false) {
+                    let workspace = self.workspace.clone();
+                    let user_store = self.user_store.clone();
+                    let client = self.client.clone();
+                    let fs = self.fs.clone();
+
                     let signed_in = current_user_terms_accepted.is_some();
-                    let tooltip_meta = if signed_in {
-                        "Read Terms of Service"
-                    } else {
-                        "Sign in to use"
-                    };
 
                     return div().child(
-                        icon_button()
+                        ButtonLike::new("zeta-pending-tos-icon")
+                            .child(
+                                IconWithIndicator::new(
+                                    Icon::new(IconName::ZedPredict),
+                                    Some(Indicator::dot().color(Color::Error)),
+                                )
+                                .indicator_border_color(Some(
+                                    cx.theme().colors().status_bar_background,
+                                ))
+                                .into_any_element(),
+                            )
                             .tooltip(move |window, cx| {
                                 Tooltip::with_meta(
                                     "Edit Predictions",
                                     None,
-                                    tooltip_meta,
+                                    if signed_in {
+                                        "Read Terms of Service"
+                                    } else {
+                                        "Sign in to use"
+                                    },
                                     window,
                                     cx,
                                 )
                             })
                             .on_click(cx.listener(move |_, _, window, cx| {
-                                window.dispatch_action(
-                                    zed_actions::OpenZedPredictOnboarding.boxed_clone(),
-                                    cx,
-                                );
+                                if let Some(workspace) = workspace.upgrade() {
+                                    ZedPredictModal::toggle(
+                                        workspace,
+                                        user_store.clone(),
+                                        client.clone(),
+                                        fs.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }
                             })),
                     );
                 }
 
                 let this = cx.entity().clone();
+                let button = IconButton::new("zeta", IconName::ZedPredict).when(
+                    !self.popover_menu_handle.is_deployed(),
+                    |button| {
+                        button.tooltip(|window, cx| {
+                            Tooltip::for_action("Edit Prediction", &ToggleMenu, window, cx)
+                        })
+                    },
+                );
 
-                if !self.popover_menu_handle.is_deployed() {
-                    icon_button().tooltip(|window, cx| {
-                        Tooltip::for_action("Edit Prediction", &ToggleMenu, window, cx)
-                    });
-                }
+                let is_refreshing = self
+                    .inline_completion_provider
+                    .as_ref()
+                    .map_or(false, |provider| provider.is_refreshing(cx));
 
                 let mut popover_menu = PopoverMenu::new("zeta")
                     .menu(move |window, cx| {
@@ -279,14 +303,9 @@ impl Render for InlineCompletionButton {
                     .anchor(Corner::BottomRight)
                     .with_handle(self.popover_menu_handle.clone());
 
-                let is_refreshing = self
-                    .inline_completion_provider
-                    .as_ref()
-                    .map_or(false, |provider| provider.is_refreshing(cx));
-
                 if is_refreshing {
                     popover_menu = popover_menu.trigger(
-                        icon_button().with_animation(
+                        button.with_animation(
                             "pulsating-label",
                             Animation::new(Duration::from_secs(2))
                                 .repeat()
@@ -295,7 +314,7 @@ impl Render for InlineCompletionButton {
                         ),
                     );
                 } else {
-                    popover_menu = popover_menu.trigger(icon_button());
+                    popover_menu = popover_menu.trigger(button);
                 }
 
                 div().child(popover_menu.into_any_element())
@@ -309,6 +328,7 @@ impl InlineCompletionButton {
         workspace: WeakEntity<Workspace>,
         fs: Arc<dyn Fs>,
         user_store: Entity<UserStore>,
+        client: Arc<Client>,
         popover_menu_handle: PopoverMenuHandle<ContextMenu>,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -328,6 +348,7 @@ impl InlineCompletionButton {
             inline_completion_provider: None,
             popover_menu_handle,
             workspace,
+            client,
             fs,
             user_store,
         }
@@ -426,15 +447,10 @@ impl InlineCompletionButton {
 
             if data_collection.is_supported() {
                 let provider = provider.clone();
-                menu = menu
-                    .separator()
-                    .header("Help Improve The Model")
-                    .header("Valid Only For OSS Projects");
-                menu = menu.item(
-                    // TODO: We want to add something later that communicates whether
-                    // the current project is open-source.
-                    ContextMenuEntry::new("Share Training Data")
+                menu = menu.separator().item(
+                    ContextMenuEntry::new("Data Collection")
                         .toggleable(IconPosition::Start, data_collection.is_enabled())
+                        .disabled(data_collection.is_unknown())
                         .handler(move |_, cx| {
                             provider.toggle_data_collection(cx);
                         }),

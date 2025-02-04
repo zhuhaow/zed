@@ -145,7 +145,7 @@
       "cmd-shift-enter": "editor::NewlineAbove",
       "cmd-k z": "editor::ToggleSoftWrap",
       "cmd-f": "buffer_search::Deploy",
-      "cmd-alt-f": "buffer_search::DeployReplace",
+      "cmd-alt-f": ["buffer_search::Deploy", { "replace_enabled": true }],
       "cmd-alt-l": ["buffer_search::Deploy", { "selection_search_enabled": true }],
       "cmd-e": ["buffer_search::Deploy", { "focus": false }],
       "cmd->": "assistant::QuoteSelection",
@@ -587,13 +587,6 @@
     }
   },
   {
-    "context": "Editor && inline_completion && showing_completions",
-    "bindings": {
-      // Currently, changing this binding breaks the preview behavior
-      "alt-tab": "editor::AcceptInlineCompletion"
-    }
-  },
-  {
     "context": "Editor && showing_code_actions",
     "use_key_equivalents": true,
     "bindings": {
@@ -841,8 +834,6 @@
       // Terminal.app compatibility
       "alt-left": ["terminal::SendText", "\u001bb"],
       "alt-right": ["terminal::SendText", "\u001bf"],
-      "alt-b": ["terminal::SendText", "\u001bb"],
-      "alt-f": ["terminal::SendText", "\u001bf"],
       // There are conflicting bindings for these keys in the global context.
       // these bindings override them, remove at your own risk:
       "up": ["terminal::SendKeystroke", "up"],

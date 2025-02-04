@@ -508,7 +508,7 @@ impl DisplayMap {
 
     pub(crate) fn splice_inlays(
         &mut self,
-        to_remove: &[InlayId],
+        to_remove: Vec<InlayId>,
         to_insert: Vec<Inlay>,
         cx: &mut Context<Self>,
     ) {
@@ -1068,15 +1068,13 @@ impl DisplaySnapshot {
         DisplayPoint(self.block_snapshot.clip_point(point.0, bias))
     }
 
-    pub fn clip_at_line_end(&self, display_point: DisplayPoint) -> DisplayPoint {
-        let mut point = self.display_point_to_point(display_point, Bias::Left);
-
-        if point.column != self.buffer_snapshot.line_len(MultiBufferRow(point.row)) {
-            return display_point;
+    pub fn clip_at_line_end(&self, point: DisplayPoint) -> DisplayPoint {
+        let mut point = point.0;
+        if point.column == self.line_len(DisplayRow(point.row)) {
+            point.column = point.column.saturating_sub(1);
+            point = self.block_snapshot.clip_point(point, Bias::Left);
         }
-        point.column = point.column.saturating_sub(1);
-        point = self.buffer_snapshot.clip_point(point, Bias::Left);
-        self.point_to_display_point(point, Bias::Left)
+        DisplayPoint(point)
     }
 
     pub fn folds_in_range<T>(&self, range: Range<T>) -> impl Iterator<Item = &Fold>
