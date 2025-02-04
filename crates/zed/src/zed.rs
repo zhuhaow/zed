@@ -45,6 +45,7 @@ use settings::{
 };
 use std::any::TypeId;
 use std::path::PathBuf;
+use std::sync::atomic::{self, AtomicBool};
 use std::rc::Rc;
 use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
 use terminal_view::terminal_panel::{self, TerminalPanel};
@@ -879,7 +880,11 @@ fn install_cli(_: &mut Workspace, _: &install_cli::Install, cx: &mut ViewContext
     .detach_and_prompt_err("Error installing zed cli", cx, |_, _| None);
 }
 
+static WAITING_QUIT_CONFIRMATION: AtomicBool = AtomicBool::new(false);
 fn quit(_: &Quit, cx: &mut AppContext) {
+    if WAITING_QUIT_CONFIRMATION.load(atomic::Ordering::Acquire) {
+        return;
+    }
     let should_confirm = WorkspaceSettings::get_global(cx).confirm_quit;
     cx.spawn(|mut cx| async move {
         let mut workspace_windows = cx.update(|cx| {
@@ -896,22 +901,26 @@ fn quit(_: &Quit, cx: &mut AppContext) {
         })
         .log_err();
 
-        if let (true, Some(workspace)) = (should_confirm, workspace_windows.first().copied()) {
-            let answer = workspace
-                .update(&mut cx, |_, cx| {
+        if should_confirm {
+            if let Some(workspace) = workspace_windows.first() {
+                let answer = workspace
+                    .update(&mut cx, |_, cx| {
                     cx.prompt(
                         PromptLevel::Info,
                         "Are you sure you want to quit?",
                         None,
                         &["Quit", "Cancel"],
-                    )
-                })
-                .log_err();
+                        )
+                    })
+                    .log_err();
 
-            if let Some(answer) = answer {
-                let answer = answer.await.ok();
-                if answer != Some(0) {
-                    return Ok(());
+                if let Some(answer) = answer {
+                    WAITING_QUIT_CONFIRMATION.store(true, atomic::Ordering::Release);
+                    let answer = answer.await.ok();
+                    WAITING_QUIT_CONFIRMATION.store(false, atomic::Ordering::Release);
+                    if answer != Some(0) {
+                        return Ok(());
+                    }
                 }
             }
         }
