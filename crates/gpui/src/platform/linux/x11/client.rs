@@ -186,8 +186,6 @@ pub struct X11ClientState {
     pub(crate) ximc: Option<X11rbClient<Rc<XCBConnection>>>,
     pub(crate) xim_handler: Option<XimHandler>,
     pub modifiers: Modifiers,
-    // TODO: Can the other updates to `modifiers` be removed so that this is unnecessary?
-    pub last_modifiers_changed_event: Modifiers,
 
     pub(crate) compose_state: Option<xkbc::compose::State>,
     pub(crate) pre_edit_text: Option<String>,
@@ -436,7 +434,6 @@ impl X11Client {
 
         X11Client(Rc::new(RefCell::new(X11ClientState {
             modifiers: Modifiers::default(),
-            last_modifiers_changed_event: Modifiers::default(),
             event_loop: Some(event_loop),
             loop_handle: handle,
             common,
@@ -870,12 +867,11 @@ impl X11Client {
                 }
 
                 let modifiers = Modifiers::from_xkb(&state.xkb);
-                if state.last_modifiers_changed_event == modifiers {
+                if state.modifiers == modifiers {
                     drop(state);
                 } else {
                     let focused_window_id = state.keyboard_focused_window?;
                     state.modifiers = modifiers;
-                    state.last_modifiers_changed_event = modifiers;
                     drop(state);
 
                     let focused_window = self.get_window(focused_window_id)?;

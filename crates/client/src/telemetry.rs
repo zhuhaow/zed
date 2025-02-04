@@ -3,21 +3,23 @@ mod event_coalescer;
 use crate::TelemetrySettings;
 use anyhow::Result;
 use clock::SystemClock;
+use collections::{HashMap, HashSet};
 use futures::channel::mpsc;
 use futures::{Future, StreamExt};
-use gpui::{App, BackgroundExecutor, Task};
+use gpui::{AppContext, BackgroundExecutor, Task};
 use http_client::{self, AsyncBody, HttpClient, HttpClientWithUrl, Method, Request};
 use parking_lot::Mutex;
 use release_channel::ReleaseChannel;
 use settings::{Settings, SettingsStore};
 use sha2::{Digest, Sha256};
-use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Write;
 use std::sync::LazyLock;
 use std::time::Instant;
 use std::{env, mem, path::PathBuf, sync::Arc, time::Duration};
-use telemetry_events::{AssistantEvent, AssistantPhase, Event, EventRequestBody, EventWrapper};
+use telemetry_events::{
+    AppEvent, AssistantEvent, AssistantPhase, EditEvent, Event, EventRequestBody, EventWrapper,
+};
 use util::{ResultExt, TryFutureExt};
 use worktree::{UpdatedEntriesSet, WorktreeId};
 
@@ -176,7 +178,7 @@ impl Telemetry {
     pub fn new(
         clock: Arc<dyn SystemClock>,
         client: Arc<HttpClientWithUrl>,
-        cx: &mut App,
+        cx: &mut AppContext,
     ) -> Arc<Self> {
         let release_channel =
             ReleaseChannel::try_global(cx).map(|release_channel| release_channel.display_name());
@@ -283,7 +285,7 @@ impl Telemetry {
     // TestAppContext ends up calling this function on shutdown and it panics when trying to find the TelemetrySettings
     #[cfg(not(any(test, feature = "test-support")))]
     fn shutdown_telemetry(self: &Arc<Self>) -> impl Future<Output = ()> {
-        telemetry::event!("App Closed");
+        self.report_app_event("close".to_string());
         // TODO: close final edit period and make sure it's sent
         Task::ready(())
     }
@@ -297,7 +299,7 @@ impl Telemetry {
         system_id: Option<String>,
         installation_id: Option<String>,
         session_id: String,
-        cx: &App,
+        cx: &AppContext,
     ) {
         let mut state = self.state.lock();
         state.system_id = system_id.map(|id| id.into());
@@ -353,23 +355,30 @@ impl Telemetry {
         );
     }
 
+    pub fn report_app_event(self: &Arc<Self>, operation: String) -> Event {
+        let event = Event::App(AppEvent { operation });
+
+        self.report_event(event.clone());
+
+        event
+    }
+
     pub fn log_edit_event(self: &Arc<Self>, environment: &'static str, is_via_ssh: bool) {
         let mut state = self.state.lock();
         let period_data = state.event_coalescer.log_event(environment);
         drop(state);
 
         if let Some((start, end, environment)) = period_data {
-            let duration = end
-                .saturating_duration_since(start)
-                .min(Duration::from_secs(60 * 60 * 24))
-                .as_millis() as i64;
+            let event = Event::Edit(EditEvent {
+                duration: end
+                    .saturating_duration_since(start)
+                    .min(Duration::from_secs(60 * 60 * 24))
+                    .as_millis() as i64,
+                environment: environment.to_string(),
+                is_via_ssh,
+            });
 
-            telemetry::event!(
-                "Editor Edited",
-                duration = duration,
-                environment = environment.to_string(),
-                is_via_ssh = is_via_ssh
-            );
+            self.report_event(event);
         }
     }
 
@@ -413,8 +422,9 @@ impl Telemetry {
                 .collect()
         };
 
+        // Done on purpose to avoid calling `self.state.lock()` multiple times
         for project_type_name in project_type_names {
-            telemetry::event!("Project Opened", project_type = project_type_name);
+            self.report_app_event(format!("open {} project", project_type_name));
         }
     }
 
@@ -580,7 +590,6 @@ mod tests {
     use clock::FakeSystemClock;
     use gpui::TestAppContext;
     use http_client::FakeHttpClient;
-    use telemetry_events::FlexibleEvent;
 
     #[gpui::test]
     fn test_telemetry_flush_on_max_queue_size(cx: &mut TestAppContext) {
@@ -600,17 +609,15 @@ mod tests {
             assert!(is_empty_state(&telemetry));
 
             let first_date_time = clock.utc_now();
-            let event_properties = HashMap::from_iter([(
-                "test_key".to_string(),
-                serde_json::Value::String("test_value".to_string()),
-            )]);
+            let operation = "test".to_string();
 
-            let event = FlexibleEvent {
-                event_type: "test".to_string(),
-                event_properties,
-            };
-
-            telemetry.report_event(Event::Flexible(event.clone()));
+            let event = telemetry.report_app_event(operation.clone());
+            assert_eq!(
+                event,
+                Event::App(AppEvent {
+                    operation: operation.clone(),
+                })
+            );
             assert_eq!(telemetry.state.lock().events_queue.len(), 1);
             assert!(telemetry.state.lock().flush_events_task.is_some());
             assert_eq!(
@@ -620,7 +627,13 @@ mod tests {
 
             clock.advance(Duration::from_millis(100));
 
-            telemetry.report_event(Event::Flexible(event.clone()));
+            let event = telemetry.report_app_event(operation.clone());
+            assert_eq!(
+                event,
+                Event::App(AppEvent {
+                    operation: operation.clone(),
+                })
+            );
             assert_eq!(telemetry.state.lock().events_queue.len(), 2);
             assert!(telemetry.state.lock().flush_events_task.is_some());
             assert_eq!(
@@ -630,7 +643,13 @@ mod tests {
 
             clock.advance(Duration::from_millis(100));
 
-            telemetry.report_event(Event::Flexible(event.clone()));
+            let event = telemetry.report_app_event(operation.clone());
+            assert_eq!(
+                event,
+                Event::App(AppEvent {
+                    operation: operation.clone(),
+                })
+            );
             assert_eq!(telemetry.state.lock().events_queue.len(), 3);
             assert!(telemetry.state.lock().flush_events_task.is_some());
             assert_eq!(
@@ -641,7 +660,14 @@ mod tests {
             clock.advance(Duration::from_millis(100));
 
             // Adding a 4th event should cause a flush
-            telemetry.report_event(Event::Flexible(event));
+            let event = telemetry.report_app_event(operation.clone());
+            assert_eq!(
+                event,
+                Event::App(AppEvent {
+                    operation: operation.clone(),
+                })
+            );
+
             assert!(is_empty_state(&telemetry));
         });
     }
@@ -664,19 +690,17 @@ mod tests {
             telemetry.start(system_id, installation_id, session_id, cx);
 
             assert!(is_empty_state(&telemetry));
+
             let first_date_time = clock.utc_now();
+            let operation = "test".to_string();
 
-            let event_properties = HashMap::from_iter([(
-                "test_key".to_string(),
-                serde_json::Value::String("test_value".to_string()),
-            )]);
-
-            let event = FlexibleEvent {
-                event_type: "test".to_string(),
-                event_properties,
-            };
-
-            telemetry.report_event(Event::Flexible(event));
+            let event = telemetry.report_app_event(operation.clone());
+            assert_eq!(
+                event,
+                Event::App(AppEvent {
+                    operation: operation.clone(),
+                })
+            );
             assert_eq!(telemetry.state.lock().events_queue.len(), 1);
             assert!(telemetry.state.lock().flush_events_task.is_some());
             assert_eq!(

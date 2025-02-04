@@ -86,7 +86,6 @@
       "ctrl-[": ["vim::SwitchMode", "Normal"],
       "v": "vim::ToggleVisual",
       "shift-v": "vim::ToggleVisualLine",
-      "ctrl-g": "vim::ShowLocation",
       "ctrl-v": "vim::ToggleVisualBlock",
       "ctrl-q": "vim::ToggleVisualBlock",
       "shift-k": "editor::Hover",
@@ -408,7 +407,6 @@
       "(": "vim::Parentheses",
       ")": "vim::Parentheses",
       "b": "vim::Parentheses",
-      // "b": "vim::AnyBrackets",
       "[": "vim::SquareBrackets",
       "]": "vim::SquareBrackets",
       "r": "vim::SquareBrackets",
@@ -421,8 +419,7 @@
       "i": "vim::IndentObj",
       "shift-i": ["vim::IndentObj", { "includeBelow": true }],
       "f": "vim::Method",
-      "c": "vim::Class",
-      "e": "vim::EntireFile"
+      "c": "vim::Class"
     }
   },
   {
@@ -438,7 +435,7 @@
     "bindings": {
       "d": "vim::CurrentLine",
       "s": ["vim::PushOperator", "DeleteSurrounds"],
-      "o": "editor::ToggleSelectedDiffHunks", // "d o"
+      "o": "editor::ToggleHunkDiff", // "d o"
       "p": "editor::RevertSelectedHunks" // "d p"
     }
   },
@@ -611,12 +608,10 @@
       "ctrl-w shift-s": "pane::SplitHorizontal",
       "ctrl-w ctrl-s": "pane::SplitHorizontal",
       "ctrl-w s": "pane::SplitHorizontal",
-      "ctrl-w ctrl-c": "pane::CloseActiveItem",
-      "ctrl-w c": "pane::CloseActiveItem",
-      "ctrl-w ctrl-q": "pane::CloseActiveItem",
-      "ctrl-w q": "pane::CloseActiveItem",
-      "ctrl-w ctrl-a": "pane::CloseAllItems",
-      "ctrl-w a": "pane::CloseAllItems",
+      "ctrl-w ctrl-c": "pane::CloseAllItems",
+      "ctrl-w c": "pane::CloseAllItems",
+      "ctrl-w ctrl-q": "pane::CloseAllItems",
+      "ctrl-w q": "pane::CloseAllItems",
       "ctrl-w ctrl-o": "workspace::CloseInactiveTabsAndPanes",
       "ctrl-w o": "workspace::CloseInactiveTabsAndPanes",
       "ctrl-w ctrl-n": "workspace::NewFileSplitHorizontal",
@@ -671,21 +666,6 @@
       "k": "menu::SelectPrev",
       "shift-g": "menu::SelectLast",
       "g g": "menu::SelectFirst"
-    }
-  },
-  {
-    "context": "GitPanel && ChangesList",
-    "use_key_equivalents": true,
-    "bindings": {
-      "k": "menu::SelectPrev",
-      "j": "menu::SelectNext",
-      "g g": "menu::SelectFirst",
-      "shift-g": "menu::SelectLast",
-      "g f": "menu::Confirm",
-      "i": "git_panel::FocusEditor",
-      "x": "git::ToggleStaged",
-      "shift-x": "git::StageAll",
-      "shift-u": "git::UnstageAll"
     }
   }
 ]

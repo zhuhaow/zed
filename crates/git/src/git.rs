@@ -6,7 +6,7 @@ mod remote;
 pub mod repository;
 pub mod status;
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, Context, Result};
 use gpui::actions;
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
@@ -20,12 +20,10 @@ pub use git2 as libgit;
 pub use repository::WORK_DIRECTORY_REPO_PATH;
 
 pub static DOT_GIT: LazyLock<&'static OsStr> = LazyLock::new(|| OsStr::new(".git"));
-pub static GITIGNORE: LazyLock<&'static OsStr> = LazyLock::new(|| OsStr::new(".gitignore"));
+pub static COOKIES: LazyLock<&'static OsStr> = LazyLock::new(|| OsStr::new("cookies"));
 pub static FSMONITOR_DAEMON: LazyLock<&'static OsStr> =
     LazyLock::new(|| OsStr::new("fsmonitor--daemon"));
-pub static COMMIT_MESSAGE: LazyLock<&'static OsStr> =
-    LazyLock::new(|| OsStr::new("COMMIT_EDITMSG"));
-pub static INDEX_LOCK: LazyLock<&'static OsStr> = LazyLock::new(|| OsStr::new("index.lock"));
+pub static GITIGNORE: LazyLock<&'static OsStr> = LazyLock::new(|| OsStr::new(".gitignore"));
 
 actions!(
     git,
@@ -44,9 +42,6 @@ actions!(
         ClearCommitMessage
     ]
 );
-
-/// The length of a Git short SHA.
-pub const SHORT_SHA_LENGTH: usize = 7;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Oid(libgit::Oid);
@@ -67,7 +62,7 @@ impl Oid {
 
     /// Returns this [`Oid`] as a short SHA.
     pub fn display_short(&self) -> String {
-        self.to_string().chars().take(SHORT_SHA_LENGTH).collect()
+        self.to_string().chars().take(7).collect()
     }
 }
 

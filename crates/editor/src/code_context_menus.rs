@@ -1,16 +1,17 @@
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
-    div, px, uniform_list, AnyElement, BackgroundExecutor, Div, Entity, FontWeight,
-    ListSizingBehavior, ScrollStrategy, SharedString, Size, StrikethroughStyle, StyledText,
-    UniformListScrollHandle, WeakEntity,
+    div, pulsating_between, px, uniform_list, Animation, AnimationExt, AnyElement,
+    BackgroundExecutor, Div, FontWeight, ListSizingBehavior, Model, ScrollStrategy, SharedString,
+    Size, StrikethroughStyle, StyledText, UniformListScrollHandle, ViewContext, WeakView,
 };
 use language::Buffer;
-use language::{CodeLabel, CompletionDocumentation};
+use language::{CodeLabel, Documentation};
 use lsp::LanguageServerId;
 use multi_buffer::{Anchor, ExcerptId};
 use ordered_float::OrderedFloat;
 use project::{CodeAction, Completion, TaskSourceKind};
-
+use settings::Settings;
+use std::time::Duration;
 use std::{
     cell::RefCell,
     cmp::{min, Reverse},
@@ -25,9 +26,11 @@ use workspace::Workspace;
 
 use crate::{
     actions::{ConfirmCodeAction, ConfirmCompletion},
+    display_map::DisplayPoint,
     render_parsed_markdown, split_words, styled_runs_for_code_label, CodeActionProvider,
     CompletionId, CompletionProvider, DisplayRow, Editor, EditorStyle, ResolvedTasks,
 };
+use crate::{AcceptInlineCompletion, InlineCompletionMenuHint, InlineCompletionText};
 
 pub const MENU_GAP: Pixels = px(4.);
 pub const MENU_ASIDE_X_PADDING: Pixels = px(16.);
@@ -43,7 +46,7 @@ impl CodeContextMenu {
     pub fn select_first(
         &mut self,
         provider: Option<&dyn CompletionProvider>,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) -> bool {
         if self.visible() {
             match self {
@@ -59,7 +62,7 @@ impl CodeContextMenu {
     pub fn select_prev(
         &mut self,
         provider: Option<&dyn CompletionProvider>,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) -> bool {
         if self.visible() {
             match self {
@@ -75,7 +78,7 @@ impl CodeContextMenu {
     pub fn select_next(
         &mut self,
         provider: Option<&dyn CompletionProvider>,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) -> bool {
         if self.visible() {
             match self {
@@ -91,7 +94,7 @@ impl CodeContextMenu {
     pub fn select_last(
         &mut self,
         provider: Option<&dyn CompletionProvider>,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) -> bool {
         if self.visible() {
             match self {
@@ -111,10 +114,10 @@ impl CodeContextMenu {
         }
     }
 
-    pub fn origin(&self) -> ContextMenuOrigin {
+    pub fn origin(&self, cursor_position: DisplayPoint) -> ContextMenuOrigin {
         match self {
-            CodeContextMenu::Completions(menu) => menu.origin(),
-            CodeContextMenu::CodeActions(menu) => menu.origin(),
+            CodeContextMenu::Completions(menu) => menu.origin(cursor_position),
+            CodeContextMenu::CodeActions(menu) => menu.origin(cursor_position),
         }
     }
 
@@ -123,15 +126,14 @@ impl CodeContextMenu {
         style: &EditorStyle,
         max_height_in_lines: u32,
         y_flipped: bool,
-        window: &mut Window,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) -> AnyElement {
         match self {
             CodeContextMenu::Completions(menu) => {
-                menu.render(style, max_height_in_lines, y_flipped, window, cx)
+                menu.render(style, max_height_in_lines, y_flipped, cx)
             }
             CodeContextMenu::CodeActions(menu) => {
-                menu.render(style, max_height_in_lines, y_flipped, window, cx)
+                menu.render(style, max_height_in_lines, y_flipped, cx)
             }
         }
     }
@@ -140,8 +142,8 @@ impl CodeContextMenu {
         &self,
         style: &EditorStyle,
         max_size: Size<Pixels>,
-        workspace: Option<WeakEntity<Workspace>>,
-        cx: &mut Context<Editor>,
+        workspace: Option<WeakView<Workspace>>,
+        cx: &mut ViewContext<Editor>,
     ) -> Option<AnyElement> {
         match self {
             CodeContextMenu::Completions(menu) => menu.render_aside(style, max_size, workspace, cx),
@@ -151,7 +153,7 @@ impl CodeContextMenu {
 }
 
 pub enum ContextMenuOrigin {
-    Cursor,
+    EditorPoint(DisplayPoint),
     GutterIndicator(DisplayRow),
 }
 
@@ -160,16 +162,21 @@ pub struct CompletionsMenu {
     pub id: CompletionId,
     sort_completions: bool,
     pub initial_position: Anchor,
-    pub buffer: Entity<Buffer>,
+    pub buffer: Model<Buffer>,
     pub completions: Rc<RefCell<Box<[Completion]>>>,
     match_candidates: Rc<[StringMatchCandidate]>,
-    pub entries: Rc<RefCell<Vec<StringMatch>>>,
+    pub entries: Rc<RefCell<Vec<CompletionEntry>>>,
     pub selected_item: usize,
     scroll_handle: UniformListScrollHandle,
     resolve_completions: bool,
     show_completion_documentation: bool,
     last_rendered_range: Rc<RefCell<Option<Range<usize>>>>,
-    pub previewing_inline_completion: bool,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum CompletionEntry {
+    Match(StringMatch),
+    InlineCompletionHint(InlineCompletionMenuHint),
 }
 
 impl CompletionsMenu {
@@ -178,7 +185,7 @@ impl CompletionsMenu {
         sort_completions: bool,
         show_completion_documentation: bool,
         initial_position: Anchor,
-        buffer: Entity<Buffer>,
+        buffer: Model<Buffer>,
         completions: Box<[Completion]>,
     ) -> Self {
         let match_candidates = completions
@@ -200,7 +207,6 @@ impl CompletionsMenu {
             scroll_handle: UniformListScrollHandle::new(),
             resolve_completions: true,
             last_rendered_range: RefCell::new(None).into(),
-            previewing_inline_completion: false,
         }
     }
 
@@ -209,7 +215,7 @@ impl CompletionsMenu {
         sort_completions: bool,
         choices: &Vec<String>,
         selection: Range<Anchor>,
-        buffer: Entity<Buffer>,
+        buffer: Model<Buffer>,
     ) -> Self {
         let completions = choices
             .iter()
@@ -237,11 +243,13 @@ impl CompletionsMenu {
         let entries = choices
             .iter()
             .enumerate()
-            .map(|(id, completion)| StringMatch {
-                candidate_id: id,
-                score: 1.,
-                positions: vec![],
-                string: completion.clone(),
+            .map(|(id, completion)| {
+                CompletionEntry::Match(StringMatch {
+                    candidate_id: id,
+                    score: 1.,
+                    positions: vec![],
+                    string: completion.clone(),
+                })
             })
             .collect::<Vec<_>>();
         Self {
@@ -257,14 +265,13 @@ impl CompletionsMenu {
             resolve_completions: false,
             show_completion_documentation: false,
             last_rendered_range: RefCell::new(None).into(),
-            previewing_inline_completion: false,
         }
     }
 
     fn select_first(
         &mut self,
         provider: Option<&dyn CompletionProvider>,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) {
         let index = if self.scroll_handle.y_flipped() {
             self.entries.borrow().len() - 1
@@ -274,7 +281,11 @@ impl CompletionsMenu {
         self.update_selection_index(index, provider, cx);
     }
 
-    fn select_last(&mut self, provider: Option<&dyn CompletionProvider>, cx: &mut Context<Editor>) {
+    fn select_last(
+        &mut self,
+        provider: Option<&dyn CompletionProvider>,
+        cx: &mut ViewContext<Editor>,
+    ) {
         let index = if self.scroll_handle.y_flipped() {
             0
         } else {
@@ -283,7 +294,11 @@ impl CompletionsMenu {
         self.update_selection_index(index, provider, cx);
     }
 
-    fn select_prev(&mut self, provider: Option<&dyn CompletionProvider>, cx: &mut Context<Editor>) {
+    fn select_prev(
+        &mut self,
+        provider: Option<&dyn CompletionProvider>,
+        cx: &mut ViewContext<Editor>,
+    ) {
         let index = if self.scroll_handle.y_flipped() {
             self.next_match_index()
         } else {
@@ -292,7 +307,11 @@ impl CompletionsMenu {
         self.update_selection_index(index, provider, cx);
     }
 
-    fn select_next(&mut self, provider: Option<&dyn CompletionProvider>, cx: &mut Context<Editor>) {
+    fn select_next(
+        &mut self,
+        provider: Option<&dyn CompletionProvider>,
+        cx: &mut ViewContext<Editor>,
+    ) {
         let index = if self.scroll_handle.y_flipped() {
             self.prev_match_index()
         } else {
@@ -305,7 +324,7 @@ impl CompletionsMenu {
         &mut self,
         match_index: usize,
         provider: Option<&dyn CompletionProvider>,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) {
         if self.selected_item != match_index {
             self.selected_item = match_index;
@@ -332,10 +351,28 @@ impl CompletionsMenu {
         }
     }
 
+    pub fn show_inline_completion_hint(&mut self, hint: InlineCompletionMenuHint) {
+        let hint = CompletionEntry::InlineCompletionHint(hint);
+        let mut entries = self.entries.borrow_mut();
+        match entries.first() {
+            Some(CompletionEntry::InlineCompletionHint { .. }) => {
+                entries[0] = hint;
+            }
+            _ => {
+                entries.insert(0, hint);
+                // When `y_flipped`, need to scroll to bring it into view.
+                if self.selected_item == 0 {
+                    self.scroll_handle
+                        .scroll_to_item(self.selected_item, ScrollStrategy::Top);
+                }
+            }
+        }
+    }
+
     pub fn resolve_visible_completions(
         &mut self,
         provider: Option<&dyn CompletionProvider>,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) {
         if !self.resolve_completions {
             return;
@@ -380,15 +417,17 @@ impl CompletionsMenu {
         // This filtering doesn't happen if the completions are currently being updated.
         let completions = self.completions.borrow();
         let candidate_ids = entry_indices
-            .map(|i| entries[i].candidate_id)
+            .flat_map(|i| Self::entry_candidate_id(&entries[i]))
             .filter(|i| completions[*i].documentation.is_none());
 
         // Current selection is always resolved even if it already has documentation, to handle
         // out-of-spec language servers that return more results later.
-        let selected_candidate_id = entries[self.selected_item].candidate_id;
-        let candidate_ids = iter::once(selected_candidate_id)
-            .chain(candidate_ids.filter(|id| *id != selected_candidate_id))
-            .collect::<Vec<usize>>();
+        let candidate_ids = match Self::entry_candidate_id(&entries[self.selected_item]) {
+            None => candidate_ids.collect::<Vec<usize>>(),
+            Some(selected_candidate_id) => iter::once(selected_candidate_id)
+                .chain(candidate_ids.filter(|id| *id != selected_candidate_id))
+                .collect::<Vec<usize>>(),
+        };
         drop(entries);
 
         if candidate_ids.is_empty() {
@@ -410,16 +449,19 @@ impl CompletionsMenu {
         .detach();
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.entries.borrow().is_empty()
+    fn entry_candidate_id(entry: &CompletionEntry) -> Option<usize> {
+        match entry {
+            CompletionEntry::Match(entry) => Some(entry.candidate_id),
+            CompletionEntry::InlineCompletionHint { .. } => None,
+        }
     }
 
     pub fn visible(&self) -> bool {
-        !self.is_empty() && !self.previewing_inline_completion
+        !self.entries.borrow().is_empty()
     }
 
-    fn origin(&self) -> ContextMenuOrigin {
-        ContextMenuOrigin::Cursor
+    fn origin(&self, cursor_position: DisplayPoint) -> ContextMenuOrigin {
+        ContextMenuOrigin::EditorPoint(cursor_position)
     }
 
     fn render(
@@ -427,8 +469,7 @@ impl CompletionsMenu {
         style: &EditorStyle,
         max_height_in_lines: u32,
         y_flipped: bool,
-        window: &mut Window,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) -> AnyElement {
         let completions = self.completions.borrow_mut();
         let show_completion_documentation = self.show_completion_documentation;
@@ -437,18 +478,23 @@ impl CompletionsMenu {
             .borrow()
             .iter()
             .enumerate()
-            .max_by_key(|(_, mat)| {
-                let completion = &completions[mat.candidate_id];
-                let documentation = &completion.documentation;
+            .max_by_key(|(_, mat)| match mat {
+                CompletionEntry::Match(mat) => {
+                    let completion = &completions[mat.candidate_id];
+                    let documentation = &completion.documentation;
 
-                let mut len = completion.label.text.chars().count();
-                if let Some(CompletionDocumentation::SingleLine(text)) = documentation {
-                    if show_completion_documentation {
-                        len += text.chars().count();
+                    let mut len = completion.label.text.chars().count();
+                    if let Some(Documentation::SingleLine(text)) = documentation {
+                        if show_completion_documentation {
+                            len += text.chars().count();
+                        }
                     }
-                }
 
-                len
+                    len
+                }
+                CompletionEntry::InlineCompletionHint(hint) => {
+                    "Zed AI / ".chars().count() + hint.label().chars().count()
+                }
             })
             .map(|(ix, _)| ix);
         drop(completions);
@@ -459,10 +505,10 @@ impl CompletionsMenu {
         let last_rendered_range = self.last_rendered_range.clone();
         let style = style.clone();
         let list = uniform_list(
-            cx.entity().clone(),
+            cx.view().clone(),
             "completions",
             self.entries.borrow().len(),
-            move |_editor, range, _window, cx| {
+            move |_editor, range, cx| {
                 last_rendered_range.borrow_mut().replace(range.clone());
                 let start_ix = range.start;
                 let completions_guard = completions.borrow_mut();
@@ -472,89 +518,181 @@ impl CompletionsMenu {
                     .enumerate()
                     .map(|(ix, mat)| {
                         let item_ix = start_ix + ix;
-                        let completion = &completions_guard[mat.candidate_id];
-                        let documentation = if show_completion_documentation {
-                            &completion.documentation
-                        } else {
-                            &None
-                        };
+                        let buffer_font = theme::ThemeSettings::get_global(cx).buffer_font.clone();
+                        let base_label = h_flex()
+                            .gap_1()
+                            .child(div().font(buffer_font.clone()).child("Zed AI"))
+                            .child(div().px_0p5().child("/").opacity(0.2));
 
-                        let filter_start = completion.label.filter_range.start;
-                        let highlights = gpui::combine_highlights(
-                            mat.ranges().map(|range| {
-                                (
-                                    filter_start + range.start..filter_start + range.end,
-                                    FontWeight::BOLD.into(),
-                                )
-                            }),
-                            styled_runs_for_code_label(&completion.label, &style.syntax).map(
-                                |(range, mut highlight)| {
-                                    // Ignore font weight for syntax highlighting, as we'll use it
-                                    // for fuzzy matches.
-                                    highlight.font_weight = None;
-                                    if completion.lsp_completion.deprecated.unwrap_or(false) {
-                                        highlight.strikethrough = Some(StrikethroughStyle {
-                                            thickness: 1.0.into(),
-                                            ..Default::default()
-                                        });
-                                        highlight.color = Some(cx.theme().colors().text_muted);
-                                    }
+                        match mat {
+                            CompletionEntry::Match(mat) => {
+                                let candidate_id = mat.candidate_id;
+                                let completion = &completions_guard[candidate_id];
 
-                                    (range, highlight)
-                                },
-                            ),
-                        );
+                                let documentation = if show_completion_documentation {
+                                    &completion.documentation
+                                } else {
+                                    &None
+                                };
 
-                        let completion_label = StyledText::new(completion.label.text.clone())
-                            .with_highlights(&style.text, highlights);
-                        let documentation_label = if let Some(
-                            CompletionDocumentation::SingleLine(text),
-                        ) = documentation
-                        {
-                            if text.trim().is_empty() {
-                                None
-                            } else {
-                                Some(
-                                    Label::new(text.clone())
-                                        .ml_4()
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted),
+                                let filter_start = completion.label.filter_range.start;
+                                let highlights = gpui::combine_highlights(
+                                    mat.ranges().map(|range| {
+                                        (
+                                            filter_start + range.start..filter_start + range.end,
+                                            FontWeight::BOLD.into(),
+                                        )
+                                    }),
+                                    styled_runs_for_code_label(&completion.label, &style.syntax)
+                                        .map(|(range, mut highlight)| {
+                                            // Ignore font weight for syntax highlighting, as we'll use it
+                                            // for fuzzy matches.
+                                            highlight.font_weight = None;
+
+                                            if completion.lsp_completion.deprecated.unwrap_or(false)
+                                            {
+                                                highlight.strikethrough =
+                                                    Some(StrikethroughStyle {
+                                                        thickness: 1.0.into(),
+                                                        ..Default::default()
+                                                    });
+                                                highlight.color =
+                                                    Some(cx.theme().colors().text_muted);
+                                            }
+
+                                            (range, highlight)
+                                        }),
+                                );
+
+                                let completion_label =
+                                    StyledText::new(completion.label.text.clone())
+                                        .with_highlights(&style.text, highlights);
+                                let documentation_label =
+                                    if let Some(Documentation::SingleLine(text)) = documentation {
+                                        if text.trim().is_empty() {
+                                            None
+                                        } else {
+                                            Some(
+                                                Label::new(text.clone())
+                                                    .ml_4()
+                                                    .size(LabelSize::Small)
+                                                    .color(Color::Muted),
+                                            )
+                                        }
+                                    } else {
+                                        None
+                                    };
+
+                                let color_swatch = completion
+                                    .color()
+                                    .map(|color| div().size_4().bg(color).rounded_sm());
+
+                                div().min_w(px(220.)).max_w(px(540.)).child(
+                                    ListItem::new(mat.candidate_id)
+                                        .inset(true)
+                                        .toggle_state(item_ix == selected_item)
+                                        .on_click(cx.listener(move |editor, _event, cx| {
+                                            cx.stop_propagation();
+                                            if let Some(task) = editor.confirm_completion(
+                                                &ConfirmCompletion {
+                                                    item_ix: Some(item_ix),
+                                                },
+                                                cx,
+                                            ) {
+                                                task.detach_and_log_err(cx)
+                                            }
+                                        }))
+                                        .start_slot::<Div>(color_swatch)
+                                        .child(h_flex().overflow_hidden().child(completion_label))
+                                        .end_slot::<Label>(documentation_label),
                                 )
                             }
-                        } else {
-                            None
-                        };
+                            CompletionEntry::InlineCompletionHint(
+                                hint @ InlineCompletionMenuHint::None,
+                            ) => div().min_w(px(250.)).max_w(px(500.)).child(
+                                ListItem::new("inline-completion")
+                                    .inset(true)
+                                    .toggle_state(item_ix == selected_item)
+                                    .start_slot(Icon::new(IconName::ZedPredict))
+                                    .child(
+                                        base_label.child(
+                                            StyledText::new(hint.label())
+                                                .with_highlights(&style.text, None),
+                                        ),
+                                    ),
+                            ),
+                            CompletionEntry::InlineCompletionHint(
+                                hint @ InlineCompletionMenuHint::Loading,
+                            ) => div().min_w(px(250.)).max_w(px(500.)).child(
+                                ListItem::new("inline-completion")
+                                    .inset(true)
+                                    .toggle_state(item_ix == selected_item)
+                                    .start_slot(Icon::new(IconName::ZedPredict))
+                                    .child(base_label.child({
+                                        let text_style = style.text.clone();
+                                        StyledText::new(hint.label())
+                                            .with_highlights(&text_style, None)
+                                            .with_animation(
+                                                "pulsating-label",
+                                                Animation::new(Duration::from_secs(1))
+                                                    .repeat()
+                                                    .with_easing(pulsating_between(0.4, 0.8)),
+                                                move |text, delta| {
+                                                    let mut text_style = text_style.clone();
+                                                    text_style.color =
+                                                        text_style.color.opacity(delta);
+                                                    text.with_highlights(&text_style, None)
+                                                },
+                                            )
+                                    })),
+                            ),
+                            CompletionEntry::InlineCompletionHint(
+                                hint @ InlineCompletionMenuHint::PendingTermsAcceptance,
+                            ) => div().min_w(px(250.)).max_w(px(500.)).child(
+                                ListItem::new("inline-completion")
+                                    .inset(true)
+                                    .toggle_state(item_ix == selected_item)
+                                    .start_slot(Icon::new(IconName::ZedPredict))
+                                    .child(
+                                        base_label.child(
+                                            StyledText::new(hint.label())
+                                                .with_highlights(&style.text, None),
+                                        ),
+                                    )
+                                    .on_click(cx.listener(move |editor, _event, cx| {
+                                        cx.stop_propagation();
+                                        editor.toggle_zed_predict_tos(cx);
+                                    })),
+                            ),
 
-                        let color_swatch = completion
-                            .color()
-                            .map(|color| div().size_4().bg(color).rounded_sm());
-
-                        div().min_w(px(280.)).max_w(px(540.)).child(
-                            ListItem::new(mat.candidate_id)
-                                .inset(true)
-                                .toggle_state(item_ix == selected_item)
-                                .on_click(cx.listener(move |editor, _event, window, cx| {
-                                    cx.stop_propagation();
-                                    if let Some(task) = editor.confirm_completion(
-                                        &ConfirmCompletion {
-                                            item_ix: Some(item_ix),
-                                        },
-                                        window,
-                                        cx,
-                                    ) {
-                                        task.detach_and_log_err(cx)
-                                    }
-                                }))
-                                .start_slot::<Div>(color_swatch)
-                                .child(h_flex().overflow_hidden().child(completion_label))
-                                .end_slot::<Label>(documentation_label),
-                        )
+                            CompletionEntry::InlineCompletionHint(
+                                hint @ InlineCompletionMenuHint::Loaded { .. },
+                            ) => div().min_w(px(250.)).max_w(px(500.)).child(
+                                ListItem::new("inline-completion")
+                                    .inset(true)
+                                    .toggle_state(item_ix == selected_item)
+                                    .start_slot(Icon::new(IconName::ZedPredict))
+                                    .child(
+                                        base_label.child(
+                                            StyledText::new(hint.label())
+                                                .with_highlights(&style.text, None),
+                                        ),
+                                    )
+                                    .on_click(cx.listener(move |editor, _event, cx| {
+                                        cx.stop_propagation();
+                                        editor.accept_inline_completion(
+                                            &AcceptInlineCompletion {},
+                                            cx,
+                                        );
+                                    })),
+                            ),
+                        }
                     })
                     .collect()
             },
         )
         .occlude()
-        .max_h(max_height_in_lines as f32 * window.line_height())
+        .max_h(max_height_in_lines as f32 * cx.line_height())
         .track_scroll(self.scroll_handle.clone())
         .y_flipped(y_flipped)
         .with_width_from_item(widest_completion_ix)
@@ -567,32 +705,49 @@ impl CompletionsMenu {
         &self,
         style: &EditorStyle,
         max_size: Size<Pixels>,
-        workspace: Option<WeakEntity<Workspace>>,
-        cx: &mut Context<Editor>,
+        workspace: Option<WeakView<Workspace>>,
+        cx: &mut ViewContext<Editor>,
     ) -> Option<AnyElement> {
         if !self.show_completion_documentation {
             return None;
         }
 
-        let mat = &self.entries.borrow()[self.selected_item];
-        let multiline_docs = match self.completions.borrow_mut()[mat.candidate_id]
-            .documentation
-            .as_ref()?
-        {
-            CompletionDocumentation::MultiLinePlainText(text) => {
-                div().child(SharedString::from(text.clone()))
+        let multiline_docs = match &self.entries.borrow()[self.selected_item] {
+            CompletionEntry::Match(mat) => {
+                match self.completions.borrow_mut()[mat.candidate_id]
+                    .documentation
+                    .as_ref()?
+                {
+                    Documentation::MultiLinePlainText(text) => {
+                        div().child(SharedString::from(text.clone()))
+                    }
+                    Documentation::MultiLineMarkdown(parsed) if !parsed.text.is_empty() => div()
+                        .child(render_parsed_markdown(
+                            "completions_markdown",
+                            parsed,
+                            &style,
+                            workspace,
+                            cx,
+                        )),
+                    Documentation::MultiLineMarkdown(_) => return None,
+                    Documentation::SingleLine(_) => return None,
+                    Documentation::Undocumented => return None,
+                }
             }
-            CompletionDocumentation::MultiLineMarkdown(parsed) if !parsed.text.is_empty() => div()
-                .child(render_parsed_markdown(
-                    "completions_markdown",
-                    parsed,
-                    &style,
-                    workspace,
-                    cx,
-                )),
-            CompletionDocumentation::MultiLineMarkdown(_) => return None,
-            CompletionDocumentation::SingleLine(_) => return None,
-            CompletionDocumentation::Undocumented => return None,
+            CompletionEntry::InlineCompletionHint(InlineCompletionMenuHint::Loaded { text }) => {
+                match text {
+                    InlineCompletionText::Edit { text, highlights } => div()
+                        .mx_1()
+                        .rounded_md()
+                        .bg(cx.theme().colors().editor_background)
+                        .child(
+                            gpui::StyledText::new(text.clone())
+                                .with_highlights(&style.text, highlights.clone()),
+                        ),
+                    InlineCompletionText::Move(text) => div().child(text.clone()),
+                }
+            }
+            CompletionEntry::InlineCompletionHint(_) => return None,
         };
 
         Some(
@@ -611,6 +766,11 @@ impl CompletionsMenu {
     }
 
     pub async fn filter(&mut self, query: Option<&str>, executor: BackgroundExecutor) {
+        let inline_completion_was_selected = self.selected_item == 0
+            && self.entries.borrow().first().map_or(false, |entry| {
+                matches!(entry, CompletionEntry::InlineCompletionHint(_))
+            });
+
         let mut matches = if let Some(query) = query {
             fuzzy::match_strings(
                 &self.match_candidates,
@@ -704,14 +864,19 @@ impl CompletionsMenu {
         }
         drop(completions);
 
-        *self.entries.borrow_mut() = matches;
-        self.selected_item = 0;
-        // This keeps the display consistent when y_flipped.
-        self.scroll_handle.scroll_to_item(0, ScrollStrategy::Top);
-    }
-
-    pub fn set_previewing_inline_completion(&mut self, value: bool) {
-        self.previewing_inline_completion = value;
+        let mut entries = self.entries.borrow_mut();
+        if let Some(CompletionEntry::InlineCompletionHint(_)) = entries.first() {
+            entries.truncate(1);
+            if inline_completion_was_selected || matches.is_empty() {
+                self.selected_item = 0;
+            } else {
+                self.selected_item = 1;
+            }
+        } else {
+            entries.truncate(0);
+            self.selected_item = 0;
+        }
+        entries.extend(matches.into_iter().map(CompletionEntry::Match));
     }
 }
 
@@ -839,14 +1004,14 @@ impl CodeActionsItem {
 
 pub struct CodeActionsMenu {
     pub actions: CodeActionContents,
-    pub buffer: Entity<Buffer>,
+    pub buffer: Model<Buffer>,
     pub selected_item: usize,
     pub scroll_handle: UniformListScrollHandle,
     pub deployed_from_indicator: Option<DisplayRow>,
 }
 
 impl CodeActionsMenu {
-    fn select_first(&mut self, cx: &mut Context<Editor>) {
+    fn select_first(&mut self, cx: &mut ViewContext<Editor>) {
         self.selected_item = if self.scroll_handle.y_flipped() {
             self.actions.len() - 1
         } else {
@@ -857,7 +1022,7 @@ impl CodeActionsMenu {
         cx.notify()
     }
 
-    fn select_last(&mut self, cx: &mut Context<Editor>) {
+    fn select_last(&mut self, cx: &mut ViewContext<Editor>) {
         self.selected_item = if self.scroll_handle.y_flipped() {
             0
         } else {
@@ -868,7 +1033,7 @@ impl CodeActionsMenu {
         cx.notify()
     }
 
-    fn select_prev(&mut self, cx: &mut Context<Editor>) {
+    fn select_prev(&mut self, cx: &mut ViewContext<Editor>) {
         self.selected_item = if self.scroll_handle.y_flipped() {
             self.next_match_index()
         } else {
@@ -879,7 +1044,7 @@ impl CodeActionsMenu {
         cx.notify();
     }
 
-    fn select_next(&mut self, cx: &mut Context<Editor>) {
+    fn select_next(&mut self, cx: &mut ViewContext<Editor>) {
         self.selected_item = if self.scroll_handle.y_flipped() {
             self.prev_match_index()
         } else {
@@ -910,11 +1075,11 @@ impl CodeActionsMenu {
         !self.actions.is_empty()
     }
 
-    fn origin(&self) -> ContextMenuOrigin {
+    fn origin(&self, cursor_position: DisplayPoint) -> ContextMenuOrigin {
         if let Some(row) = self.deployed_from_indicator {
             ContextMenuOrigin::GutterIndicator(row)
         } else {
-            ContextMenuOrigin::Cursor
+            ContextMenuOrigin::EditorPoint(cursor_position)
         }
     }
 
@@ -923,16 +1088,15 @@ impl CodeActionsMenu {
         _style: &EditorStyle,
         max_height_in_lines: u32,
         y_flipped: bool,
-        window: &mut Window,
-        cx: &mut Context<Editor>,
+        cx: &mut ViewContext<Editor>,
     ) -> AnyElement {
         let actions = self.actions.clone();
         let selected_item = self.selected_item;
         let list = uniform_list(
-            cx.entity().clone(),
+            cx.view().clone(),
             "code_actions_menu",
             self.actions.len(),
-            move |_this, range, _, cx| {
+            move |_this, range, cx| {
                 actions
                     .iter()
                     .skip(range.start)
@@ -947,13 +1111,12 @@ impl CodeActionsMenu {
                                 .inset(true)
                                 .toggle_state(selected)
                                 .when_some(action.as_code_action(), |this, action| {
-                                    this.on_click(cx.listener(move |editor, _, window, cx| {
+                                    this.on_click(cx.listener(move |editor, _, cx| {
                                         cx.stop_propagation();
                                         if let Some(task) = editor.confirm_code_action(
                                             &ConfirmCodeAction {
                                                 item_ix: Some(item_ix),
                                             },
-                                            window,
                                             cx,
                                         ) {
                                             task.detach_and_log_err(cx)
@@ -972,13 +1135,12 @@ impl CodeActionsMenu {
                                     )
                                 })
                                 .when_some(action.as_task(), |this, task| {
-                                    this.on_click(cx.listener(move |editor, _, window, cx| {
+                                    this.on_click(cx.listener(move |editor, _, cx| {
                                         cx.stop_propagation();
                                         if let Some(task) = editor.confirm_code_action(
                                             &ConfirmCodeAction {
                                                 item_ix: Some(item_ix),
                                             },
-                                            window,
                                             cx,
                                         ) {
                                             task.detach_and_log_err(cx)
@@ -999,7 +1161,7 @@ impl CodeActionsMenu {
             },
         )
         .occlude()
-        .max_h(max_height_in_lines as f32 * window.line_height())
+        .max_h(max_height_in_lines as f32 * cx.line_height())
         .track_scroll(self.scroll_handle.clone())
         .y_flipped(y_flipped)
         .with_width_from_item(

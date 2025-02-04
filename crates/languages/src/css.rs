@@ -151,7 +151,7 @@ async fn get_cached_server_binary(
 
 #[cfg(test)]
 mod tests {
-    use gpui::{AppContext as _, TestAppContext};
+    use gpui::{Context, TestAppContext};
     use unindent::Unindent;
 
     #[gpui::test]
@@ -183,7 +183,8 @@ mod tests {
         "#
         .unindent();
 
-        let buffer = cx.new(|cx| language::Buffer::local(text, cx).with_language(language, cx));
+        let buffer =
+            cx.new_model(|cx| language::Buffer::local(text, cx).with_language(language, cx));
         let outline = buffer.update(cx, |buffer, _| buffer.snapshot().outline(None).unwrap());
         assert_eq!(
             outline

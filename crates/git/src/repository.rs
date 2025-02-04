@@ -1,7 +1,7 @@
 use crate::status::FileStatus;
+use crate::GitHostingProviderRegistry;
 use crate::{blame::Blame, status::GitStatus};
-use crate::{GitHostingProviderRegistry, COMMIT_MESSAGE};
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, Context, Result};
 use collections::{HashMap, HashSet};
 use git2::BranchType;
 use gpui::SharedString;
@@ -62,7 +62,7 @@ pub trait GitRepository: Send + Sync {
     /// If any of the paths were previously staged but do not exist in HEAD, they will be removed from the index.
     fn unstage_paths(&self, paths: &[RepoPath]) -> Result<()>;
 
-    fn commit(&self, name_and_email: Option<(&str, &str)>) -> Result<()>;
+    fn commit(&self, message: &str) -> Result<()>;
 }
 
 impl std::fmt::Debug for dyn GitRepository {
@@ -283,31 +283,17 @@ impl GitRepository for RealGitRepository {
         Ok(())
     }
 
-    fn commit(&self, name_and_email: Option<(&str, &str)>) -> Result<()> {
+    fn commit(&self, message: &str) -> Result<()> {
         let working_directory = self
             .repository
             .lock()
             .workdir()
             .context("failed to read git work directory")?
             .to_path_buf();
-        let commit_file = self.dot_git_dir().join(*COMMIT_MESSAGE);
-        let commit_file_path = commit_file.to_string_lossy();
-        let mut args = vec![
-            "commit",
-            "--quiet",
-            "-F",
-            commit_file_path.as_ref(),
-            "--cleanup=strip",
-        ];
-        let author = name_and_email.map(|(name, email)| format!("{name} <{email}>"));
-        if let Some(author) = author.as_deref() {
-            args.push("--author");
-            args.push(author);
-        }
 
         let cmd = new_std_command(&self.git_binary_path)
             .current_dir(&working_directory)
-            .args(args)
+            .args(["commit", "--quiet", "-m", message])
             .status()?;
         if !cmd.success() {
             return Err(anyhow!("Failed to commit: {cmd}"));
@@ -458,7 +444,7 @@ impl GitRepository for FakeGitRepository {
         unimplemented!()
     }
 
-    fn commit(&self, _name_and_email: Option<(&str, &str)>) -> Result<()> {
+    fn commit(&self, _message: &str) -> Result<()> {
         unimplemented!()
     }
 }
