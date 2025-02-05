@@ -23,7 +23,7 @@ use git::{
     status::{
         FileStatus, GitSummary, StatusCode, TrackedStatus, UnmergedStatus, UnmergedStatusCode,
     },
-    GitHostingProviderRegistry, COMMIT_MESSAGE, DOT_GIT, FSMONITOR_DAEMON, GITIGNORE, INDEX_LOCK,
+    GitHostingProviderRegistry, COOKIES, DOT_GIT, FSMONITOR_DAEMON, GITIGNORE,
 };
 use gpui::{
     App, AppContext as _, AsyncApp, BackgroundExecutor, Context, Entity, EventEmitter, Task,
@@ -87,7 +87,7 @@ pub const FS_WATCH_LATENCY: Duration = Duration::from_millis(100);
 /// May correspond to a directory or a single file.
 /// Possible examples:
 /// * a drag and dropped file — may be added as an invisible, "ephemeral" entry to the current worktree
-/// * a directory opened in Zed — may be added as a visible entry to the current worktree
+/// * a directory opened in Zed — may be added as a visible entry to the current worktree
 ///
 /// Uses [`Entry`] to track the state of each file/directory, can look up absolute paths for entries.
 pub enum Worktree {
@@ -1528,6 +1528,11 @@ impl LocalWorktree {
 
     pub fn settings(&self) -> WorktreeSettings {
         self.settings.clone()
+    }
+
+    pub fn local_git_repo(&self, path: &Path) -> Option<Arc<dyn GitRepository>> {
+        self.local_repo_for_path(path)
+            .map(|local_repo| local_repo.repo_ptr.clone())
     }
 
     pub fn get_local_repo(&self, repo: &RepositoryEntry) -> Option<&LocalRepositoryEntry> {
@@ -4317,41 +4322,47 @@ impl BackgroundScanner {
             }
         };
 
-        // Certain directories may have FS changes, but do not lead to git data changes that Zed cares about.
-        // Ignore these, to avoid Zed unnecessarily rescanning git metadata.
-        let skipped_files_in_dot_git = HashSet::from_iter([*COMMIT_MESSAGE, *INDEX_LOCK]);
-        let skipped_dirs_in_dot_git = [*FSMONITOR_DAEMON];
-
         let mut relative_paths = Vec::with_capacity(abs_paths.len());
         let mut dot_git_abs_paths = Vec::new();
         abs_paths.sort_unstable();
         abs_paths.dedup_by(|a, b| a.starts_with(b));
         abs_paths.retain(|abs_path| {
             let abs_path = SanitizedPath::from(abs_path);
-
             let snapshot = &self.state.lock().snapshot;
             {
                 let mut is_git_related = false;
 
-                let dot_git_paths = abs_path.as_path().ancestors().find_map(|ancestor| {
-                    if smol::block_on(is_git_dir(ancestor, self.fs.as_ref())) {
-                        let path_in_git_dir = abs_path.as_path().strip_prefix(ancestor).expect("stripping off the ancestor");
-                        Some((ancestor.to_owned(), path_in_git_dir.to_owned()))
-                    } else {
-                        None
-                    }
-                });
+                // We don't want to trigger .git rescan for events within .git/fsmonitor--daemon/cookies directory.
+                #[derive(PartialEq)]
+                enum FsMonitorParseState {
+                    Cookies,
+                    FsMonitor
+                }
+                let mut fsmonitor_parse_state = None;
+                if let Some(dot_git_abs_path) = abs_path.as_path()
+                    .ancestors()
+                    .find(|ancestor| {
+                        let file_name = ancestor.file_name();
+                        if file_name == Some(*COOKIES) {
+                            fsmonitor_parse_state = Some(FsMonitorParseState::Cookies);
+                            false
+                        } else if fsmonitor_parse_state == Some(FsMonitorParseState::Cookies) && file_name == Some(*FSMONITOR_DAEMON) {
+                            fsmonitor_parse_state = Some(FsMonitorParseState::FsMonitor);
+                            false
+                        } else if fsmonitor_parse_state != Some(FsMonitorParseState::FsMonitor) && smol::block_on(is_git_dir(ancestor, self.fs.as_ref())) {
+                            true
+                        } else {
+                            fsmonitor_parse_state.take();
+                            false
+                        }
 
-                if let Some((dot_git_abs_path, path_in_git_dir)) = dot_git_paths {
-                    if skipped_files_in_dot_git.contains(path_in_git_dir.as_os_str()) || skipped_dirs_in_dot_git.iter().any(|skipped_git_subdir| path_in_git_dir.starts_with(skipped_git_subdir)) {
-                        log::debug!("ignoring event {abs_path:?} as it's in the .git directory among skipped files or directories");
-                        return false;
-                    }
-
-                    is_git_related = true;
+                    })
+                {
+                    let dot_git_abs_path = dot_git_abs_path.to_path_buf();
                     if !dot_git_abs_paths.contains(&dot_git_abs_path) {
                         dot_git_abs_paths.push(dot_git_abs_path);
                     }
+                    is_git_related = true;
                 }
 
                 let relative_path: Arc<Path> =

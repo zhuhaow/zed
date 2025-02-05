@@ -186,5 +186,3 @@ pub mod outline {
     /// A pointer to outline::toggle function, exposed here to sewer the breadcrumbs <-> outline dependency.
     pub static TOGGLE_OUTLINE: OnceLock<fn(AnyView, &mut Window, &mut App)> = OnceLock::new();
 }
-
-actions!(zed_predict_onboarding, [OpenZedPredictOnboarding]);

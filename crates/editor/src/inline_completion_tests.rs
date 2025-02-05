@@ -304,8 +304,8 @@ fn assert_editor_active_move_completion(
             .as_ref()
             .expect("editor has no active completion");
 
-        if let InlineCompletion::Move { target, .. } = &completion_state.completion {
-            assert(editor.buffer().read(cx).snapshot(cx), *target);
+        if let InlineCompletion::Move(anchor) = &completion_state.completion {
+            assert(editor.buffer().read(cx).snapshot(cx), *anchor);
         } else {
             panic!("expected move completion");
         }
@@ -333,7 +333,6 @@ fn propose_edits<T: ToOffset>(
         provider.update(cx, |provider, _| {
             provider.set_inline_completion(Some(inline_completion::InlineCompletion {
                 edits: edits.collect(),
-                edit_preview: None,
             }))
         })
     });

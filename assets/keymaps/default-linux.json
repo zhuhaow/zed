@@ -136,7 +136,7 @@
       "ctrl-k z": "editor::ToggleSoftWrap",
       "find": "buffer_search::Deploy",
       "ctrl-f": "buffer_search::Deploy",
-      "ctrl-h": "buffer_search::DeployReplace",
+      "ctrl-h": ["buffer_search::Deploy", { "replace_enabled": true }],
       // "cmd-e": ["buffer_search::Deploy", { "focus": false }],
       "ctrl->": "assistant::QuoteSelection",
       "ctrl-<": "assistant::InsertIntoEditor",
@@ -510,13 +510,6 @@
     }
   },
   {
-    "context": "Editor && inline_completion && showing_completions",
-    "bindings": {
-      // Currently, changing this binding breaks the preview behavior
-      "alt-enter": "editor::AcceptInlineCompletion"
-    }
-  },
-  {
     "context": "Editor && showing_code_actions",
     "bindings": {
       "enter": "editor::ConfirmCodeAction"
@@ -805,8 +798,6 @@
       "shift-insert": "terminal::Paste",
       "ctrl-shift-v": "terminal::Paste",
       "ctrl-enter": "assistant::InlineAssist",
-      "alt-b": ["terminal::SendText", "\u001bb"],
-      "alt-f": ["terminal::SendText", "\u001bf"],
       // Overrides for conflicting keybindings
       "ctrl-w": ["terminal::SendKeystroke", "ctrl-w"],
       "ctrl-shift-a": "editor::SelectAll",

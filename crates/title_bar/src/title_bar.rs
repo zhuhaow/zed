@@ -15,7 +15,9 @@ use crate::platforms::{platform_linux, platform_mac, platform_windows};
 use auto_update::AutoUpdateStatus;
 use call::ActiveCall;
 use client::{Client, UserStore};
-use feature_flags::{FeatureFlagAppExt, ZedPro};
+use feature_flags::{FeatureFlagAppExt, GitUiFeatureFlag, ZedPro};
+use git_ui::repository_selector::RepositorySelector;
+use git_ui::repository_selector::RepositorySelectorPopoverMenu;
 use gpui::{
     actions, div, px, Action, AnyElement, App, Context, Decorations, Element, Entity,
     InteractiveElement, Interactivity, IntoElement, MouseButton, ParentElement, Render, Stateful,
@@ -25,6 +27,7 @@ use project::Project;
 use rpc::proto;
 use settings::Settings as _;
 use smallvec::SmallVec;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use theme::ActiveTheme;
 use ui::{
@@ -34,7 +37,7 @@ use ui::{
 use util::ResultExt;
 use workspace::{notifications::NotifyResultExt, Workspace};
 use zed_actions::{OpenBrowser, OpenRecent, OpenRemote};
-use zeta::ZedPredictBanner;
+use zed_predict_onboarding::ZedPredictBanner;
 
 #[cfg(feature = "stories")]
 pub use stories::*;
@@ -102,6 +105,7 @@ pub struct TitleBar {
     platform_style: PlatformStyle,
     content: Stateful<Div>,
     children: SmallVec<[AnyElement; 2]>,
+    repository_selector: Entity<RepositorySelector>,
     project: Entity<Project>,
     user_store: Entity<UserStore>,
     client: Arc<Client>,
@@ -109,6 +113,7 @@ pub struct TitleBar {
     should_move: bool,
     application_menu: Option<Entity<ApplicationMenu>>,
     _subscriptions: Vec<Subscription>,
+    git_ui_enabled: Arc<AtomicBool>,
     zed_predict_banner: Entity<ZedPredictBanner>,
 }
 
@@ -162,7 +167,6 @@ impl Render for TitleBar {
                     .id("titlebar-content")
                     .flex()
                     .flex_row()
-                    .items_center()
                     .justify_between()
                     .w_full()
                     // Note: On Windows the title bar behavior is handled by the platform implementation.
@@ -187,6 +191,7 @@ impl Render for TitleBar {
                                         title_bar
                                             .children(self.render_project_host(cx))
                                             .child(self.render_project_name(cx))
+                                            .children(self.render_current_repository(cx))
                                             .children(self.render_project_branch(cx))
                                     })
                             })
@@ -269,6 +274,7 @@ impl TitleBar {
         let project = workspace.project().clone();
         let user_store = workspace.app_state().user_store.clone();
         let client = workspace.app_state().client.clone();
+        let fs = workspace.app_state().fs.clone();
         let active_call = ActiveCall::global(cx);
 
         let platform_style = PlatformStyle::platform();
@@ -296,19 +302,37 @@ impl TitleBar {
         subscriptions.push(cx.observe_window_activation(window, Self::window_activation_changed));
         subscriptions.push(cx.observe(&user_store, |_, _, cx| cx.notify()));
 
-        let zed_predict_banner = cx.new(ZedPredictBanner::new);
+        let is_git_ui_enabled = Arc::new(AtomicBool::new(false));
+        subscriptions.push(cx.observe_flag::<GitUiFeatureFlag, _>({
+            let is_git_ui_enabled = is_git_ui_enabled.clone();
+            move |enabled, _cx| {
+                is_git_ui_enabled.store(enabled, Ordering::SeqCst);
+            }
+        }));
+
+        let zed_predict_banner = cx.new(|cx| {
+            ZedPredictBanner::new(
+                workspace.weak_handle(),
+                user_store.clone(),
+                client.clone(),
+                fs.clone(),
+                cx,
+            )
+        });
 
         Self {
             platform_style,
             content: div().id(id.into()),
             children: SmallVec::new(),
             application_menu,
+            repository_selector: cx.new(|cx| RepositorySelector::new(project.clone(), window, cx)),
             workspace: workspace.weak_handle(),
             should_move: false,
             project,
             user_store,
             client,
             _subscriptions: subscriptions,
+            git_ui_enabled: is_git_ui_enabled,
             zed_predict_banner,
         }
     }
@@ -489,6 +513,41 @@ impl TitleBar {
                     cx,
                 );
             }))
+    }
+
+    // NOTE: Not sure we want to keep this in the titlebar, but for while we are working on Git it is helpful in the short term
+    pub fn render_current_repository(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
+        if !self.git_ui_enabled.load(Ordering::SeqCst) {
+            return None;
+        }
+
+        let active_repository = self.project.read(cx).active_repository(cx)?;
+        let display_name = active_repository.display_name(self.project.read(cx), cx);
+
+        // TODO: what to render if no active repository?
+        Some(RepositorySelectorPopoverMenu::new(
+            self.repository_selector.clone(),
+            ButtonLike::new("active-repository")
+                .style(ButtonStyle::Subtle)
+                .child(
+                    h_flex().w_full().gap_0p5().child(
+                        div()
+                            .overflow_x_hidden()
+                            .flex_grow()
+                            .whitespace_nowrap()
+                            .child(
+                                h_flex()
+                                    .gap_1()
+                                    .child(
+                                        Label::new(display_name)
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                    )
+                                    .into_any_element(),
+                            ),
+                    ),
+                ),
+        ))
     }
 
     pub fn render_project_branch(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {

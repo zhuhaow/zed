@@ -1207,7 +1207,7 @@ impl Item for ExtensionsPage {
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {
-        Some("Extensions Page Opened")
+        Some("extensions page")
     }
 
     fn show_toolbar(&self) -> bool {

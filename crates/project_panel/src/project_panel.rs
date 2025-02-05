@@ -445,9 +445,9 @@ impl ProjectPanel {
                 show_scrollbar: !Self::should_autohide_scrollbar(cx),
                 hide_scrollbar_task: None,
                 vertical_scrollbar_state: ScrollbarState::new(scroll_handle.clone())
-                    .parent_entity(&cx.entity()),
+                    .parent_model(&cx.entity()),
                 horizontal_scrollbar_state: ScrollbarState::new(scroll_handle.clone())
-                    .parent_entity(&cx.entity()),
+                    .parent_model(&cx.entity()),
                 max_width_item_index: None,
                 diagnostics: Default::default(),
                 scroll_handle,
@@ -2257,45 +2257,24 @@ impl ProjectPanel {
         cx: &mut Context<Self>,
     ) {
         if let Some((worktree, entry)) = self.selected_sub_entry(cx) {
-            let dir_path = if entry.is_dir() {
-                entry.path.clone()
-            } else {
-                // entry is a file, use its parent directory
-                match entry.path.parent() {
-                    Some(parent) => Arc::from(parent),
-                    None => {
-                        // File at root, open search with empty filter
-                        self.workspace
-                            .update(cx, |workspace, cx| {
-                                search::ProjectSearchView::new_search_in_directory(
-                                    workspace,
-                                    Path::new(""),
-                                    window,
-                                    cx,
-                                );
-                            })
-                            .ok();
-                        return;
-                    }
-                }
-            };
+            if entry.is_dir() {
+                let include_root = self.project.read(cx).visible_worktrees(cx).count() > 1;
+                let dir_path = if include_root {
+                    let mut full_path = PathBuf::from(worktree.read(cx).root_name());
+                    full_path.push(&entry.path);
+                    Arc::from(full_path)
+                } else {
+                    entry.path.clone()
+                };
 
-            let include_root = self.project.read(cx).visible_worktrees(cx).count() > 1;
-            let dir_path = if include_root {
-                let mut full_path = PathBuf::from(worktree.read(cx).root_name());
-                full_path.push(&dir_path);
-                Arc::from(full_path)
-            } else {
-                dir_path
-            };
-
-            self.workspace
-                .update(cx, |workspace, cx| {
-                    search::ProjectSearchView::new_search_in_directory(
-                        workspace, &dir_path, window, cx,
-                    );
-                })
-                .ok();
+                self.workspace
+                    .update(cx, |workspace, cx| {
+                        search::ProjectSearchView::new_search_in_directory(
+                            workspace, &dir_path, window, cx,
+                        );
+                    })
+                    .ok();
+            }
         }
     }
 
@@ -3707,7 +3686,7 @@ impl ProjectPanel {
                     }
                     cx.stop_propagation();
 
-                    if let Some(selection) = this.selection.filter(|_| event.modifiers().shift) {
+                    if let Some(selection) = this.selection.filter(|_| event.down.modifiers.shift) {
                         let current_selection = this.index_for_selection(selection);
                         let clicked_entry = SelectedEntry {
                             entry_id,
@@ -3741,7 +3720,7 @@ impl ProjectPanel {
                             this.selection = Some(clicked_entry);
                             this.marked_entries.insert(clicked_entry);
                         }
-                    } else if event.modifiers().secondary() {
+                    } else if event.down.modifiers.secondary() {
                         if event.down.click_count > 1 {
                             this.split_entry(entry_id, cx);
                         } else {
@@ -3752,7 +3731,7 @@ impl ProjectPanel {
                         }
                     } else if kind.is_dir() {
                         this.marked_entries.clear();
-                        if event.modifiers().alt {
+                        if event.down.modifiers.alt {
                             this.toggle_expand_all(entry_id, window, cx);
                         } else {
                             this.toggle_expanded(entry_id, window, cx);

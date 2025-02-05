@@ -2540,10 +2540,8 @@ impl Pane {
         let navigate_backward = IconButton::new("navigate_backward", IconName::ArrowLeft)
             .icon_size(IconSize::Small)
             .on_click({
-                let entity = cx.entity().clone();
-                move |_, window, cx| {
-                    entity.update(cx, |pane, cx| pane.navigate_backward(window, cx))
-                }
+                let model = cx.entity().clone();
+                move |_, window, cx| model.update(cx, |pane, cx| pane.navigate_backward(window, cx))
             })
             .disabled(!self.can_navigate_backward())
             .tooltip({
@@ -2556,8 +2554,8 @@ impl Pane {
         let navigate_forward = IconButton::new("navigate_forward", IconName::ArrowRight)
             .icon_size(IconSize::Small)
             .on_click({
-                let entity = cx.entity().clone();
-                move |_, window, cx| entity.update(cx, |pane, cx| pane.navigate_forward(window, cx))
+                let model = cx.entity().clone();
+                move |_, window, cx| model.update(cx, |pane, cx| pane.navigate_forward(window, cx))
             })
             .disabled(!self.can_navigate_forward())
             .tooltip({

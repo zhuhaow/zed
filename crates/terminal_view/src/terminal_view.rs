@@ -1479,14 +1479,13 @@ impl SerializableItem for TerminalView {
 impl SearchableItem for TerminalView {
     type Match = RangeInclusive<Point>;
 
-    fn supported_options(&self) -> SearchOptions {
+    fn supported_options() -> SearchOptions {
         SearchOptions {
             case: false,
             word: false,
             regex: true,
             replacement: false,
             selection: false,
-            find_in_results: false,
         }
     }
 

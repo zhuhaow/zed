@@ -68,10 +68,10 @@ impl<V: Render> Element for Entity<V> {
     }
 }
 
-/// A dynamically-typed handle to a view, which can be downcast to a [Entity] for a specific type.
+/// A dynamically-typed handle to a view, which can be downcast to a [View] for a specific type.
 #[derive(Clone, Debug)]
 pub struct AnyView {
-    entity: AnyEntity,
+    model: AnyEntity,
     render: fn(&AnyView, &mut Window, &mut App) -> AnyElement,
     cached_style: Option<StyleRefinement>,
 }
@@ -79,7 +79,7 @@ pub struct AnyView {
 impl<V: Render> From<Entity<V>> for AnyView {
     fn from(value: Entity<V>) -> Self {
         AnyView {
-            entity: value.into_any(),
+            model: value.into_any(),
             render: any_view::render::<V>,
             cached_style: None,
         }
@@ -88,8 +88,8 @@ impl<V: Render> From<Entity<V>> for AnyView {
 
 impl AnyView {
     /// Indicate that this view should be cached when using it as an element.
-    /// When using this method, the view's previous layout and paint will be recycled from the previous frame if [Context::notify] has not been called since it was rendered.
-    /// The one exception is when [Window::refresh] is called, in which case caching is ignored.
+    /// When using this method, the view's previous layout and paint will be recycled from the previous frame if [ViewContext::notify] has not been called since it was rendered.
+    /// The one exception is when [WindowContext::refresh] is called, in which case caching is ignored.
     pub fn cached(mut self, style: StyleRefinement) -> Self {
         self.cached_style = Some(style);
         self
@@ -98,18 +98,18 @@ impl AnyView {
     /// Convert this to a weak handle.
     pub fn downgrade(&self) -> AnyWeakView {
         AnyWeakView {
-            entity: self.entity.downgrade(),
+            model: self.model.downgrade(),
             render: self.render,
         }
     }
 
-    /// Convert this to a [Entity] of a specific type.
+    /// Convert this to a [View] of a specific type.
     /// If this handle does not contain a view of the specified type, returns itself in an `Err` variant.
     pub fn downcast<T: 'static>(self) -> Result<Entity<T>, Self> {
-        match self.entity.downcast() {
-            Ok(entity) => Ok(entity),
-            Err(entity) => Err(Self {
-                entity,
+        match self.model.downcast() {
+            Ok(model) => Ok(model),
+            Err(model) => Err(Self {
+                model,
                 render: self.render,
                 cached_style: self.cached_style,
             }),
@@ -118,18 +118,18 @@ impl AnyView {
 
     /// Gets the [TypeId] of the underlying view.
     pub fn entity_type(&self) -> TypeId {
-        self.entity.entity_type
+        self.model.entity_type
     }
 
     /// Gets the entity id of this handle.
     pub fn entity_id(&self) -> EntityId {
-        self.entity.entity_id()
+        self.model.entity_id()
     }
 }
 
 impl PartialEq for AnyView {
     fn eq(&self, other: &Self) -> bool {
-        self.entity == other.entity
+        self.model == other.model
     }
 }
 
@@ -155,11 +155,9 @@ impl Element for AnyView {
             let layout_id = window.request_layout(root_style, None, cx);
             (layout_id, None)
         } else {
-            window.with_rendered_view(self.entity_id(), |window| {
-                let mut element = (self.render)(self, window, cx);
-                let layout_id = element.request_layout(window, cx);
-                (layout_id, Some(element))
-            })
+            let mut element = (self.render)(self, window, cx);
+            let layout_id = element.request_layout(window, cx);
+            (layout_id, Some(element))
         }
     }
 
@@ -199,16 +197,12 @@ impl Element for AnyView {
 
                     let refreshing = mem::replace(&mut window.refreshing, true);
                     let prepaint_start = window.prepaint_index();
-                    let (mut element, accessed_entities) =
-                        window.with_rendered_view(self.entity_id(), |window| {
-                            cx.detect_accessed_entities(|cx| {
-                                let mut element = (self.render)(self, window, cx);
-                                element.layout_as_root(bounds.size.into(), window, cx);
-                                element.prepaint_at(bounds.origin, window, cx);
-                                element
-                            })
-                        });
-
+                    let (mut element, accessed_entities) = cx.detect_accessed_entities(|cx| {
+                        let mut element = (self.render)(self, window, cx);
+                        element.layout_as_root(bounds.size.into(), window, cx);
+                        element.prepaint_at(bounds.origin, window, cx);
+                        element
+                    });
                     let prepaint_end = window.prepaint_index();
                     window.refreshing = refreshing;
 
@@ -229,10 +223,7 @@ impl Element for AnyView {
             )
         } else {
             let mut element = element.take().unwrap();
-            window.with_rendered_view(self.entity_id(), |window| {
-                element.prepaint(window, cx);
-            });
-
+            element.prepaint(window, cx);
             Some(element)
         }
     }
@@ -256,9 +247,7 @@ impl Element for AnyView {
 
                     if let Some(element) = element {
                         let refreshing = mem::replace(&mut window.refreshing, true);
-                        window.with_rendered_view(self.entity_id(), |window| {
-                            element.paint(window, cx);
-                        });
+                        element.paint(window, cx);
                         window.refreshing = refreshing;
                     } else {
                         window.reuse_paint(element_state.paint_range.clone());
@@ -294,16 +283,16 @@ impl IntoElement for AnyView {
 
 /// A weak, dynamically-typed view handle that does not prevent the view from being released.
 pub struct AnyWeakView {
-    entity: AnyWeakEntity,
+    model: AnyWeakEntity,
     render: fn(&AnyView, &mut Window, &mut App) -> AnyElement,
 }
 
 impl AnyWeakView {
     /// Convert to a strongly-typed handle if the referenced view has not yet been released.
     pub fn upgrade(&self) -> Option<AnyView> {
-        let entity = self.entity.upgrade()?;
+        let model = self.model.upgrade()?;
         Some(AnyView {
-            entity,
+            model,
             render: self.render,
             cached_style: None,
         })
@@ -313,7 +302,7 @@ impl AnyWeakView {
 impl<V: 'static + Render> From<WeakEntity<V>> for AnyWeakView {
     fn from(view: WeakEntity<V>) -> Self {
         AnyWeakView {
-            entity: view.into(),
+            model: view.into(),
             render: any_view::render::<V>,
         }
     }
@@ -321,14 +310,14 @@ impl<V: 'static + Render> From<WeakEntity<V>> for AnyWeakView {
 
 impl PartialEq for AnyWeakView {
     fn eq(&self, other: &Self) -> bool {
-        self.entity == other.entity
+        self.model == other.model
     }
 }
 
 impl std::fmt::Debug for AnyWeakView {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AnyWeakView")
-            .field("entity_id", &self.entity.entity_id)
+            .field("entity_id", &self.model.entity_id)
             .finish_non_exhaustive()
     }
 }

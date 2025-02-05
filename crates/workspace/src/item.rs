@@ -1504,8 +1504,8 @@ pub mod test {
             _window: &mut Window,
             cx: &mut App,
         ) -> Task<anyhow::Result<Entity<Self>>> {
-            let entity = cx.new(|cx| Self::new_deserialized(workspace_id, cx));
-            Task::ready(Ok(entity))
+            let model = cx.new(|cx| Self::new_deserialized(workspace_id, cx));
+            Task::ready(Ok(model))
         }
 
         fn cleanup(

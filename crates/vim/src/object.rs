@@ -40,7 +40,6 @@ pub enum Object {
     Method,
     Class,
     Comment,
-    EntireFile,
 }
 
 #[derive(Clone, Deserialize, JsonSchema, PartialEq)]
@@ -84,8 +83,7 @@ actions!(
         Tag,
         Method,
         Class,
-        Comment,
-        EntireFile
+        Comment
     ]
 );
 
@@ -152,9 +150,6 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
     Vim::action(editor, cx, |vim, _: &Class, window, cx| {
         vim.object(Object::Class, window, cx)
     });
-    Vim::action(editor, cx, |vim, _: &EntireFile, window, cx| {
-        vim.object(Object::EntireFile, window, cx)
-    });
     Vim::action(editor, cx, |vim, _: &Comment, window, cx| {
         if !matches!(vim.active_operator(), Some(Operator::Object { .. })) {
             vim.push_operator(Operator::Object { around: true }, window, cx);
@@ -205,7 +200,6 @@ impl Object {
             | Object::Argument
             | Object::Method
             | Object::Class
-            | Object::EntireFile
             | Object::Comment
             | Object::IndentObj { .. } => true,
         }
@@ -231,7 +225,6 @@ impl Object {
             | Object::Method
             | Object::Class
             | Object::Comment
-            | Object::EntireFile
             | Object::CurlyBrackets
             | Object::AngleBrackets => true,
         }
@@ -269,7 +262,7 @@ impl Object {
                     Mode::Visual
                 }
             }
-            Object::Paragraph | Object::EntireFile => Mode::VisualLine,
+            Object::Paragraph => Mode::VisualLine,
         }
     }
 
@@ -393,7 +386,6 @@ impl Object {
             ),
             Object::Argument => argument(map, relative_to, around),
             Object::IndentObj { include_below } => indent(map, relative_to, around, include_below),
-            Object::EntireFile => entire_file(map),
         }
     }
 
@@ -715,10 +707,6 @@ fn around_next_word(
     });
 
     Some(start..end)
-}
-
-fn entire_file(map: &DisplaySnapshot) -> Option<Range<DisplayPoint>> {
-    Some(DisplayPoint::zero()..map.max_point())
 }
 
 fn text_object(

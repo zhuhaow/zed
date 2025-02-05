@@ -189,7 +189,7 @@ impl WindowFocusEvent {
     }
 }
 
-/// This is provided when subscribing for `Context::on_focus_out` events.
+/// This is provided when subscribing for `ViewContext::on_focus_out` events.
 pub struct FocusOutEvent {
     /// A weak focus handle representing what was blurred.
     pub blurred: WeakFocusHandle,
@@ -423,7 +423,7 @@ impl HitboxId {
 }
 
 /// A rectangular region that potentially blocks hitboxes inserted prior.
-/// See [Window::insert_hitbox] for more details.
+/// See [WindowContext::insert_hitbox] for more details.
 #[derive(Clone, Debug, Deref)]
 pub struct Hitbox {
     /// A unique identifier for the hitbox.
@@ -612,7 +612,6 @@ pub struct Window {
     pub(crate) root: Option<AnyView>,
     pub(crate) element_id_stack: SmallVec<[ElementId; 32]>,
     pub(crate) text_style_stack: Vec<TextStyleRefinement>,
-    pub(crate) rendered_entity_stack: Vec<EntityId>,
     pub(crate) element_offset_stack: Vec<Point<Pixels>>,
     pub(crate) element_opacity: Option<f32>,
     pub(crate) content_mask_stack: Vec<ContentMask<Pixels>>,
@@ -879,8 +878,6 @@ impl Window {
             platform_window.set_app_id(&app_id);
         }
 
-        platform_window.map_window().unwrap();
-
         Ok(Window {
             handle,
             invalidator,
@@ -896,7 +893,6 @@ impl Window {
             root: None,
             element_id_stack: SmallVec::default(),
             text_style_stack: Vec::new(),
-            rendered_entity_stack: Vec::new(),
             element_offset_stack: Vec::new(),
             content_mask_stack: Vec::new(),
             element_opacity: None,
@@ -973,6 +969,27 @@ impl ContentMask<Pixels> {
 }
 
 impl Window {
+    /// Indicate that a view has changed, which will invoke any observers and also mark the window as dirty.
+    /// If this view or any of its ancestors are *cached*, notifying it will cause it or its ancestors to be redrawn.
+    /// Note that this method will always cause a redraw, the entire window is refreshed if view_id is None.
+    pub(crate) fn notify(
+        &mut self,
+        notify_effect: bool,
+        entity_id: Option<EntityId>,
+        cx: &mut App,
+    ) {
+        let Some(view_id) = entity_id else {
+            self.refresh();
+            return;
+        };
+
+        self.mark_view_dirty(view_id);
+
+        if notify_effect {
+            self.invalidator.invalidate_view(view_id, cx);
+        }
+    }
+
     fn mark_view_dirty(&mut self, view_id: EntityId) {
         // Mark ancestor views as dirty. If already in the `dirty_views` set, then all its ancestors
         // should already be dirty.
@@ -1174,9 +1191,9 @@ impl Window {
         });
     }
 
-    /// Subscribe to events emitted by a entity.
+    /// Subscribe to events emitted by a model or view.
     /// The entity to which you're subscribing must implement the [`EventEmitter`] trait.
-    /// The callback will be invoked a handle to the emitting entity, the event, and a window context for the current window.
+    /// The callback will be invoked a handle to the emitting entity (either a [`View`] or [`Model`]), the event, and a window context for the current window.
     pub fn observe<T: 'static>(
         &mut self,
         observed: &Entity<T>,
@@ -1203,9 +1220,9 @@ impl Window {
         )
     }
 
-    /// Subscribe to events emitted by a entity.
+    /// Subscribe to events emitted by a model or view.
     /// The entity to which you're subscribing must implement the [`EventEmitter`] trait.
-    /// The callback will be invoked a handle to the emitting entity, the event, and a window context for the current window.
+    /// The callback will be invoked a handle to the emitting entity (either a [`View`] or [`Model`]), the event, and a window context for the current window.
     pub fn subscribe<Emitter, Evt>(
         &mut self,
         entity: &Entity<Emitter>,
@@ -1240,7 +1257,7 @@ impl Window {
         )
     }
 
-    /// Register a callback to be invoked when the given `Entity` is released.
+    /// Register a callback to be invoked when the given Model or View is released.
     pub fn observe_release<T>(
         &self,
         entity: &Entity<T>,
@@ -1281,14 +1298,13 @@ impl Window {
     ///
     /// If called from within a view, it will notify that view on the next frame. Otherwise, it will refresh the entire window.
     pub fn request_animation_frame(&self) {
-        let entity = self.current_view();
-        self.on_next_frame(move |_, cx| cx.notify(entity));
+        let parent_id = self.parent_view_id();
+        self.on_next_frame(move |window, cx| window.notify(true, parent_id, cx));
     }
 
     /// Spawn the future returned by the given closure on the application thread pool.
     /// The closure is provided a handle to the current window and an `AsyncWindowContext` for
     /// use within your future.
-    #[track_caller]
     pub fn spawn<Fut, R>(&self, cx: &App, f: impl FnOnce(AsyncWindowContext) -> Fut) -> Task<R>
     where
         R: 'static,
@@ -1515,7 +1531,6 @@ impl Window {
     pub fn draw(&mut self, cx: &mut App) {
         self.invalidate_entities();
         cx.entities.clear_accessed();
-        debug_assert!(self.rendered_entity_stack.is_empty());
         self.invalidator.set_dirty(false);
         self.requested_autoscroll = None;
 
@@ -1578,7 +1593,6 @@ impl Window {
                 .retain(&(), |listener| listener(&event, self, cx));
         }
 
-        debug_assert!(self.rendered_entity_stack.is_empty());
         self.record_entities_accessed(cx);
         self.reset_cursor_style(cx);
         self.refreshing = false;
@@ -1898,7 +1912,7 @@ impl Window {
     }
 
     /// Push a text style onto the stack, and call a function with that style active.
-    /// Use [`Window::text_style`] to get the current, combined text style. This method
+    /// Use [`AppContext::text_style`] to get the current, combined text style. This method
     /// should only be called as part of element drawing.
     pub fn with_text_style<F, R>(&mut self, style: Option<TextStyleRefinement>, f: F) -> R
     where
@@ -2057,14 +2071,14 @@ impl Window {
         let (task, is_first) = cx.fetch_asset::<A>(source);
         task.clone().now_or_never().or_else(|| {
             if is_first {
-                let entity = self.current_view();
+                let parent_id = self.parent_view_id();
                 self.spawn(cx, {
                     let task = task.clone();
                     |mut cx| async move {
                         task.await;
 
-                        cx.on_next_frame(move |_, cx| {
-                            cx.notify(entity);
+                        cx.on_next_frame(move |window, cx| {
+                            window.notify(true, parent_id, cx);
                         });
                     }
                 })
@@ -2673,12 +2687,12 @@ impl Window {
         Ok(())
     }
 
+    #[must_use]
     /// Add a node to the layout tree for the current frame. Takes the `Style` of the element for which
     /// layout is being requested, along with the layout ids of any children. This method is called during
     /// calls to the [`Element::request_layout`] trait method and enables any element to participate in layout.
     ///
     /// This method should only be called as part of the request_layout or prepaint phase of element drawing.
-    #[must_use]
     pub fn request_layout(
         &mut self,
         style: Style,
@@ -2809,21 +2823,9 @@ impl Window {
         self.next_frame.dispatch_tree.set_view_id(view_id);
     }
 
-    /// Get the entity ID for the currently rendering view
-    pub fn current_view(&self) -> EntityId {
-        self.invalidator.debug_assert_paint_or_prepaint();
-        self.rendered_entity_stack.last().copied().unwrap()
-    }
-
-    pub(crate) fn with_rendered_view<R>(
-        &mut self,
-        id: EntityId,
-        f: impl FnOnce(&mut Self) -> R,
-    ) -> R {
-        self.rendered_entity_stack.push(id);
-        let result = f(self);
-        self.rendered_entity_stack.pop();
-        result
+    /// Get the last view id for the current element
+    pub fn parent_view_id(&self) -> Option<EntityId> {
+        self.next_frame.dispatch_tree.parent_view_id()
     }
 
     /// Sets an input handler, such as [`ElementInputHandler`][element_input_handler], which interfaces with the
@@ -4067,7 +4069,7 @@ impl From<(&'static str, u32)> for ElementId {
 }
 
 /// A rectangle to be rendered in the window at the given position and size.
-/// Passed as an argument [`Window::paint_quad`].
+/// Passed as an argument [`WindowContext::paint_quad`].
 #[derive(Clone)]
 pub struct PaintQuad {
     /// The bounds of the quad within the window.

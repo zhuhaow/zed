@@ -33,19 +33,7 @@ trait InstalledApp {
 #[command(
     name = "zed",
     disable_version_flag = true,
-    before_help = "The Zed CLI binary.
-This CLI is a separate binary that invokes Zed.
-
-Examples:
-    `zed`
-          Simply opens Zed
-    `zed --foreground`
-          Runs in foreground (shows all logs)
-    `zed path-to-your-project`
-          Open your project in Zed
-    `zed -n path-to-file `
-          Open file/folder in a new window",
-    after_help = "To read from stdin, append '-', e.g. 'ps axf | zed -'"
+    after_help = "To read from stdin, append '-' (e.g. 'ps axf | zed -')"
 )]
 struct Args {
     /// Wait for all of the given paths to be opened/closed before exiting.
@@ -57,9 +45,10 @@ struct Args {
     /// Create a new workspace
     #[arg(short, long, overrides_with = "add")]
     new: bool,
-    /// The paths to open in Zed (space-separated).
+    /// A sequence of space-separated paths that you want to open.
     ///
-    /// Use `path:line:column` syntax to open a file at the given line and column.
+    /// Use `path:line:row` syntax to open a file at a specific location.
+    /// Non-existing paths and directories will ignore `:line:row` suffix.
     paths_with_position: Vec<String>,
     /// Print Zed's version and the app path.
     #[arg(short, long)]

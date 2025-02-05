@@ -466,7 +466,7 @@ impl ConfigurationView {
             underline: None,
             strikethrough: None,
             white_space: WhiteSpace::Normal,
-            ..Default::default()
+            truncate: None,
         };
         EditorElement::new(
             &self.api_key_editor,
@@ -506,7 +506,7 @@ impl Render for ConfigurationView {
                     h_flex().child(Label::new(INSTRUCTIONS[1])).child(
                         Button::new("deepseek_console", DEEPSEEK_CONSOLE_URL)
                             .style(ButtonStyle::Subtle)
-                            .icon(IconName::ArrowUpRight)
+                            .icon(IconName::ExternalLink)
                             .icon_size(IconSize::XSmall)
                             .icon_color(Color::Muted)
                             .on_click(move |_, _window, cx| cx.open_url(DEEPSEEK_CONSOLE_URL)),
@@ -520,14 +520,12 @@ impl Render for ConfigurationView {
                         .px_2()
                         .py_1()
                         .bg(cx.theme().colors().editor_background)
-                        .border_1()
-                        .border_color(cx.theme().colors().border_variant)
                         .rounded_md()
                         .child(self.render_api_key_editor(cx)),
                 )
                 .child(
                     Label::new(format!(
-                        "Or set the {} environment variable.",
+                        "Or set {} environment variable",
                         DEEPSEEK_API_KEY_VAR
                     ))
                     .size(LabelSize::Small),

@@ -425,7 +425,7 @@ impl BufferLineHeight {
 }
 
 impl ThemeSettings {
-    /// Returns the buffer font size.
+    /// Returns the [AdjustedBufferFontSize].
     pub fn buffer_font_size(&self) -> Pixels {
         Self::clamp_font_size(self.buffer_font_size)
     }

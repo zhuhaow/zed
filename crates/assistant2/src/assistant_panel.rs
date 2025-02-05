@@ -134,6 +134,7 @@ impl AssistantPanel {
                         project,
                         prompt_builder.clone(),
                         slash_commands,
+                        tools.clone(),
                         cx,
                     )
                 })?
@@ -442,7 +443,7 @@ impl AssistantPanel {
 
     fn handle_assistant_configuration_event(
         &mut self,
-        _entity: &Entity<AssistantConfiguration>,
+        _model: &Entity<AssistantConfiguration>,
         event: &AssistantConfigurationEvent,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -612,7 +613,7 @@ impl AssistantPanel {
                 })
                 .unwrap_or_else(|| SharedString::from("Loading Summary…")),
             ActiveView::History | ActiveView::PromptEditorHistory => "History".into(),
-            ActiveView::Configuration => "Assistant Settings".into(),
+            ActiveView::Configuration => "Configuration".into(),
         };
 
         let sub_title = match self.active_view {
@@ -699,7 +700,7 @@ impl AssistantPanel {
                         IconButton::new("configure-assistant", IconName::Settings)
                             .icon_size(IconSize::Small)
                             .style(ButtonStyle::Subtle)
-                            .tooltip(Tooltip::text("Assistant Settings"))
+                            .tooltip(Tooltip::text("Configure Assistant"))
                             .on_click(move |_event, window, cx| {
                                 window.dispatch_action(OpenConfiguration.boxed_clone(), cx);
                             }),
