@@ -36,8 +36,8 @@ use gpui::{
     Edges, Element, ElementInputHandler, Entity, FocusHandle, Focusable as _, FontId,
     GlobalElementId, Hitbox, Hsla, InteractiveElement, IntoElement, Keystroke, Length,
     ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad,
-    ParentElement, Pixels, ScrollDelta, ScrollWheelEvent, ShapedLine, SharedString, Size,
-    StatefulInteractiveElement, Style, Styled, Subscription, TextRun, TextStyleRefinement,
+    ParentElement, PathBuilder, Pixels, ScrollDelta, ScrollWheelEvent, ShapedLine, SharedString,
+    Size, StatefulInteractiveElement, Style, Styled, Subscription, TextRun, TextStyleRefinement,
     WeakEntity, Window,
 };
 use itertools::Itertools;
@@ -3597,6 +3597,54 @@ impl EditorElement {
         }
     }
 
+    fn layout_edit_prediction_connector(
+        &self,
+        editor_snapshot: &EditorSnapshot,
+        visible_row_range: Range<DisplayRow>,
+        scroll_pixel_position: gpui::Point<Pixels>,
+        line_height: Pixels,
+        line_layouts: &[LineWithInvisibles],
+        content_origin: gpui::Point<Pixels>,
+        cursor: DisplayPoint,
+        cx: &mut App,
+    ) -> Option<EditPredictionConnector> {
+        let editor = self.editor.read(cx);
+        let active_inline_completion = editor.active_inline_completion.as_ref()?;
+
+        let InlineCompletion::Move { target, .. } = &active_inline_completion.completion else {
+            return None;
+        };
+
+        let current_cursor_x = if visible_row_range.contains(&cursor.row()) {
+            let cursor_row_layout =
+                &line_layouts[cursor.row().minus(visible_row_range.start) as usize];
+            Some(content_origin.x + cursor_row_layout.x_for_index(cursor.column() as usize))
+        } else {
+            None
+        };
+        let current_cursor_y = content_origin.y + cursor.row().next_row().0 as f32 * line_height
+            - scroll_pixel_position.y;
+
+        let target_point = target.to_display_point(&editor_snapshot.display_snapshot);
+        let target_cursor_x = if visible_row_range.contains(&target_point.row()) {
+            let target_row_layout =
+                &line_layouts[target_point.row().minus(visible_row_range.start) as usize];
+            Some(content_origin.x + target_row_layout.x_for_index(target_point.column() as usize))
+        } else {
+            None
+        };
+        let target_cursor_y = content_origin.y
+            + target_point.row().next_row().0 as f32 * line_height
+            - scroll_pixel_position.y;
+
+        Some(EditPredictionConnector {
+            current_cursor_x,
+            current_cursor_y,
+            target_cursor_x,
+            target_cursor_y,
+        })
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn layout_inline_completion_popover(
         &self,
@@ -4419,6 +4467,43 @@ impl EditorElement {
                     color,
                 ));
             }
+        }
+    }
+
+    fn paint_edit_prediction_connector(
+        &mut self,
+        layout: &mut EditorLayout,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let Some(connector_layout) = layout.edit_prediction_connector.as_ref() else {
+            return;
+        };
+
+        let mut builder = PathBuilder::stroke(px(1.5));
+        builder.move_to(gpui::Point::new(
+            connector_layout
+                .current_cursor_x
+                .unwrap_or(layout.content_origin.x),
+            connector_layout.current_cursor_y,
+        ));
+        builder.line_to(gpui::Point::new(
+            layout.content_origin.x,
+            connector_layout.current_cursor_y,
+        ));
+        builder.line_to(gpui::Point::new(
+            layout.content_origin.x,
+            connector_layout.target_cursor_y,
+        ));
+        builder.line_to(gpui::Point::new(
+            connector_layout
+                .target_cursor_x
+                .unwrap_or(layout.content_origin.x),
+            connector_layout.target_cursor_y,
+        ));
+
+        if let Ok(path) = builder.build() {
+            window.paint_path(path, cx.theme().colors().icon_accent);
         }
     }
 
@@ -7403,6 +7488,19 @@ impl Element for EditorElement {
                         );
                     }
 
+                    let edit_prediction_connector = newest_selection_head.and_then(|cursor| {
+                        self.layout_edit_prediction_connector(
+                            &snapshot,
+                            start_row..end_row,
+                            scroll_pixel_position,
+                            line_height,
+                            &line_layouts,
+                            content_origin,
+                            cursor,
+                            cx,
+                        )
+                    });
+
                     let inline_completion_popover = self.layout_inline_completion_popover(
                         &text_hitbox.bounds,
                         &snapshot,
@@ -7539,6 +7637,7 @@ impl Element for EditorElement {
                         tab_invisible,
                         space_invisible,
                         sticky_buffer_header,
+                        edit_prediction_connector,
                     }
                 })
             })
@@ -7580,6 +7679,7 @@ impl Element for EditorElement {
                     self.paint_mouse_listeners(layout, window, cx);
                     self.paint_background(layout, window, cx);
                     self.paint_indent_guides(layout, window, cx);
+                    self.paint_edit_prediction_connector(layout, window, cx);
 
                     if layout.gutter_hitbox.size.width > Pixels::ZERO {
                         self.paint_blamed_display_rows(layout, window, cx);
@@ -7714,6 +7814,7 @@ pub struct EditorLayout {
     tab_invisible: ShapedLine,
     space_invisible: ShapedLine,
     sticky_buffer_header: Option<AnyElement>,
+    edit_prediction_connector: Option<EditPredictionConnector>,
 }
 
 impl EditorLayout {
@@ -7860,6 +7961,14 @@ impl ScrollbarLayout {
 struct CreaseTrailerLayout {
     element: AnyElement,
     bounds: Bounds<Pixels>,
+}
+
+#[derive(Debug)]
+struct EditPredictionConnector {
+    current_cursor_x: Option<Pixels>,
+    current_cursor_y: Pixels,
+    target_cursor_x: Option<Pixels>,
+    target_cursor_y: Pixels,
 }
 
 pub(crate) struct PositionMap {
