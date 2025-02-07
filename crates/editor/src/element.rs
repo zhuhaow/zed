@@ -3622,6 +3622,7 @@ impl EditorElement {
         } else {
             None
         };
+
         let current_cursor_y = content_origin.y + cursor.row().next_row().0 as f32 * line_height
             - scroll_pixel_position.y;
 
@@ -4480,7 +4481,7 @@ impl EditorElement {
             return;
         };
 
-        let mut builder = PathBuilder::stroke(px(1.5));
+        let mut builder = PathBuilder::stroke(px(2.));
         builder.move_to(gpui::Point::new(
             connector_layout
                 .current_cursor_x
