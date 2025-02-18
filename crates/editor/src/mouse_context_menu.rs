@@ -10,6 +10,7 @@ use gpui::{Context, DismissEvent, Entity, Focusable as _, Pixels, Point, Subscri
 use std::ops::Range;
 use text::PointUtf16;
 use workspace::OpenInTerminal;
+use zed_actions::workspace::{CopyPath, CopyRelativePath};
 
 #[derive(Debug)]
 pub enum MenuPosition {
@@ -153,7 +154,8 @@ pub fn deploy_context_menu(
         }
 
         let focus = window.focused(cx);
-        let has_reveal_target = editor.target_file(cx).is_some();
+        let has_target_file = editor.target_file(cx).is_some();
+
         let has_selections = editor
             .selections
             .all::<PointUtf16>(cx)
@@ -197,14 +199,18 @@ pub fn deploy_context_menu(
                         "Reveal in File Manager"
                     };
                     const OPEN_IN_TERMINAL_LABEL: &str = "Open in Terminal";
-                    if has_reveal_target {
+                    if has_target_file {
                         builder
                             .action(reveal_in_finder_label, Box::new(RevealInFileManager))
                             .action(OPEN_IN_TERMINAL_LABEL, Box::new(OpenInTerminal))
+                            .action("Copy Path", Box::new(CopyPath))
+                            .action("Copy Relative Path", Box::new(CopyRelativePath))
                     } else {
                         builder
                             .disabled_action(reveal_in_finder_label, Box::new(RevealInFileManager))
                             .disabled_action(OPEN_IN_TERMINAL_LABEL, Box::new(OpenInTerminal))
+                            .disabled_action("Copy Path", Box::new(CopyPath))
+                            .disabled_action("Copy Relative Path", Box::new(CopyRelativePath))
                     }
                 })
                 .map(|builder| {
@@ -215,6 +221,7 @@ pub fn deploy_context_menu(
                         builder.disabled_action(COPY_PERMALINK_LABEL, Box::new(CopyPermalinkToLine))
                     }
                 });
+
             match focus {
                 Some(focus) => builder.context(focus),
                 None => builder,

@@ -316,8 +316,8 @@ impl ContextMenu {
                 window.dispatch_action(action.boxed_clone(), cx);
             }),
             icon: None,
-            icon_size: IconSize::Small,
             icon_position: IconPosition::End,
+            icon_size: IconSize::Small,
             icon_color: None,
             disabled: true,
             documentation_aside: None,
