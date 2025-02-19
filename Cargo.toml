@@ -367,7 +367,7 @@ zeta = { path = "crates/zeta" }
 #
 
 aho-corasick = "1.1"
-alacritty_terminal = { git = "https://github.com/zed-industries/alacritty.git", rev = "03c2907b44b4189aac5fdeaea331f5aab5c7072e"}
+alacritty_terminal = { git = "https://github.com/zed-industries/alacritty.git", rev = "03c2907b44b4189aac5fdeaea331f5aab5c7072e" }
 any_vec = "0.14"
 anyhow = "1.0.86"
 arrayvec = { version = "0.7.4", features = ["serde"] }
@@ -569,6 +569,7 @@ wasmtime = { version = "29", default-features = false, features = [
 ] }
 wasmtime-wasi = "29"
 which = "6.0.0"
+windows-core = "0.58"
 wit-component = "0.221"
 zed_llm_client = "0.4"
 zstd = "0.11"
