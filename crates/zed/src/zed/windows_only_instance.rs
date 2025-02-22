@@ -1,11 +1,19 @@
+use std::{path::Path, sync::Arc, thread::JoinHandle};
+
 use anyhow::Context;
+use clap::Parser;
+use cli::{ipc::IpcOneShotServer, CliRequest, CliResponse, IpcHandshake};
+use parking_lot::Mutex;
 use release_channel::ReleaseChannel;
 use util::ResultExt;
 use windows::{
     core::HSTRING,
     Win32::{
-        Foundation::{GetLastError, ERROR_ALREADY_EXISTS, HANDLE},
-        Storage::FileSystem::{ReadFile, PIPE_ACCESS_INBOUND},
+        Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, GENERIC_WRITE, HANDLE},
+        Storage::FileSystem::{
+            CreateFileW, ReadFile, WriteFile, FILE_FLAGS_AND_ATTRIBUTES, FILE_SHARE_MODE,
+            OPEN_EXISTING, PIPE_ACCESS_INBOUND,
+        },
         System::{
             Pipes::{
                 ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe, PIPE_READMODE_MESSAGE,
@@ -16,7 +24,7 @@ use windows::{
     },
 };
 
-use crate::OpenListener;
+use crate::{Args, OpenListener};
 
 #[inline]
 fn retrieve_app_identifier() -> &'static str {
@@ -51,6 +59,9 @@ pub fn check_single_instance(opener: OpenListener) -> bool {
         std::thread::spawn(move || {
             with_pipe(|url| opener.open_urls(vec![url]));
         });
+    } else {
+        // We are not the first instance
+        send_args_to_instance().log_err();
     }
 
     ret
@@ -84,6 +95,81 @@ fn with_pipe(f: impl Fn(String)) {
             f(message);
         }
     }
+}
+
+// This part of code is mostly from crates/cli/src/main.rs
+fn send_args_to_instance() -> anyhow::Result<()> {
+    let args = Args::parse();
+    let (server, server_name) =
+        IpcOneShotServer::<IpcHandshake>::new().context("Handshake before Zed spawn")?;
+    let url = format!("zed-cli://{server_name}");
+
+    let exit_status = Arc::new(Mutex::new(None));
+    let mut paths = vec![];
+    let mut urls = vec![];
+    for path in args.paths_or_urls.iter() {
+        if path.starts_with("zed://")
+            || path.starts_with("http://")
+            || path.starts_with("https://")
+            || path.starts_with("file://")
+            || path.starts_with("ssh://")
+        {
+            urls.push(path.to_string());
+        } else if let Some(path) = std::fs::canonicalize(Path::new(path)).ok() {
+            paths.push(path.to_string_lossy().to_string());
+        }
+    }
+
+    let sender: JoinHandle<anyhow::Result<()>> = std::thread::spawn({
+        let exit_status = exit_status.clone();
+        move || {
+            let (_, handshake) = server.accept().context("Handshake after Zed spawn")?;
+            let (tx, rx) = (handshake.requests, handshake.responses);
+
+            tx.send(CliRequest::Open {
+                paths,
+                urls,
+                wait: false,
+                open_new_workspace: None,
+                env: None,
+            })?;
+
+            while let Ok(response) = rx.recv() {
+                match response {
+                    CliResponse::Ping => {}
+                    CliResponse::Stdout { message } => log::info!("{message}"),
+                    CliResponse::Stderr { message } => log::error!("{message}"),
+                    CliResponse::Exit { status } => {
+                        exit_status.lock().replace(status);
+                        return Ok(());
+                    }
+                }
+            }
+
+            Ok(())
+        }
+    });
+
+    unsafe {
+        let pipe = CreateFileW(
+            &generate_identifier_with_prefix("\\\\.\\pipe\\", "Named-Pipe"),
+            GENERIC_WRITE.0,
+            FILE_SHARE_MODE::default(),
+            None,
+            OPEN_EXISTING,
+            FILE_FLAGS_AND_ATTRIBUTES::default(),
+            None,
+        )?;
+        let message = url.as_bytes();
+        let mut bytes_written = 0;
+        WriteFile(pipe, Some(message), Some(&mut bytes_written), None)?;
+        CloseHandle(pipe)?;
+    }
+    sender.join().unwrap()?;
+    if let Some(exit_status) = exit_status.lock().take() {
+        std::process::exit(exit_status);
+    }
+    Ok(())
 }
 
 fn retrieve_message_from_pipe(pipe: HANDLE) -> anyhow::Result<String> {
