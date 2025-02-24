@@ -164,7 +164,7 @@ use std::{
 };
 pub use sum_tree::Bias;
 use sum_tree::TreeMap;
-use text::{BufferId, OffsetUtf16, Rope};
+use text::{BufferId, OffsetUtf16, Rope, TextSummary};
 use theme::{
     observe_buffer_font_size_adjustment, ActiveTheme, PlayerColor, StatusColors, SyntaxTheme,
     ThemeColors, ThemeSettings,
@@ -7987,7 +7987,8 @@ impl Editor {
         self.do_paste(&text, metadata, false, window, cx);
     }
 
-    pub fn copy(&mut self, _: &Copy, _: &mut Window, cx: &mut Context<Self>) {
+    pub fn copy(&mut self, _: &Copy, window: &mut Window, cx: &mut Context<Self>) {
+        let map = self.snapshot(window, cx);
         let selections = self.selections.all::<Point>(cx);
         let buffer = self.buffer.read(cx).read(cx);
         let mut text = String::new();
@@ -7996,9 +7997,14 @@ impl Editor {
         {
             let max_point = buffer.max_point();
             let mut is_first = true;
-            for selection in selections.iter() {
+            // let mut indent_before_first_selection = None;
+            for selection in &selections {
                 let mut start = selection.start;
                 let mut end = selection.end;
+                let spanned_rows = selection.spanned_rows(true, &map);
+                // TODO kb need to split selection into rows, and process them, row by row?
+                // OR split final text into rows?
+                dbg!(spanned_rows, selection);
                 let is_entire_line = selection.is_empty() || self.selections.line_mode;
                 if is_entire_line {
                     start = Point::new(start.row, 0);
@@ -8010,7 +8016,12 @@ impl Editor {
                     text += "\n";
                 }
                 let mut len = 0;
-                for chunk in buffer.text_for_range(start..end) {
+                for mut chunk in buffer.text_for_range(start..end) {
+                    if !is_first {
+                        // if let Some(indent) = indent_before_first_selection {
+                        //     // chunk = todo!("TODO kb");
+                        // }
+                    }
                     text.push_str(chunk);
                     len += chunk.len();
                 }
