@@ -117,7 +117,7 @@ if (platform === "darwin") {
   try {
     const resolutionOutput = execSync(
       `powershell -Command "& {Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Size}"`,
-      { encoding: "utf8" },
+      { encoding: "utf8" }
     ).trim();
     [screenWidth, screenHeight] = resolutionOutput.match(/\d+/g).map(Number);
   } catch (err) {
@@ -165,8 +165,10 @@ if (user) {
 
 let buildArgs = ["build"];
 let zedBinary = "target/debug/zed";
-buildArgs.push("--tests");
-zedBinary = "target/debug/zed";
+if (isReleaseMode) {
+  buildArgs.push("--release");
+  zedBinary = "target/release/zed";
+}
 
 try {
   execFileSync("cargo", buildArgs, {
@@ -182,7 +184,10 @@ setTimeout(() => {
     const column = i % columns;
     let position;
     if (platform == "win32") {
-      position = [column * instanceWidth, row * instanceHeight].join(",");
+      position = [
+        column * instanceWidth,
+        row * instanceHeight,
+      ].join(",");
     } else {
       position = [
         column * instanceWidth,
