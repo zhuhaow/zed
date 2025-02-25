@@ -1,4 +1,8 @@
-use std::any::{Any, TypeId};
+use std::{
+    any::{Any, TypeId},
+    thread,
+    time::Duration,
+};
 
 use ::git::UnstageAndNext;
 use anyhow::Result;
@@ -119,6 +123,27 @@ impl ProjectDiff {
     ) -> Self {
         let focus_handle = cx.focus_handle();
         let multibuffer = cx.new(|_| MultiBuffer::new(Capability::ReadWrite));
+        let weak_project = project.downgrade();
+        cx.on_release(|_, cx| {
+            dbg!("WAT?!");
+            let handle = thread::spawn(move || {
+                dbg!("WAT?!");
+                // executor.timer(Duration::from_millis(100)).await;
+                weak_project.assert_released();
+                assert!(weak_project.upgrade().is_none());
+                assert!(false);
+            });
+            // let executor = cx.background_executor().clone();
+            // cx.background_executor().spawn(async move {}).detach();
+            dbg!("diff view dropped");
+        })
+        .detach();
+        project.update(cx, |project, cx| {
+            cx.on_release(|_, cx| {
+                dbg!("project dropped");
+            })
+            .detach();
+        });
 
         let editor = cx.new(|cx| {
             let mut diff_display_editor = Editor::for_multibuffer(
@@ -340,7 +365,7 @@ impl ProjectDiff {
                     .project
                     .update(cx, |project, cx| project.open_buffer(project_path, cx));
 
-                let project = self.project.clone();
+                let project = self.project.downgrade();
                 result.push(cx.spawn(|_, mut cx| async move {
                     let buffer = load_buffer.await?;
                     let changes = project

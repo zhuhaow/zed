@@ -686,6 +686,7 @@ impl Client {
 
         let mut state = self.handler_set.lock();
         if state.entities_by_type_and_remote_id.contains_key(&id) {
+            panic!("already subscribed to entity");
             return Err(anyhow!("already subscribed to entity"));
         }
 

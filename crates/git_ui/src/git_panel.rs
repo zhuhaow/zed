@@ -264,6 +264,10 @@ impl GitPanel {
         let workspace = cx.entity().downgrade();
 
         cx.new(|cx| {
+            cx.on_release(|_, _| {
+                dbg!("git panel dropped");
+            })
+            .detach();
             let focus_handle = cx.focus_handle();
             cx.on_focus(&focus_handle, window, Self::focus_in).detach();
             cx.on_focus_out(&focus_handle, window, |this, _, window, cx| {
@@ -2801,6 +2805,7 @@ impl GitPanelMessageTooltip {
     ) -> Entity<Self> {
         cx.new(|cx| {
             cx.spawn_in(window, |this, mut cx| async move {
+                dbg!("here?!");
                 let details = git_panel
                     .update(&mut cx, |git_panel, cx| {
                         git_panel.load_commit_details(&sha, cx)
