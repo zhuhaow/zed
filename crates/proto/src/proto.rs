@@ -450,6 +450,7 @@ messages!(
     (GetRemotes, Background),
     (GetRemotesResponse, Background),
     (Pull, Background),
+    (RemoteMessageResponse, Background),
 );
 
 request_messages!(
@@ -587,10 +588,10 @@ request_messages!(
     (GitReset, Ack),
     (GitCheckoutFiles, Ack),
     (SetIndexText, Ack),
-    (Push, Ack),
-    (Fetch, Ack),
+    (Push, RemoteMessageResponse),
+    (Fetch, RemoteMessageResponse),
     (GetRemotes, GetRemotesResponse),
-    (Pull, Ack),
+    (Pull, RemoteMessageResponse),
 );
 
 entity_messages!(
