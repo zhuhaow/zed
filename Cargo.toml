@@ -206,7 +206,6 @@ edition = "2021"
 #
 
 activity_indicator = { path = "crates/activity_indicator" }
-ai = { path = "crates/ai" }
 anthropic = { path = "crates/anthropic" }
 assets = { path = "crates/assets" }
 assistant = { path = "crates/assistant" }
@@ -228,7 +227,6 @@ channel = { path = "crates/channel" }
 cli = { path = "crates/cli" }
 client = { path = "crates/client" }
 clock = { path = "crates/clock" }
-collab = { path = "crates/collab" }
 collab_ui = { path = "crates/collab_ui" }
 collections = { path = "crates/collections" }
 command_palette = { path = "crates/command_palette" }
@@ -301,8 +299,6 @@ outline_panel = { path = "crates/outline_panel" }
 paths = { path = "crates/paths" }
 panel = { path = "crates/panel" }
 picker = { path = "crates/picker" }
-plugin = { path = "crates/plugin" }
-plugin_macros = { path = "crates/plugin_macros" }
 prettier = { path = "crates/prettier" }
 project = { path = "crates/project" }
 project_panel = { path = "crates/project_panel" }
@@ -331,7 +327,6 @@ snippets_ui = { path = "crates/snippets_ui" }
 sqlez = { path = "crates/sqlez" }
 sqlez_macros = { path = "crates/sqlez_macros" }
 story = { path = "crates/story" }
-storybook = { path = "crates/storybook" }
 streaming_diff = { path = "crates/streaming_diff" }
 sum_tree = { path = "crates/sum_tree" }
 supermaven = { path = "crates/supermaven" }
@@ -346,13 +341,11 @@ terminal_view = { path = "crates/terminal_view" }
 text = { path = "crates/text" }
 theme = { path = "crates/theme" }
 theme_extension = { path = "crates/theme_extension" }
-theme_importer = { path = "crates/theme_importer" }
 theme_selector = { path = "crates/theme_selector" }
 time_format = { path = "crates/time_format" }
 title_bar = { path = "crates/title_bar" }
 toolchain_selector = { path = "crates/toolchain_selector" }
 ui = { path = "crates/ui" }
-ui_input = { path = "crates/ui_input" }
 ui_macros = { path = "crates/ui_macros" }
 util = { path = "crates/util" }
 util_macros = { path = "crates/util_macros" }
@@ -361,7 +354,6 @@ vim_mode_setting = { path = "crates/vim_mode_setting" }
 welcome = { path = "crates/welcome" }
 workspace = { path = "crates/workspace" }
 worktree = { path = "crates/worktree" }
-zed = { path = "crates/zed" }
 zed_actions = { path = "crates/zed_actions" }
 zeta = { path = "crates/zeta" }
 
@@ -404,7 +396,6 @@ cargo_toml = "0.21"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.4", features = ["derive"] }
 cocoa = "0.26"
-cocoa-foundation = "0.2.0"
 convert_case = "0.8.0"
 core-foundation = "0.9.3"
 core-foundation-sys = "0.8.6"
@@ -461,7 +452,6 @@ parking_lot = "0.12.1"
 pathdiff = "0.2"
 pet = { git = "https://github.com/microsoft/python-environment-tools.git", rev = "1abe5cec5ebfbe97ca71746a4cfc7fe89bddf8e0" }
 pet-fs = { git = "https://github.com/microsoft/python-environment-tools.git", rev = "1abe5cec5ebfbe97ca71746a4cfc7fe89bddf8e0" }
-pet-pixi = { git = "https://github.com/microsoft/python-environment-tools.git", rev = "1abe5cec5ebfbe97ca71746a4cfc7fe89bddf8e0" }
 pet-conda = { git = "https://github.com/microsoft/python-environment-tools.git", rev = "1abe5cec5ebfbe97ca71746a4cfc7fe89bddf8e0" }
 pet-core = { git = "https://github.com/microsoft/python-environment-tools.git", rev = "1abe5cec5ebfbe97ca71746a4cfc7fe89bddf8e0" }
 pet-poetry = { git = "https://github.com/microsoft/python-environment-tools.git", rev = "1abe5cec5ebfbe97ca71746a4cfc7fe89bddf8e0" }
@@ -478,7 +468,6 @@ quote = "1.0.9"
 rand = "0.8.5"
 rayon = "1.8"
 regex = "1.5"
-repair_json = "0.1.0"
 reqwest = { git = "https://github.com/zed-industries/reqwest.git", rev = "fd110f6998da16bbca97b6dddda9be7827c50e29", default-features = false, features = [
     "charset",
     "http2",
@@ -509,7 +498,6 @@ serde_repr = "0.1"
 sha2 = "0.10"
 shellexpand = "2.1.0"
 shlex = "1.3.0"
-signal-hook = "0.3.17"
 simplelog = "0.12.2"
 smallvec = { version = "1.6", features = ["union"] }
 smol = "2.0"
@@ -532,7 +520,6 @@ time = { version = "0.3", features = [
     "serde-well-known",
     "formatting",
 ] }
-tiny_http = "0.8"
 toml = "0.8"
 tokio = { version = "1" }
 tower-http = "0.4.4"
@@ -567,14 +554,14 @@ url = "2.2"
 uuid = { version = "1.1.2", features = ["v4", "v5", "v7", "serde"] }
 wasmparser = "0.221"
 wasm-encoder = "0.221"
-wasmtime = { version = "29", default-features = false, features = [
+wasmtime = { version = "30", default-features = false, features = [
     "async",
     "demangle",
     "runtime",
     "cranelift",
     "component-model",
 ] }
-wasmtime-wasi = "29"
+wasmtime-wasi = "30"
 which = "6.0.0"
 wit-component = "0.221"
 zed_llm_client = "0.4"
@@ -649,11 +636,7 @@ codegen-units = 16
 
 [profile.dev.package]
 taffy = { opt-level = 3 }
-cranelift-codegen = { opt-level = 3 }
 resvg = { opt-level = 3 }
-rustybuzz = { opt-level = 3 }
-ttf-parser = { opt-level = 3 }
-wasmtime-cranelift = { opt-level = 3 }
 wasmtime = { opt-level = 3 }
 # Build single-source-file crates with cg=1 as it helps make `cargo build` of a whole workspace a bit faster
 activity_indicator = { codegen-units = 1 }
@@ -662,8 +645,6 @@ breadcrumbs = { codegen-units = 1 }
 collections = { codegen-units = 1 }
 command_palette = { codegen-units = 1 }
 command_palette_hooks = { codegen-units = 1 }
-evals = { codegen-units = 1 }
-extension_cli = { codegen-units = 1 }
 feature_flags = { codegen-units = 1 }
 file_icons = { codegen-units = 1 }
 fsevent = { codegen-units = 1 }
@@ -693,16 +674,12 @@ supermaven_api = { codegen-units = 1 }
 telemetry_events = { codegen-units = 1 }
 theme_selector = { codegen-units = 1 }
 time_format = { codegen-units = 1 }
-ui_input = { codegen-units = 1 }
 zed_actions = { codegen-units = 1 }
 
 [profile.release]
 debug = "limited"
 lto = "thin"
 codegen-units = 1
-
-[profile.release.package]
-zed = { codegen-units = 16 }
 
 [profile.release-fast]
 inherits = "release"

@@ -1,10 +1,18 @@
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 fn main() {
     use std::{env, path::PathBuf, process::Command};
 
     let sdk_path = String::from_utf8(
         Command::new("xcrun")
-            .args(["--sdk", "macosx", "--show-sdk-path"])
+            .args([
+                "--sdk",
+                match build_target::Os::target().unwrap() {
+                    build_target::Os::MacOs => "macosx",
+                    build_target::Os::iOs => "iphoneos",
+                    _ => panic!("unsupported target"),
+                },
+                "--show-sdk-path",
+            ])
             .output()
             .unwrap()
             .stdout,
