@@ -627,7 +627,8 @@ features = [
 [patch.crates-io]
 cpal = { git = "https://github.com/zed-industries/cpal", rev = "fd8bc2fd39f1f5fdee5a0690656caff9a26d9d50" }
 real-async-tls = { git = "https://github.com/zed-industries/async-tls", rev = "1e759a4b5e370f87dc15e40756ac4f8815b61d9d", package = "async-tls" }
-tree-sitter = { git = "https://github.com/zhuhaow/tree-sitter", rev = "d274b9625840981e0c7315a146e26b3224b22bc7", package = "tree-sitter"}
+tree-sitter = { git = "https://github.com/zhuhaow/tree-sitter", rev = "97c776cd0471b2e3477a0e0e50e3210d94532c30", package = "tree-sitter"}
+tree-sitter-language = { git = "https://github.com/zhuhaow/tree-sitter", rev = "97c776cd0471b2e3477a0e0e50e3210d94532c30", package = "tree-sitter-language"}
 
 [profile.dev]
 split-debuginfo = "unpacked"
