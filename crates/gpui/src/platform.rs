@@ -10,6 +10,9 @@ mod linux;
 #[cfg(target_os = "macos")]
 mod mac;
 
+#[cfg(target_os = "ios")]
+mod ios;
+
 #[cfg(any(
     all(
         any(target_os = "linux", target_os = "freebsd"),
@@ -61,6 +64,8 @@ use uuid::Uuid;
 pub use app_menu::*;
 pub use keystroke::*;
 
+#[cfg(target_os = "ios")]
+pub(crate) use ios::*;
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 pub(crate) use linux::*;
 #[cfg(target_os = "macos")]
