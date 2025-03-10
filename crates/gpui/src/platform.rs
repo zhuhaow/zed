@@ -7,7 +7,7 @@ mod keystroke;
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 mod linux;
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 mod mac;
 
 #[cfg(any(
@@ -63,7 +63,7 @@ pub use keystroke::*;
 
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 pub(crate) use linux::*;
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 pub(crate) use mac::*;
 pub use semantic_version::SemanticVersion;
 #[cfg(any(test, feature = "test-support"))]
@@ -74,7 +74,7 @@ pub(crate) use windows::*;
 #[cfg(any(test, feature = "test-support"))]
 pub use test::TestScreenCaptureSource;
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 pub(crate) fn current_platform(headless: bool) -> Rc<dyn Platform> {
     Rc::new(MacPlatform::new(headless))
 }
