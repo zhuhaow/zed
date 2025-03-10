@@ -1,15 +1,27 @@
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 fn main() {
     use std::{env, path::PathBuf, process::Command};
 
-    let sdk_path = String::from_utf8(
-        Command::new("xcrun")
-            .args(["--sdk", "macosx", "--show-sdk-path"])
-            .output()
-            .unwrap()
-            .stdout,
-    )
-    .unwrap();
+    let sdk_path = if build_target::target_os().unwrap() == build_target::Os::MacOs {
+        String::from_utf8(
+            Command::new("xcrun")
+                .args(["--sdk", "macosx", "--show-sdk-path"])
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap()
+    } else {
+        String::from_utf8(
+            Command::new("xcrun")
+                .args(["--sdk", "iphoneos", "--show-sdk-path"])
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap()
+    };
+
     let sdk_path = sdk_path.trim_end();
 
     println!("cargo:rerun-if-changed=src/bindings.h");
@@ -39,5 +51,5 @@ fn main() {
         .expect("couldn't write dispatch bindings");
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(target_vendor = "apple"))]
 fn main() {}

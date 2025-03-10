@@ -3,15 +3,15 @@
 
 mod bindings;
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 use core_foundation::{
     base::{CFTypeID, TCFType},
     declare_TCFType, impl_CFTypeDescription, impl_TCFType,
 };
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 use std::ffi::c_void;
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 pub mod io_surface {
     use super::*;
 
@@ -30,7 +30,7 @@ pub mod io_surface {
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 pub mod core_video {
     #![allow(non_snake_case)]
 
@@ -210,7 +210,7 @@ pub mod core_video {
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 pub mod core_media {
     #![allow(non_snake_case)]
 
@@ -421,7 +421,7 @@ pub mod core_media {
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 pub mod video_toolbox {
     #![allow(non_snake_case)]
 

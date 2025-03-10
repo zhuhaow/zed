@@ -3,8 +3,8 @@
 #![allow(non_snake_case)]
 #![allow(unused)]
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 use objc::*;
 
-#[cfg(target_os = "macos")]
+#[cfg(target_vendor = "apple")]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
