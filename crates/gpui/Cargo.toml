@@ -297,3 +297,6 @@ path = "examples/window_shadow.rs"
 [[example]]
 name = "on_window_close_quit"
 path = "examples/on_window_close_quit.rs"
+
+[build-dependencies]
+build-target = "0.4.0"

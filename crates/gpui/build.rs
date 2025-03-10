@@ -203,43 +203,43 @@ mod darwin {
             PathBuf::from(env::var("OUT_DIR").unwrap()).join("shaders.metallib");
         println!("cargo:rerun-if-changed={}", shader_path);
 
-        #[cfg(target_os = "macos")]
-        let output = Command::new("xcrun")
-            .args([
-                "-sdk",
-                "macosx",
-                "metal",
-                "-gline-tables-only",
-                "-mmacosx-version-min=10.15.7",
-                "-MO",
-                "-c",
-                shader_path,
-                "-include",
-                (header_path.to_str().unwrap()),
-                "-o",
-            ])
-            .arg(&air_output_path)
-            .output()
-            .unwrap();
-
-        #[cfg(target_os = "ios")]
-        let output = Command::new("xcrun")
-            .args([
-                "-sdk",
-                "iphoneos",
-                "metal",
-                "-gline-tables-only",
-                "-mios-version-min=13.0",
-                "-MO",
-                "-c",
-                shader_path,
-                "-include",
-                (header_path.to_str().unwrap()),
-                "-o",
-            ])
-            .arg(&air_output_path)
-            .output()
-            .unwrap();
+        let output = if build_target::target_os().unwrap() == build_target::Os::MacOs {
+            Command::new("xcrun")
+                .args([
+                    "-sdk",
+                    "macosx",
+                    "metal",
+                    "-gline-tables-only",
+                    "-mmacosx-version-min=10.15.7",
+                    "-MO",
+                    "-c",
+                    shader_path,
+                    "-include",
+                    (header_path.to_str().unwrap()),
+                    "-o",
+                ])
+                .arg(&air_output_path)
+                .output()
+                .unwrap()
+        } else {
+            Command::new("xcrun")
+                .args([
+                    "-sdk",
+                    "iphoneos",
+                    "metal",
+                    "-gline-tables-only",
+                    "-mios-version-min=13.0",
+                    "-MO",
+                    "-c",
+                    shader_path,
+                    "-include",
+                    (header_path.to_str().unwrap()),
+                    "-o",
+                ])
+                .arg(&air_output_path)
+                .output()
+                .unwrap()
+        };
 
         if !output.status.success() {
             eprintln!(
