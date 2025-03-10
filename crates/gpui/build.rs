@@ -1,4 +1,7 @@
-#![cfg_attr(any(not(target_os = "macos"), feature = "macos-blade"), allow(unused))]
+#![cfg_attr(
+    any(not(target_vendor = "apple"), feature = "macos-blade"),
+    allow(unused)
+)]
 
 //TODO: consider generating shader code for WGSL
 //TODO: deprecate "runtime-shaders" and "macos-blade"
@@ -9,13 +12,13 @@ fn main() {
     let target = env::var("CARGO_CFG_TARGET_OS");
     println!("cargo::rustc-check-cfg=cfg(gles)");
 
-    #[cfg(any(not(target_os = "macos"), feature = "macos-blade"))]
+    #[cfg(any(not(target_vendor = "apple"), feature = "macos-blade"))]
     check_wgsl_shaders();
 
     match target.as_deref() {
-        Ok("macos") => {
-            #[cfg(target_os = "macos")]
-            macos::build();
+        Ok("macos") | Ok("ios") => {
+            #[cfg(target_vendor = "apple")]
+            darwin::build();
         }
         #[cfg(target_os = "windows")]
         Ok("windows") => {
@@ -53,8 +56,8 @@ fn check_wgsl_shaders() {
         }
     }
 }
-#[cfg(target_os = "macos")]
-mod macos {
+#[cfg(target_vendor = "apple")]
+mod darwin {
     use std::{
         env,
         path::{Path, PathBuf},
@@ -200,6 +203,7 @@ mod macos {
             PathBuf::from(env::var("OUT_DIR").unwrap()).join("shaders.metallib");
         println!("cargo:rerun-if-changed={}", shader_path);
 
+        #[cfg(target_os = "macos")]
         let output = Command::new("xcrun")
             .args([
                 "-sdk",
@@ -207,6 +211,25 @@ mod macos {
                 "metal",
                 "-gline-tables-only",
                 "-mmacosx-version-min=10.15.7",
+                "-MO",
+                "-c",
+                shader_path,
+                "-include",
+                (header_path.to_str().unwrap()),
+                "-o",
+            ])
+            .arg(&air_output_path)
+            .output()
+            .unwrap();
+
+        #[cfg(target_os = "ios")]
+        let output = Command::new("xcrun")
+            .args([
+                "-sdk",
+                "iphoneos",
+                "metal",
+                "-gline-tables-only",
+                "-mios-version-min=13.0",
                 "-MO",
                 "-c",
                 shader_path,
@@ -226,8 +249,18 @@ mod macos {
             process::exit(1);
         }
 
+        #[cfg(target_os = "macos")]
         let output = Command::new("xcrun")
             .args(["-sdk", "macosx", "metallib"])
+            .arg(air_output_path)
+            .arg("-o")
+            .arg(metallib_output_path)
+            .output()
+            .unwrap();
+
+        #[cfg(target_os = "ios")]
+        let output = Command::new("xcrun")
+            .args(["-sdk", "iphoneos", "metallib"])
             .arg(air_output_path)
             .arg("-o")
             .arg(metallib_output_path)
