@@ -200,7 +200,7 @@ impl TaffyLayoutEngine {
         }
 
         let layout = self.taffy.layout(id.into()).expect(EXPECT_MESSAGE);
-        let mut bounds = Bounds {
+        let mut bounds: Bounds<Pixels> = Bounds {
             origin: layout.location.into(),
             size: layout.size.into(),
         };
