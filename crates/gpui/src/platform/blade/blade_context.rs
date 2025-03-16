@@ -1,7 +1,7 @@
 use blade_graphics as gpu;
 use std::sync::Arc;
 
-#[cfg_attr(target_os = "macos", derive(Clone))]
+#[cfg_attr(target_vendor = "apple", derive(Clone))]
 pub struct BladeContext {
     pub(super) gpu: Arc<gpu::Context>,
 }
