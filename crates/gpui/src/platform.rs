@@ -85,8 +85,8 @@ pub(crate) fn current_platform(headless: bool) -> Rc<dyn Platform> {
 }
 
 #[cfg(target_os = "ios")]
-pub(crate) fn current_platform(headless: bool) -> Rc<dyn Platform> {
-    Rc::new(IosPlatform::new(headless))
+pub(crate) fn current_platform(_headless: bool) -> Rc<dyn Platform> {
+    Rc::new(IosPlatform::new())
 }
 
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
