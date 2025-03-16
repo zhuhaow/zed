@@ -45,5 +45,18 @@
   "hard_tabs": false,
   "formatter": "auto",
   "remove_trailing_whitespace_on_save": true,
-  "ensure_final_newline_on_save": true
+  "ensure_final_newline_on_save": true,
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "check": {
+          "workspace": false
+        },
+        "cargo": {
+          "features": ["macos-blade"],
+          "target": "aarch64-apple-ios"
+        }
+      }
+    }
+  }
 }
