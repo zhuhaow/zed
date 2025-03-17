@@ -147,6 +147,8 @@ objc2-foundation = "0.3"
 objc2-core-foundation = { version = "0.3", features = ["objc2"]}
 objc2-ui-kit = "0.3"
 objc2-core-graphics = "0.3"
+core-foundation.workspace = true
+core-text = "20.1"
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "macos", target_os = "ios"))'.dependencies]
 pathfinder_geometry = "0.5"
