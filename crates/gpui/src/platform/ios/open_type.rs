@@ -68,6 +68,7 @@ fn generate_fallback_array(
             .downcast::<NSArray>()
             .unwrap();
         for fallback in default_fallbacks.iter() {
+            // TODO: check kCTFontURLAttribute exists
             fallback_array.push(unsafe { Retained::cast_unchecked(fallback) });
         }
     }
