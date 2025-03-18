@@ -12,6 +12,7 @@ use core_foundation::{
     number::CFNumber,
     string::CFString,
 };
+use core_graphics::geometry::CGPoint;
 use core_graphics::{
     base::{kCGImageAlphaPremultipliedLast, CGGlyph},
     color_space::CGColorSpace,
@@ -34,7 +35,7 @@ use font_kit::{
     source::SystemSource,
     sources::mem::MemSource,
 };
-use objc2_core_foundation::{CGFloat, CGPoint};
+use objc2_core_foundation::CGFloat;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use pathfinder_geometry::{
     rect::{RectF, RectI},
