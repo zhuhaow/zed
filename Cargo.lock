@@ -4127,6 +4127,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dispatch2"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a0d569e003ff27784e0e14e4a594048698e0c0f0b66cabcb51511be55a7caa0"
+dependencies = [
+ "bitflags 2.9.0",
+ "block2 0.6.0",
+ "libc",
+ "objc2 0.6.0",
+]
+
+[[package]]
 name = "displaydoc"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5734,6 +5746,7 @@ dependencies = [
  "cosmic-text",
  "ctor",
  "derive_more",
+ "dispatch2",
  "embed-resource",
  "env_logger 0.11.7",
  "etagere",

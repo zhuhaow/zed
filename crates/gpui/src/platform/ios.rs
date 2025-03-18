@@ -5,3 +5,5 @@ mod open_type;
 mod text_system;
 
 mod window_appearance;
+
+mod dispatcher;
