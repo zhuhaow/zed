@@ -92,7 +92,7 @@ pub fn apply_features_and_fallbacks(
         if !fallbacks.fallback_list().is_empty() {
             keys.push(&cascade_list);
             values.push(generate_fallback_array(fallbacks, unsafe {
-                CFRetained::from_raw(NonNull::new_unchecked(
+                CFRetained::retain(NonNull::new_unchecked(
                     font.native_font().as_concrete_TypeRef() as *mut CTFont,
                 ))
                 .as_ref()
@@ -113,7 +113,7 @@ pub fn apply_features_and_fallbacks(
 
     let new_font = unsafe {
         CTFontCreateCopyWithAttributes(
-            CFRetained::from_raw(NonNull::new_unchecked(
+            CFRetained::retain(NonNull::new_unchecked(
                 font.native_font().as_concrete_TypeRef() as *mut CTFont,
             ))
             .as_ref(),
